@@ -1,0 +1,22 @@
+{
+  "id": "maple-letter",
+  "name": "Maple Letter",
+  "author": "FUJISTYLE",
+  "filmSimulation": "classic-neg",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -1.5,
+    "shadow": -1.5,
+    "color": 3,
+    "sharpness": 1,
+    "clarity": 0,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "weak",
+    "whiteBalance": "auto",
+    "wbShiftRed": 2,
+    "wbShiftBlue": -3
+  }
+}
+

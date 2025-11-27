@@ -1,0 +1,27 @@
+{
+  "id": "provia",
+  "name": "Provia / Standard",
+  "curve": {
+    "points": [
+      [0, 0],
+      [64, 68],
+      [128, 128],
+      [192, 188],
+      [255, 255]
+    ]
+  },
+  "colorBalance": {
+    "shadows": {
+      "r": 0,
+      "g": 0,
+      "b": 0
+    },
+    "highlights": {
+      "r": 0,
+      "g": 0,
+      "b": 0
+    }
+  },
+  "saturation": 0
+}
+

@@ -1,0 +1,27 @@
+{
+  "id": "velvia",
+  "name": "Velvia / Vivid",
+  "curve": {
+    "points": [
+      [0, 5],
+      [64, 72],
+      [128, 135],
+      [192, 195],
+      [255, 250]
+    ]
+  },
+  "colorBalance": {
+    "shadows": {
+      "r": 3,
+      "g": -2,
+      "b": 5
+    },
+    "highlights": {
+      "r": 5,
+      "g": 2,
+      "b": -3
+    }
+  },
+  "saturation": 0.25
+}
+

@@ -1,0 +1,18 @@
+{
+  "id": "moody-chrome",
+  "name": "Moody Chrome",
+  "filmSimulation": "classic-chrome",
+  "settings": {
+    "highlight": -2,
+    "shadow": 2,
+    "color": -1,
+    "sharpness": 0,
+    "clarity": 2,
+    "grainEffect": "strong",
+    "grainSize": "large",
+    "colorChromeEffect": "weak",
+    "wbShiftRed": -1,
+    "wbShiftBlue": 2
+  }
+}
+

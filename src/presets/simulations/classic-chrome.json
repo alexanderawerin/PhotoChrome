@@ -1,0 +1,28 @@
+{
+  "id": "classic-chrome",
+  "name": "Classic Chrome",
+  "curve": {
+    "points": [
+      [0, 0],
+      [32, 28],
+      [96, 90],
+      [128, 135],
+      [192, 200],
+      [255, 250]
+    ]
+  },
+  "colorBalance": {
+    "shadows": {
+      "r": -5,
+      "g": 0,
+      "b": 8
+    },
+    "highlights": {
+      "r": 5,
+      "g": -2,
+      "b": -5
+    }
+  },
+  "saturation": -0.15
+}
+

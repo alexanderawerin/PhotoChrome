@@ -1,0 +1,18 @@
+{
+  "id": "vivid-sunset",
+  "name": "Vivid Sunset",
+  "filmSimulation": "velvia",
+  "settings": {
+    "highlight": 1,
+    "shadow": -1,
+    "color": 2,
+    "sharpness": 2,
+    "clarity": 1,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "weak",
+    "wbShiftRed": 3,
+    "wbShiftBlue": -2
+  }
+}
+

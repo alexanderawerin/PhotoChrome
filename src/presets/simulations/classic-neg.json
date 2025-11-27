@@ -1,0 +1,27 @@
+{
+  "id": "classic-neg",
+  "name": "Classic Neg.",
+  "curve": {
+    "points": [
+      [0, 8],
+      [64, 70],
+      [128, 128],
+      [192, 185],
+      [255, 245]
+    ]
+  },
+  "colorBalance": {
+    "shadows": {
+      "r": -3,
+      "g": 2,
+      "b": 5
+    },
+    "highlights": {
+      "r": 8,
+      "g": -3,
+      "b": -5
+    }
+  },
+  "saturation": -0.1
+}
+
