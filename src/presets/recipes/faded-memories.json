@@ -1,0 +1,21 @@
+{
+  "id": "faded-memories",
+  "name": "Faded Memories",
+  "author": "Community",
+  "filmSimulation": "classic-neg",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": 2,
+    "shadow": 2,
+    "color": -2,
+    "sharpness": -1,
+    "clarity": -2,
+    "grainEffect": "strong",
+    "grainSize": "large",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 2,
+    "wbShiftBlue": 1
+  }
+}
+

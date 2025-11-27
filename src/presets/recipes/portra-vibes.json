@@ -1,0 +1,22 @@
+{
+  "id": "portra-vibes",
+  "name": "Portra Vibes",
+  "author": "Community",
+  "filmSimulation": "provia",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": -1,
+    "shadow": 1,
+    "color": 1,
+    "sharpness": 0,
+    "clarity": -1,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "weak",
+    "colorChromeFXBlue": "off",
+    "whiteBalance": "auto",
+    "wbShiftRed": 3,
+    "wbShiftBlue": -2
+  }
+}
+

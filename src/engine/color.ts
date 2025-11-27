@@ -1,4 +1,5 @@
 import { ColorBalanceConfig } from './types'
+import { clamp, luminance } from './utils'
 
 /**
  * Применяет цветовой баланс (split-toning) к изображению
@@ -16,8 +17,8 @@ export function applyColorBalance(
     const b = data[i + 2]
 
     // Вычисляем яркость пикселя для определения shadow/highlight
-    const luminance = 0.299 * r + 0.587 * g + 0.114 * b
-    const normalized = luminance / 255
+    const lum = luminance(r, g, b)
+    const normalized = lum / 255
 
     // Вес для теней и светов (shadows сильнее в тёмных областях)
     const shadowWeight = 1 - normalized
@@ -56,7 +57,7 @@ export function applySaturation(imageData: ImageData, factor: number): void {
     const b = data[i + 2]
 
     // Вычисляем яркость (grayscale)
-    const gray = 0.299 * r + 0.587 * g + 0.114 * b
+    const gray = luminance(r, g, b)
 
     // Интерполируем между серым и исходным цветом
     data[i] = clamp(gray + (r - gray) * multiplier)
@@ -101,25 +102,20 @@ export function applyToneAdjustment(
     const b = data[i + 2]
 
     // Вычисляем яркость
-    const luminance = 0.299 * r + 0.587 * g + 0.114 * b
-    const normalized = luminance / 255
+    const lum = luminance(r, g, b)
+    const normalized = lum / 255
 
-    // Применяем корректировки
-    // Shadows влияют на тёмные области
-    const shadowMult = shadowAdjust * (1 - normalized) * 5
+    // Применяем корректировки с мягкими переходами
+    // Shadows влияют на тёмные области (кубическая функция для плавности)
+    const shadowWeight = Math.pow(1 - normalized, 2)
+    const shadowMult = shadowAdjust * shadowWeight * 8
+
     // Highlights влияют на светлые области
-    const highlightMult = highlightAdjust * normalized * 5
+    const highlightWeight = Math.pow(normalized, 2)
+    const highlightMult = highlightAdjust * highlightWeight * 8
 
     data[i] = clamp(r + shadowMult + highlightMult)
     data[i + 1] = clamp(g + shadowMult + highlightMult)
     data[i + 2] = clamp(b + shadowMult + highlightMult)
   }
 }
-
-/**
- * Clamp значение в диапазоне 0-255
- */
-function clamp(value: number): number {
-  return Math.max(0, Math.min(255, Math.round(value)))
-}
-

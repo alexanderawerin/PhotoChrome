@@ -1,0 +1,22 @@
+{
+  "id": "warm-summer",
+  "name": "Warm Summer",
+  "author": "Community",
+  "filmSimulation": "velvia",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": 0,
+    "shadow": 1,
+    "color": 2,
+    "sharpness": 0,
+    "clarity": 1,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "weak",
+    "colorChromeFXBlue": "off",
+    "whiteBalance": "daylight",
+    "wbShiftRed": 4,
+    "wbShiftBlue": -4
+  }
+}
+

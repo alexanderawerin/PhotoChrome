@@ -1,0 +1,21 @@
+{
+  "id": "classic-chrome-cool",
+  "name": "Classic Chrome Cool",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "classic-chrome",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -2,
+    "shadow": 0,
+    "color": -1,
+    "sharpness": 0,
+    "clarity": 1,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "strong",
+    "wbShiftRed": -2,
+    "wbShiftBlue": 3
+  }
+}
+

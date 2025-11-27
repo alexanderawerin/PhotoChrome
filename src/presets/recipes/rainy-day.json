@@ -1,0 +1,21 @@
+{
+  "id": "rainy-day",
+  "name": "Rainy Day",
+  "author": "Community",
+  "filmSimulation": "classic-chrome",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -1,
+    "shadow": 1,
+    "color": -2,
+    "sharpness": 0,
+    "clarity": 1,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "weak",
+    "colorChromeFXBlue": "weak",
+    "wbShiftRed": -2,
+    "wbShiftBlue": 3
+  }
+}
+

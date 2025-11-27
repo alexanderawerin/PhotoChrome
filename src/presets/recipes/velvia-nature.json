@@ -1,0 +1,21 @@
+{
+  "id": "velvia-nature",
+  "name": "Velvia Nature",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "velvia",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": -2,
+    "shadow": 0,
+    "color": 3,
+    "sharpness": 1,
+    "clarity": 1,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "strong",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 2
+  }
+}
+

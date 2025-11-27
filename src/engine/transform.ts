@@ -2,6 +2,8 @@
  * Трансформации изображения: поворот и crop
  */
 
+import { clampRange } from './utils'
+
 export type RotationAngle = 0 | 90 | 180 | 270
 
 export interface CropArea {
@@ -56,15 +58,40 @@ export function rotateImage(
 }
 
 /**
+ * Валидирует и корректирует область crop
+ */
+export function validateCropArea(
+  cropArea: CropArea,
+  imageWidth: number,
+  imageHeight: number
+): CropArea {
+  // Ограничиваем координаты
+  const x = clampRange(Math.round(cropArea.x), 0, imageWidth - 1)
+  const y = clampRange(Math.round(cropArea.y), 0, imageHeight - 1)
+
+  // Ограничиваем размеры
+  const maxWidth = imageWidth - x
+  const maxHeight = imageHeight - y
+
+  const width = clampRange(Math.round(cropArea.width), 1, maxWidth)
+  const height = clampRange(Math.round(cropArea.height), 1, maxHeight)
+
+  return { x, y, width, height }
+}
+
+/**
  * Обрезает изображение по заданной области
  */
 export function cropImage(
   imageData: ImageData,
   cropArea: CropArea
 ): ImageData {
+  // Валидируем область
+  const validArea = validateCropArea(cropArea, imageData.width, imageData.height)
+
   const canvas = document.createElement('canvas')
-  canvas.width = cropArea.width
-  canvas.height = cropArea.height
+  canvas.width = validArea.width
+  canvas.height = validArea.height
 
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Failed to get canvas context')
@@ -80,17 +107,17 @@ export function cropImage(
   // Рисуем обрезанную область
   ctx.drawImage(
     tempCanvas,
-    cropArea.x,
-    cropArea.y,
-    cropArea.width,
-    cropArea.height,
+    validArea.x,
+    validArea.y,
+    validArea.width,
+    validArea.height,
     0,
     0,
-    cropArea.width,
-    cropArea.height
+    validArea.width,
+    validArea.height
   )
 
-  return ctx.getImageData(0, 0, canvas.width, canvas.height)
+  return ctx.getImageData(0, 0, validArea.width, validArea.height)
 }
 
 /**
@@ -148,4 +175,3 @@ export function calculateCropArea(
     height: Math.round(height)
   }
 }
-

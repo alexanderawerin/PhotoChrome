@@ -1,0 +1,21 @@
+{
+  "id": "provia-portrait",
+  "name": "Provia Portrait",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "provia",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": -1,
+    "shadow": 1,
+    "color": 0,
+    "sharpness": -2,
+    "clarity": -1,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "weak",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 2,
+    "wbShiftBlue": -1
+  }
+}
+

@@ -1,0 +1,21 @@
+{
+  "id": "classic-neg-soft",
+  "name": "Classic Neg Soft",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "classic-neg",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": 0,
+    "shadow": 2,
+    "color": 1,
+    "sharpness": -3,
+    "clarity": -2,
+    "grainEffect": "weak",
+    "grainSize": "large",
+    "colorChromeEffect": "weak",
+    "colorChromeFXBlue": "weak",
+    "wbShiftRed": 2,
+    "wbShiftBlue": -2
+  }
+}
+

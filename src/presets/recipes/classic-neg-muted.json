@@ -1,0 +1,21 @@
+{
+  "id": "classic-neg-muted",
+  "name": "Classic Neg Muted",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "classic-neg",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -2,
+    "shadow": -2,
+    "color": -2,
+    "sharpness": -2,
+    "clarity": 0,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 3,
+    "wbShiftBlue": -5
+  }
+}
+

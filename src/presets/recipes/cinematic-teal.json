@@ -1,0 +1,22 @@
+{
+  "id": "cinematic-teal",
+  "name": "Cinematic Teal",
+  "author": "Community",
+  "filmSimulation": "classic-chrome",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -2,
+    "shadow": 0,
+    "color": -1,
+    "sharpness": 1,
+    "clarity": 2,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "strong",
+    "whiteBalance": "auto",
+    "wbShiftRed": -2,
+    "wbShiftBlue": 4
+  }
+}
+

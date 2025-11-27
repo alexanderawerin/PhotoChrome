@@ -1,14 +1,31 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Photochrome</title>
+    <meta name="description" content="Плёночные симуляции Fujifilm для любых фото. Применяйте легендарные фильтры прямо в браузере." />
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="color-scheme" content="dark" />
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="Photochrome" />
+    <meta property="og:description" content="Плёночные симуляции Fujifilm для любых фото" />
+    <meta property="og:type" content="website" />
+    
+    <title>Photochrome — Плёночные симуляции Fujifilm</title>
+    
+    <!-- Preload fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <style>
+      /* Critical CSS for dark mode */
+      html { background-color: #0a0a0a; }
+    </style>
   </head>
-  <body>
+  <body class="dark">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

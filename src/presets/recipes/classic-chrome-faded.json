@@ -1,0 +1,21 @@
+{
+  "id": "classic-chrome-faded",
+  "name": "Classic Chrome Faded",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "classic-chrome",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": 2,
+    "shadow": 2,
+    "color": -1,
+    "sharpness": -1,
+    "clarity": -1,
+    "grainEffect": "strong",
+    "grainSize": "large",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 1,
+    "wbShiftBlue": 1
+  }
+}
+

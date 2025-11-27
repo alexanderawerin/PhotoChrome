@@ -1,0 +1,21 @@
+{
+  "id": "classic-neg-street",
+  "name": "Classic Neg Street",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "classic-neg",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -1,
+    "shadow": -1,
+    "color": 0,
+    "sharpness": 1,
+    "clarity": 2,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "weak",
+    "wbShiftRed": 1,
+    "wbShiftBlue": -2
+  }
+}
+
