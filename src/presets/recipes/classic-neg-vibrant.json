@@ -1,0 +1,21 @@
+{
+  "id": "classic-neg-vibrant",
+  "name": "Classic Neg Vibrant",
+  "author": "Community",
+  "filmSimulation": "classic-neg",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": -1,
+    "shadow": 1,
+    "color": 2,
+    "sharpness": 1,
+    "clarity": 1,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "weak",
+    "wbShiftRed": 2,
+    "wbShiftBlue": -2
+  }
+}
+

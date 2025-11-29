@@ -1,32 +1,39 @@
-import { RotateCw, RotateCcw, Crop, Check, Download, RotateCcw as Reset } from 'lucide-react'
+import { RotateCw, RotateCcw, Crop, Check, Download, Settings2, Film } from 'lucide-react'
+import { Spinner } from './ui/spinner'
 import { Button } from './ui/button'
 import { ButtonGroup } from './ui/button-group'
 import { AspectRatio } from '../engine/transform'
+import { Recipe } from '../engine/types'
 
 interface ToolbarProps {
   onRotateClockwise: () => void
   onRotateCounterClockwise: () => void
   onCropClick: () => void
   onExport: () => void
-  onReset: () => void
   canExport: boolean
-  canReset: boolean
   isExporting?: boolean
+  // Crop mode
   cropMode?: boolean
   cropRatio?: AspectRatio
   onCropRatioChange?: (ratio: AspectRatio) => void
   onCropApply?: () => void
   onCropCancel?: () => void
+  // Recipe & tuning
+  activeRecipe?: Recipe | null
+  tuningMode?: boolean
+  onTuningOpen?: () => void
+  // Mobile modes
+  mobileMode?: boolean  // Show only tools without download
+  downloadOnly?: boolean // Show only download button
 }
 
 /** Available crop aspect ratios with labels */
 const CROP_RATIOS: { value: AspectRatio; label: string; ariaLabel: string }[] = [
-  { value: '1:1', label: '1:1', ariaLabel: 'Квадрат 1 к 1' },
-  { value: '4:3', label: '4:3', ariaLabel: '4 к 3 горизонтальный' },
-  { value: '3:4', label: '3:4', ariaLabel: '3 к 4 вертикальный' },
-  { value: '16:9', label: '16:9', ariaLabel: '16 к 9 широкий' },
-  { value: '9:16', label: '9:16', ariaLabel: '9 к 16 высокий' },
-  { value: 'free', label: 'Отмена', ariaLabel: 'Отменить обрезку' },
+  { value: '1:1', label: '1:1', ariaLabel: 'Square 1:1' },
+  { value: '4:3', label: '4:3', ariaLabel: '4:3 landscape' },
+  { value: '3:4', label: '3:4', ariaLabel: '3:4 portrait' },
+  { value: '16:9', label: '16:9', ariaLabel: '16:9 wide' },
+  { value: '9:16', label: '9:16', ariaLabel: '9:16 tall' },
 ]
 
 export function Toolbar({
@@ -34,82 +41,205 @@ export function Toolbar({
   onRotateCounterClockwise,
   onCropClick,
   onExport,
-  onReset,
   canExport,
-  canReset,
   isExporting = false,
   cropMode = false,
   cropRatio = '1:1',
   onCropRatioChange,
   onCropApply,
-  onCropCancel
+  onCropCancel,
+  activeRecipe,
+  tuningMode = false,
+  onTuningOpen,
+  mobileMode = false,
+  downloadOnly = false
 }: ToolbarProps) {
-  // Режим кропа
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CROP MODE
+  // ═══════════════════════════════════════════════════════════════════════════
   if (cropMode) {
     return (
       <div 
-        className="flex items-center justify-center gap-2 flex-wrap"
+        className="flex items-center justify-center gap-3"
         role="toolbar"
-        aria-label="Выбор соотношения сторон для обрезки"
+        aria-label="Crop aspect ratio selection"
       >
-        {CROP_RATIOS.map((ratio) => (
+        {/* Grouped crop ratios */}
+        <ButtonGroup role="group" aria-label="Aspect ratios">
+          {CROP_RATIOS.map((ratio) => (
+            <Button
+              key={ratio.value}
+              variant={cropRatio === ratio.value ? 'default' : 'outline'}
+              size="default"
+              onClick={() => onCropRatioChange?.(ratio.value)}
+              aria-label={ratio.ariaLabel}
+              aria-pressed={cropRatio === ratio.value}
+            >
+              {ratio.label}
+            </Button>
+          ))}
+        </ButtonGroup>
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-1.5">
           <Button
-            key={ratio.value}
-            variant={cropRatio === ratio.value ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => {
-              if (ratio.value === 'free') {
-                onCropCancel?.()
-              } else {
-                onCropRatioChange?.(ratio.value)
-              }
-            }}
-            className={ratio.value === 'free' ? 'text-zinc-400' : ''}
-            aria-label={ratio.ariaLabel}
-            aria-pressed={cropRatio === ratio.value}
+            variant="outline"
+            size="default"
+            onClick={onCropApply}
+            aria-label="Apply crop"
           >
-            {ratio.label}
+            <Check className="w-4 h-4" aria-hidden="true" />
+            Apply
           </Button>
-        ))}
-        <Button
-          size="sm"
-          onClick={onCropApply}
-          className="gap-2 ml-2"
-          disabled={cropRatio === 'free'}
-          aria-label="Применить обрезку"
-        >
-          <Check className="w-4 h-4" aria-hidden="true" />
-          Применить
-        </Button>
+          <Button
+            variant="outline"
+            size="default"
+            onClick={onCropCancel}
+            aria-label="Cancel crop"
+          >
+            Cancel
+          </Button>
+        </div>
       </div>
     )
   }
 
-  // Обычный режим - все по центру
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DOWNLOAD ONLY MODE (mobile)
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (downloadOnly) {
+    return (
+      <Button
+        variant="default"
+        size="default"
+        onClick={onExport}
+        disabled={!canExport || isExporting}
+        aria-label={isExporting ? 'Exporting...' : 'Download processed image'}
+        aria-busy={isExporting}
+        className="w-full"
+      >
+        {isExporting ? (
+          <Spinner className="size-4" randomColor />
+        ) : (
+          <Download className="w-4 h-4" aria-hidden="true" />
+        )}
+        {isExporting ? 'Exporting...' : 'Download'}
+      </Button>
+    )
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MOBILE MODE (tools without download)
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (mobileMode) {
+    return (
+      <div 
+        className="flex items-center justify-between gap-2 w-full"
+        role="toolbar"
+        aria-label="Editing tools"
+      >
+        {/* Recipe chip — toggle panel */}
+        {activeRecipe ? (
+          <Button
+            variant="outline"
+            size="default"
+            onClick={onTuningOpen}
+            aria-label={`Tune ${activeRecipe.name}`}
+            aria-pressed={tuningMode}
+            className="text-xs min-w-0 flex-1"
+          >
+            <Film className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+            <span className="truncate">
+              {activeRecipe.name}
+            </span>
+            <Settings2 className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="default"
+            disabled
+            className="text-xs flex-1"
+          >
+            <Film className="w-4 h-4" aria-hidden="true" />
+            <span>Select preset</span>
+          </Button>
+        )}
+
+        {/* Transform tools */}
+        <ButtonGroup role="group" aria-label="Transform tools" className="flex-shrink-0">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onRotateCounterClockwise}
+            aria-label="Rotate counter-clockwise"
+          >
+            <RotateCcw className="w-4 h-4" aria-hidden="true" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onRotateClockwise}
+            aria-label="Rotate clockwise"
+          >
+            <RotateCw className="w-4 h-4" aria-hidden="true" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onCropClick}
+            aria-label="Crop image"
+          >
+            <Crop className="w-4 h-4" aria-hidden="true" />
+          </Button>
+        </ButtonGroup>
+      </div>
+    )
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DESKTOP MODE (full toolbar)
+  // ═══════════════════════════════════════════════════════════════════════════
   return (
     <div 
       className="flex items-center justify-center gap-3"
       role="toolbar"
-      aria-label="Инструменты редактирования"
+      aria-label="Editing tools"
     >
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onReset}
-        disabled={!canReset}
-        className="text-zinc-500 hover:text-zinc-300 disabled:opacity-30"
-        aria-label="Сбросить все изменения"
-      >
-        <Reset className="w-4 h-4 mr-1.5" aria-hidden="true" />
-        Сбросить
-      </Button>
+      {/* Recipe chip — toggle panel */}
+      {activeRecipe ? (
+        <Button
+          variant="outline"
+          size="default"
+          onClick={onTuningOpen}
+          aria-label={`Tune ${activeRecipe.name}`}
+          aria-pressed={tuningMode}
+        >
+          <Film className="w-4 h-4" aria-hidden="true" />
+          <span className="max-w-32 truncate">
+            {activeRecipe.name}
+          </span>
+          <Settings2 className="w-4 h-4" aria-hidden="true" />
+        </Button>
+      ) : (
+        <Button
+          variant="outline"
+          size="default"
+          disabled
+        >
+          <Film className="w-4 h-4" aria-hidden="true" />
+          Select preset
+        </Button>
+      )}
 
-      <ButtonGroup role="group" aria-label="Инструменты поворота и обрезки">
+      {/* Transform tools */}
+      <ButtonGroup role="group" aria-label="Transform tools">
         <Button
           variant="outline"
           size="icon"
           onClick={onRotateCounterClockwise}
-          aria-label="Повернуть против часовой стрелки (Shift+R)"
+          aria-label="Rotate counter-clockwise (Shift+R)"
         >
           <RotateCcw className="w-4 h-4" aria-hidden="true" />
         </Button>
@@ -117,7 +247,7 @@ export function Toolbar({
           variant="outline"
           size="icon"
           onClick={onRotateClockwise}
-          aria-label="Повернуть по часовой стрелке (R)"
+          aria-label="Rotate clockwise (R)"
         >
           <RotateCw className="w-4 h-4" aria-hidden="true" />
         </Button>
@@ -125,22 +255,27 @@ export function Toolbar({
           variant="outline"
           size="icon"
           onClick={onCropClick}
-          aria-label="Обрезать изображение (C)"
+          aria-label="Crop image (C)"
         >
           <Crop className="w-4 h-4" aria-hidden="true" />
         </Button>
       </ButtonGroup>
-      
+
+      {/* Download */}
       <Button
-        size="sm"
+        variant="outline"
+        size="default"
         onClick={onExport}
         disabled={!canExport || isExporting}
-        className="gap-2"
-        aria-label={isExporting ? 'Экспорт в процессе' : 'Скачать обработанное изображение (Ctrl+S)'}
+        aria-label={isExporting ? 'Exporting...' : 'Download processed image (Ctrl+S)'}
         aria-busy={isExporting}
       >
-        <Download className="w-4 h-4" aria-hidden="true" />
-        {isExporting ? 'Экспорт...' : 'Скачать'}
+        {isExporting ? (
+          <Spinner className="size-4" randomColor />
+        ) : (
+          <Download className="w-4 h-4" aria-hidden="true" />
+        )}
+        {isExporting ? 'Exporting...' : 'Download'}
       </Button>
     </div>
   )

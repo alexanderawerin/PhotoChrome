@@ -1,0 +1,21 @@
+{
+  "id": "velvia-clean",
+  "name": "Velvia Clean",
+  "author": "Community",
+  "filmSimulation": "velvia",
+  "settings": {
+    "dynamicRange": "DR100",
+    "highlight": 0,
+    "shadow": 0,
+    "color": 0,
+    "sharpness": 0,
+    "clarity": 0,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 0
+  }
+}
+

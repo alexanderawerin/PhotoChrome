@@ -5,6 +5,7 @@ import velviaData from './velvia.json'
 import classicChromeData from './classic-chrome.json'
 import classicNegData from './classic-neg.json'
 import acrosData from './acros.json'
+import neopanData from './neopan.json'
 import astiaData from './astia.json'
 import pro400hData from './pro-400h.json'
 import superiaData from './superia.json'
@@ -25,6 +26,7 @@ function loadSimulations(): Record<string, FilmSimulation> {
     superia: superiaData,
     // Черно-белые
     acros: acrosData,
+    neopan: neopanData,
     // Кинопленки
     eterna: eternaData,
     // Цифровые симуляции Fujifilm

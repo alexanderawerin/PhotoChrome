@@ -1,24 +1,60 @@
+import { useState, useEffect } from 'react'
 import { LandingScreen } from './components/LandingScreen'
 import { Editor } from './components/Editor'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { Spinner } from './components/ui/spinner'
 import { useImageProcessor } from './hooks/useImageProcessor'
 
 /**
+ * Loading messages that cycle while waiting.
+ * Ordered from quick to slow operations.
+ */
+const LOADING_MESSAGES = [
+  'Reading file...',
+  'Decoding image...',
+  'Preparing canvas...',
+  'Creating thumbnail...',
+  'Almost ready...',
+  'Just a moment...',
+  'Still working...',
+  'Large image, hang tight...',
+  'Processing pixels...',
+  'Worth the wait...',
+] as const
+
+/** Interval between message changes (ms) */
+const MESSAGE_INTERVAL = 1500
+
+/**
  * Loading overlay shown while image is being processed.
+ * Cycles through helpful messages on slow connections.
  */
 function LoadingOverlay() {
+  const [messageIndex, setMessageIndex] = useState(0)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMessageIndex(prev => (prev + 1) % LOADING_MESSAGES.length)
+    }, MESSAGE_INTERVAL)
+
+    return () => clearInterval(interval)
+  }, [])
+
   return (
     <div 
-      className="fixed inset-0 bg-background/80 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50"
       role="status"
-      aria-label="Загрузка изображения"
+      aria-label="Loading image"
+      aria-live="polite"
     >
       <div className="text-center">
-        <div 
-          className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"
-          aria-hidden="true"
-        />
-        <p className="text-muted-foreground">Загрузка изображения...</p>
+        <Spinner className="size-10 mx-auto mb-4" randomColor />
+        <p 
+          key={messageIndex}
+          className="text-zinc-400 animate-fade-in"
+        >
+          {LOADING_MESSAGES[messageIndex]}
+        </p>
       </div>
     </div>
   )
@@ -41,7 +77,7 @@ function AppContent() {
             onClick={reset}
             className="text-sm text-zinc-400 hover:text-white underline"
           >
-            Попробовать снова
+            Try again
           </button>
         </div>
       </div>

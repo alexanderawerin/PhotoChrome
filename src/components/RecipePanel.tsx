@@ -1,9 +1,16 @@
-import { useMemo } from 'react'
+import { useMemo, Fragment, useRef, useEffect } from 'react'
 import { Shuffle, Heart } from 'lucide-react'
 import { Button } from './ui/button'
 import { Recipe } from '../engine/types'
 import { RecipeCard } from './RecipeCard'
 import { getAllRecipes, getRecipesGroupedBySimulation, RECIPES } from '../presets/recipes'
+
+/** Width of a recipe card including gap (w-24 = 96px + gap-2 = 8px) */
+const CARD_WIDTH_WITH_GAP = 104
+/** Width of favorites header (w-20 = 80px + gap-2 = 8px) */
+const HEADER_WIDTH_WITH_GAP = 88
+/** Width of empty state (w-32 = 128px + gap) */
+const EMPTY_STATE_WIDTH = 136
 
 interface RecipePanelProps {
   sourceImage: ImageData
@@ -12,6 +19,8 @@ interface RecipePanelProps {
   onRecipeSelect: (recipe: Recipe) => void
   onRandomRecipe: () => void
   onFavoriteToggle: (recipeId: string) => void
+  /** Horizontal mode for mobile - shows presets in a horizontal scroll */
+  horizontal?: boolean
 }
 
 export function RecipePanel({ 
@@ -20,10 +29,13 @@ export function RecipePanel({
   favoriteIds,
   onRecipeSelect, 
   onRandomRecipe,
-  onFavoriteToggle
+  onFavoriteToggle,
+  horizontal = false
 }: RecipePanelProps) {
   const recipes = getAllRecipes()
   const groupedRecipes = getRecipesGroupedBySimulation()
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const prevFavoritesCountRef = useRef(favoriteIds.length)
   
   // Create favorites set for quick lookup
   const favoritesSet = useMemo(() => new Set(favoriteIds), [favoriteIds])
@@ -35,26 +47,157 @@ export function RecipePanel({
       .filter((recipe): recipe is Recipe => recipe !== undefined)
   }, [favoriteIds])
 
+  // Compensate scroll position when favorites are added (horizontal mode only)
+  useEffect(() => {
+    if (!horizontal || !scrollContainerRef.current) return
+    
+    const prevCount = prevFavoritesCountRef.current
+    const newCount = favoriteIds.length
+    
+    if (newCount > prevCount) {
+      // Favorite added - scroll right to compensate
+      const addedCount = newCount - prevCount
+      
+      let scrollAdjustment: number
+      if (prevCount === 0) {
+        // Going from empty state to having favorites
+        // Before: empty state (128px)
+        // After: header (80px) + gap (8px) + card (96px) = 184px
+        // Difference: 184 - 128 = 56px
+        scrollAdjustment = HEADER_WIDTH_WITH_GAP + CARD_WIDTH_WITH_GAP - EMPTY_STATE_WIDTH
+      } else {
+        // Just adding more favorites
+        scrollAdjustment = CARD_WIDTH_WITH_GAP * addedCount
+      }
+      
+      scrollContainerRef.current.scrollLeft += scrollAdjustment
+    }
+    
+    prevFavoritesCountRef.current = newCount
+  }, [favoriteIds.length, horizontal])
+
+  // Horizontal mode for mobile - with favorites and sections
+  if (horizontal) {
+    return (
+      <nav 
+        className="w-full bg-black/80 backdrop-blur-sm border-t border-zinc-800"
+        aria-label="Film presets"
+      >
+        <div 
+          ref={scrollContainerRef}
+          className="flex gap-2 p-3 overflow-x-auto scrollbar-hide"
+          role="list"
+        >
+          {/* Favorites Section - header or empty state */}
+          {favoriteRecipes.length > 0 ? (
+            <>
+              {/* Favorites header */}
+              <div className="flex-shrink-0 flex items-center" role="listitem">
+                <div className="w-20 h-full flex flex-col items-center justify-center px-2 py-3 rounded-xl bg-zinc-900/50 border border-zinc-800">
+                  <Heart className="w-4 h-4 text-white fill-white mb-1" aria-hidden="true" />
+                  <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider">
+                    Favorites
+                  </span>
+                  <span className="text-[10px] text-zinc-600 mt-0.5">
+                    {favoriteRecipes.length}
+                  </span>
+                </div>
+              </div>
+              {/* Favorite recipes */}
+              {favoriteRecipes.map((recipe) => (
+                <div 
+                  key={`fav-${recipe.id}`} 
+                  role="listitem"
+                  className="flex-shrink-0 w-24"
+                >
+                  <RecipeCard
+                    recipe={recipe}
+                    sourceImage={sourceImage}
+                    isActive={activeRecipeId === recipe.id}
+                    isFavorite={true}
+                    onFavoriteToggle={onFavoriteToggle}
+                    onClick={() => onRecipeSelect(recipe)}
+                    largeTouchTargets
+                  />
+                </div>
+              ))}
+            </>
+          ) : (
+            /* Empty state - square */
+            <div className="flex-shrink-0 w-32" role="listitem">
+              <div className="w-32 h-32 rounded-lg bg-zinc-900/30 border border-dashed border-zinc-700 flex flex-col items-center justify-center p-2">
+                <Heart className="w-5 h-5 text-zinc-600 mb-1.5" />
+                <p className="text-[9px] text-zinc-500 text-center leading-tight">
+                  Tap heart to<br />add favorite
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {/* Section groups */}
+          {groupedRecipes.map((group) => (
+            <Fragment key={group.simulationId}>
+              {/* Section header card */}
+              <div 
+                className="flex-shrink-0 flex items-center"
+                role="listitem"
+              >
+                <div className="w-20 h-full flex flex-col items-center justify-center px-2 py-3 rounded-xl bg-zinc-900/50 border border-zinc-800">
+                  <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider text-center leading-tight">
+                    {group.simulationName}
+                  </span>
+                  <span className="text-[10px] text-zinc-600 mt-1">
+                    {group.recipes.length}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Section recipes */}
+              {group.recipes.map((recipe) => (
+                <div 
+                  key={recipe.id} 
+                  role="listitem"
+                  className="flex-shrink-0 w-24"
+                >
+                  <RecipeCard
+                    recipe={recipe}
+                    sourceImage={sourceImage}
+                    isActive={activeRecipeId === recipe.id}
+                    isFavorite={favoritesSet.has(recipe.id)}
+                    onFavoriteToggle={onFavoriteToggle}
+                    onClick={() => onRecipeSelect(recipe)}
+                    largeTouchTargets
+                  />
+                </div>
+              ))}
+            </Fragment>
+          ))}
+        </div>
+      </nav>
+    )
+  }
+
+  // Vertical mode for desktop
   return (
     <nav 
       className="h-full flex flex-col"
-      aria-label="Панель рецептов"
+      aria-label="Film presets panel"
     >
       {/* Header */}
       <div className="flex-shrink-0 px-4 py-4 flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold text-white" id="recipes-heading">
-            Рецепты
+            Films
           </h2>
           <p className="text-xs text-zinc-500" aria-live="polite">
-            {recipes.length} пресетов
+            {recipes.length} presets
           </p>
         </div>
         <Button
           variant="ghost"
           size="icon"
           onClick={onRandomRecipe}
-          aria-label="Выбрать случайный рецепт"
+          aria-label="Random preset"
           className="text-zinc-400 hover:text-white"
         >
           <Shuffle className="w-4 h-4" aria-hidden="true" />
@@ -70,20 +213,20 @@ export function RecipePanel({
       >
         <div className="space-y-4">
           {/* Favorites section - always first */}
-          <section aria-label="Избранные рецепты">
+          <section aria-label="Favorite presets">
             {/* Section header */}
             <div className="flex items-center gap-2 mb-2 px-1">
-              <Heart className="w-3 h-3 text-red-500 fill-red-500" aria-hidden="true" />
+              <Heart className="w-3 h-3 text-white fill-white" aria-hidden="true" />
               <h3 
                 className="text-xs font-medium text-zinc-400 uppercase tracking-wider"
                 id="group-favorites"
               >
-                Избранное
+                Favorites
               </h3>
               <div className="flex-1 h-px bg-zinc-800" aria-hidden="true" />
               <span 
                 className="text-[10px] text-zinc-600"
-                aria-label={`${favoriteRecipes.length} рецептов`}
+                aria-label={`${favoriteRecipes.length} presets`}
               >
                 {favoriteRecipes.length}
               </span>
@@ -112,8 +255,8 @@ export function RecipePanel({
               <div className="text-center py-4 px-2">
                 <Heart className="w-6 h-6 text-zinc-700 mx-auto mb-2" />
                 <p className="text-xs text-zinc-600">
-                  Нажмите на сердечко на карточке,<br />
-                  чтобы добавить в избранное
+                  Click the heart on a card<br />
+                  to add to favorites
                 </p>
               </div>
             )}
@@ -123,7 +266,7 @@ export function RecipePanel({
           {groupedRecipes.map((group) => (
             <section 
               key={group.simulationId}
-              aria-label={`Рецепты ${group.simulationName}`}
+              aria-label={`${group.simulationName} presets`}
             >
               {/* Section header */}
               <div className="flex items-center gap-2 mb-2 px-1">
@@ -136,7 +279,7 @@ export function RecipePanel({
                 <div className="flex-1 h-px bg-zinc-800" aria-hidden="true" />
                 <span 
                   className="text-[10px] text-zinc-600"
-                  aria-label={`${group.recipes.length} рецептов`}
+                  aria-label={`${group.recipes.length} presets`}
                 >
                   {group.recipes.length}
                 </span>

@@ -1,6 +1,6 @@
 {
   "id": "pro400h-overexposed",
-  "name": "Pro 400H Пересвет",
+  "name": "Pro 400H Overexposed",
   "filmSimulation": "pro-400h",
   "settings": {
     "highlight": -2,

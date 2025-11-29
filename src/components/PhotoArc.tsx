@@ -1,62 +1,90 @@
+import { useState, useEffect, useMemo } from 'react'
 import { PHOTO_ARC } from '../constants'
 
-/** Gradient backgrounds for decorative cards representing different film looks */
-const CARD_GRADIENTS = [
-  'linear-gradient(135deg, #2d1f3d 0%, #614385 50%, #516395 100%)',
-  'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-  'linear-gradient(135deg, #3d2914 0%, #6b4423 50%, #8b6914 100%)',
-  'linear-gradient(135deg, #134e5e 0%, #71b280 50%, #c9d99e 100%)',
-  'linear-gradient(135deg, #232526 0%, #414345 50%, #606060 100%)',
-  'linear-gradient(135deg, #4a1c40 0%, #8e3a59 50%, #c96480 100%)',
-  'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)',
-  'linear-gradient(135deg, #3e2723 0%, #5d4037 50%, #8d6e63 100%)',
-  'linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #4a90a4 100%)',
-  'linear-gradient(135deg, #2c3e50 0%, #3498db 50%, #87ceeb 100%)',
-  'linear-gradient(135deg, #355c7d 0%, #6c5b7b 50%, #c06c84 100%)',
-] as const
-
-/** Rotation factor for cards based on their angle in the arc */
-const ROTATION_FACTOR = 0.35
-
-/** Y-axis scaling factor for the arc (makes it elliptical) */
-const Y_SCALE_FACTOR = 0.6
-
-/** Vertical offset for the entire arc */
-const Y_OFFSET = -60
+/** Total number of processed card images available */
+const TOTAL_CARD_IMAGES = 34
 
 /**
- * Calculates position for each card in the arc.
+ * Shuffles an array using Fisher-Yates algorithm.
+ * Returns a new array without modifying the original.
  */
-function calculateCardPositions(cardCount: number, radius: number, spanDegrees: number) {
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
+}
+
+/**
+ * Generates an array of random card image paths.
+ * Ensures no duplicates if count <= total available images.
+ */
+function getRandomCardImages(count: number): string[] {
+  const allIndexes = Array.from({ length: TOTAL_CARD_IMAGES }, (_, i) => i + 1)
+  const shuffled = shuffleArray(allIndexes)
+  
+  return shuffled.slice(0, count).map(
+    index => `/cards/card-${String(index).padStart(2, '0')}.jpg`
+  )
+}
+
+/** Rotation factor for cards based on their angle */
+const ROTATION_FACTOR = 1
+
+/** Breakpoint for desktop (md) */
+const DESKTOP_BREAKPOINT = 768
+
+/**
+ * Calculates positions for cards arranged in a circle.
+ */
+function calculateCirclePositions(cardCount: number, radius: number) {
   return Array.from({ length: cardCount }, (_, i) => {
-    const angle = -spanDegrees / 2 + (spanDegrees / (cardCount - 1)) * i
+    // Distribute cards evenly around the circle (360 degrees)
+    const angle = (360 / cardCount) * i - 90 // Start from top (-90 degrees)
     const angleRad = (angle * Math.PI) / 180
     
-    const x = Math.sin(angleRad) * radius
-    const y = -Math.cos(angleRad) * radius * Y_SCALE_FACTOR
+    const x = Math.cos(angleRad) * radius
+    const y = Math.sin(angleRad) * radius
     
-    // Cards closer to center have higher z-index
-    const distFromCenter = Math.abs(i - (cardCount - 1) / 2)
-    const z = cardCount - Math.floor(distFromCenter)
+    // Rotate card to face outward from center
+    const rotate = angle + 90
     
     return { 
-      rotate: angle * ROTATION_FACTOR, 
+      rotate: rotate * ROTATION_FACTOR, 
       translateX: x, 
-      translateY: y + Y_OFFSET, 
-      z 
+      translateY: y,
+      angle
     }
   })
 }
 
 /**
- * Decorative arc of gradient cards displayed on the landing screen.
+ * Decorative circle of gradient cards displayed on the landing screen.
  * Purely visual element, hidden from screen readers.
  */
 export function PhotoArc() {
-  const positions = calculateCardPositions(
-    PHOTO_ARC.CARD_COUNT,
-    PHOTO_ARC.RADIUS,
-    PHOTO_ARC.SPAN_DEGREES
+  const [isDesktop, setIsDesktop] = useState(
+    typeof window !== 'undefined' ? window.innerWidth >= DESKTOP_BREAKPOINT : true
+  )
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= DESKTOP_BREAKPOINT)
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const settings = isDesktop ? PHOTO_ARC.DESKTOP : PHOTO_ARC.MOBILE
+  const positions = calculateCirclePositions(settings.CARD_COUNT, settings.RADIUS)
+  
+  // Generate random card images once on mount (stable across re-renders)
+  const cardImages = useMemo(
+    () => getRandomCardImages(Math.max(PHOTO_ARC.DESKTOP.CARD_COUNT, PHOTO_ARC.MOBILE.CARD_COUNT)),
+    []
   )
 
   return (
@@ -66,55 +94,42 @@ export function PhotoArc() {
       aria-hidden="true"
       role="presentation"
     >
-      {/* Decorative cards */}
+      {/* Decorative cards in a circle */}
       <div className="absolute inset-0 flex items-center justify-center">
         {positions.map((pos, index) => (
           <div
             key={index}
-            className="absolute"
+            className="absolute transition-transform duration-300"
             style={{
               transform: `translateX(${pos.translateX}px) translateY(${pos.translateY}px) rotate(${pos.rotate}deg)`,
-              zIndex: pos.z,
             }}
           >
             <div 
-              className="rounded-2xl overflow-hidden shadow-2xl shadow-black/70"
+              className="relative rounded-2xl overflow-hidden shadow-2xl shadow-black/70 transition-all duration-300 bg-zinc-900"
               style={{ 
-                width: PHOTO_ARC.CARD_SIZE, 
-                height: PHOTO_ARC.CARD_SIZE, 
-                background: CARD_GRADIENTS[index % CARD_GRADIENTS.length] 
+                width: settings.CARD_SIZE, 
+                height: settings.CARD_SIZE, 
               }}
             >
-              {/* Light reflection effect */}
+              {/* Card image */}
+              <img
+                src={cardImages[index]}
+                alt=""
+                className="w-full h-full object-cover"
+                loading="eager"
+                decoding="async"
+              />
+              {/* Light reflection effect overlay */}
               <div 
-                className="w-full h-full"
+                className="absolute inset-0"
                 style={{ 
-                  background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.12) 0%, transparent 50%)' 
+                  background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.08) 0%, transparent 50%)' 
                 }}
               />
             </div>
           </div>
         ))}
       </div>
-      
-      {/* Left fade gradient */}
-      <div 
-        className="absolute left-0 top-0 bottom-0"
-        style={{
-          width: '25%',
-          background: 'linear-gradient(to right, rgb(9, 9, 11) 0%, rgb(9, 9, 11) 40%, rgba(9, 9, 11, 0.6) 70%, transparent 100%)',
-          zIndex: 20,
-        }}
-      />
-      {/* Right fade gradient */}
-      <div 
-        className="absolute right-0 top-0 bottom-0"
-        style={{
-          width: '25%',
-          background: 'linear-gradient(to left, rgb(9, 9, 11) 0%, rgb(9, 9, 11) 40%, rgba(9, 9, 11, 0.6) 70%, transparent 100%)',
-          zIndex: 20,
-        }}
-      />
     </div>
   )
 }

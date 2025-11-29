@@ -1,0 +1,18 @@
+{
+  "id": "neopan-contrast",
+  "name": "Neopan Contrast",
+  "author": "Community",
+  "filmSimulation": "neopan",
+  "settings": {
+    "dynamicRange": "DR100",
+    "highlight": -2,
+    "shadow": -1,
+    "sharpness": 2,
+    "clarity": 2,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 0
+  }
+}
+

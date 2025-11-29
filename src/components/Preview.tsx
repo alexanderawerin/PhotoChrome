@@ -42,10 +42,13 @@ export function Preview({
 
   // Вычисляем размер canvas на экране для позиционирования оверлея
   useEffect(() => {
-    const updateSize = () => {
-      if (!canvasRef.current || !wrapperRef.current || !imageData) return
+    if (!wrapperRef.current || !imageData) return
 
-      const wrapper = wrapperRef.current
+    const wrapper = wrapperRef.current
+
+    const updateSize = () => {
+      if (!canvasRef.current) return
+
       const wrapperRect = wrapper.getBoundingClientRect()
 
       // Вычисляем размер, чтобы изображение вписывалось в контейнер
@@ -70,13 +73,22 @@ export function Preview({
 
     updateSize()
 
-    // Обновляем при ресайзе
+    // ResizeObserver для отслеживания изменений размера контейнера
+    // (срабатывает при сворачивании/разворачивании панели)
+    const resizeObserver = new ResizeObserver(() => {
+      // Небольшая задержка чтобы дождаться окончания CSS transition
+      requestAnimationFrame(updateSize)
+    })
+    resizeObserver.observe(wrapper)
+
+    // Также слушаем window resize на случай изменения размера окна
     window.addEventListener('resize', updateSize)
     
-    // Также обновляем через небольшую задержку (для случаев когда layout ещё не стабилизировался)
+    // Обновляем через небольшую задержку (для случаев когда layout ещё не стабилизировался)
     const timeoutId = setTimeout(updateSize, RESIZE_DEBOUNCE_DELAY)
 
     return () => {
+      resizeObserver.disconnect()
       window.removeEventListener('resize', updateSize)
       clearTimeout(timeoutId)
     }

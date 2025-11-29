@@ -1,0 +1,21 @@
+{
+  "id": "eterna-night",
+  "name": "Eterna Night",
+  "author": "Community",
+  "filmSimulation": "eterna",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": 1,
+    "shadow": 3,
+    "color": -1,
+    "sharpness": 0,
+    "clarity": 0,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "weak",
+    "colorChromeFXBlue": "strong",
+    "wbShiftRed": -2,
+    "wbShiftBlue": 3
+  }
+}
+

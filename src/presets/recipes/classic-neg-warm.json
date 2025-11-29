@@ -1,0 +1,21 @@
+{
+  "id": "classic-neg-warm",
+  "name": "Classic Neg Warm",
+  "author": "Community",
+  "filmSimulation": "classic-neg",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": -1,
+    "shadow": 1,
+    "color": 0,
+    "sharpness": 0,
+    "clarity": 0,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 5,
+    "wbShiftBlue": -3
+  }
+}
+

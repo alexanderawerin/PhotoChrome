@@ -1,0 +1,21 @@
+{
+  "id": "provia-vivid",
+  "name": "Provia Vivid",
+  "author": "Community",
+  "filmSimulation": "provia",
+  "settings": {
+    "dynamicRange": "DR100",
+    "highlight": -1,
+    "shadow": 1,
+    "color": 2,
+    "sharpness": 2,
+    "clarity": 1,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "weak",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 1,
+    "wbShiftBlue": -1
+  }
+}
+

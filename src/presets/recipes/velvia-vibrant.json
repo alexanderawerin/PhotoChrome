@@ -1,0 +1,21 @@
+{
+  "id": "velvia-vibrant",
+  "name": "Velvia Vibrant",
+  "author": "Community",
+  "filmSimulation": "velvia",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": -2,
+    "shadow": 2,
+    "color": 3,
+    "sharpness": 1,
+    "clarity": 2,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "weak",
+    "wbShiftRed": 2,
+    "wbShiftBlue": -2
+  }
+}
+

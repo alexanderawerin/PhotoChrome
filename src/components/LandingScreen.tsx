@@ -62,15 +62,15 @@ export function LandingScreen({ onImageSelect }: LandingScreenProps) {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       role="main"
-      aria-label="Стартовый экран Photochrome"
+      aria-label="Photochrome start screen"
     >
       {/* Background */}
       <div className="absolute inset-0 bg-zinc-950" aria-hidden="true" />
 
-      {/* Декоративная арка из фото */}
+      {/* Decorative circle of cards */}
       <PhotoArc />
 
-      {/* Основной контент */}
+      {/* Main content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center z-[100]">
         <header className="text-center space-y-3">
           <div className="flex items-center justify-center mb-2" aria-hidden="true">
@@ -80,7 +80,7 @@ export function LandingScreen({ onImageSelect }: LandingScreenProps) {
             Photochrome
           </h1>
           <p className="text-sm text-zinc-500 max-w-xs mx-auto leading-relaxed">
-            Плёночные симуляции Fujifilm<br/>для ваших фотографий
+            Fujifilm film simulations<br/>for your photos
           </p>
         </header>
 
@@ -92,7 +92,7 @@ export function LandingScreen({ onImageSelect }: LandingScreenProps) {
             onChange={handleFileSelect}
             className="sr-only"
             id="image-upload"
-            aria-label="Выбрать изображение для обработки"
+            aria-label="Select image for processing"
           />
           
           <Button
@@ -102,17 +102,17 @@ export function LandingScreen({ onImageSelect }: LandingScreenProps) {
             aria-controls="image-upload"
           >
             <Upload className="w-4 h-4" aria-hidden="true" />
-            Загрузить фото
+            Upload Photo
           </Button>
           
           <p 
             className={`
-              text-xs mt-4 text-center transition-colors duration-300
+              text-xs mt-4 text-center transition-colors duration-300 hidden md:block
               ${isDragging ? 'text-white' : 'text-zinc-600'}
             `}
             aria-live="polite"
           >
-            {isDragging ? 'Отпустите для загрузки' : 'или перетащите фото сюда'}
+            {isDragging ? 'Drop to upload' : 'or drag and drop here'}
           </p>
         </div>
       </div>

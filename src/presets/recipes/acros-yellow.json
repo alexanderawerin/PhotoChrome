@@ -1,0 +1,18 @@
+{
+  "id": "acros-yellow",
+  "name": "Acros + Yellow",
+  "author": "Community",
+  "filmSimulation": "acros",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": 0,
+    "shadow": 1,
+    "sharpness": 1,
+    "clarity": 0,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "wbShiftRed": 3,
+    "wbShiftBlue": -4
+  }
+}
+

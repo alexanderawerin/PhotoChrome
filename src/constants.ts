@@ -4,6 +4,16 @@
  */
 
 // ============================================================================
+// App Info
+// ============================================================================
+
+/** Application version */
+export const APP_VERSION = '1.0'
+
+/** Application URL for watermark */
+export const APP_URL = 'photochrome.netdesigner.ru'
+
+// ============================================================================
 // Image Processing
 // ============================================================================
 
@@ -36,6 +46,9 @@ export const PREVIEW_CACHE_MAX_SIZE = 100
 /** Maximum number of small images to cache */
 export const SMALL_IMAGE_CACHE_MAX_SIZE = 100
 
+/** Number of sample points for image hashing (for cache key generation) */
+export const IMAGE_HASH_SAMPLE_COUNT = 16
+
 // ============================================================================
 // Image Effects
 // ============================================================================
@@ -65,16 +78,20 @@ export const WB_SHIFT_SCALE_FACTOR = 2.5
 /** Recipe panel width (px) */
 export const RECIPE_PANEL_WIDTH = 288 // w-72 = 18rem = 288px
 
-/** Arc animation parameters */
+/** Circle animation parameters */
 export const PHOTO_ARC = {
-  /** Number of cards in the arc */
-  CARD_COUNT: 11,
-  /** Radius of the arc (px) */
-  RADIUS: 300,
-  /** Total span of the arc (degrees) */
-  SPAN_DEGREES: 180,
-  /** Size of each card (px) */
-  CARD_SIZE: 110,
+  /** Mobile settings */
+  MOBILE: {
+    CARD_COUNT: 12,
+    RADIUS: 200,
+    CARD_SIZE: 80,
+  },
+  /** Desktop settings */
+  DESKTOP: {
+    CARD_COUNT: 16,
+    RADIUS: 320,
+    CARD_SIZE: 100,
+  },
 } as const
 
 // ============================================================================

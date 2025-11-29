@@ -1,0 +1,18 @@
+{
+  "id": "neopan-1600",
+  "name": "Neopan 1600",
+  "author": "Community",
+  "filmSimulation": "neopan",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -1,
+    "shadow": 2,
+    "sharpness": 2,
+    "clarity": 1,
+    "grainEffect": "strong",
+    "grainSize": "large",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 0
+  }
+}
+

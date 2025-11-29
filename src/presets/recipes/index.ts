@@ -1,13 +1,68 @@
 import { Recipe } from '../../engine/types'
 import { parseRecipe } from '../../engine/schemas'
 
-// Classic Negative
-import mapleLetterData from './maple-letter.json'
-import classicNegMutedData from './classic-neg-muted.json'
-import classicNegSoftData from './classic-neg-soft.json'
-import classicNegStreetData from './classic-neg-street.json'
+// Provia
+// import proviaCleanData from './provia-clean.json'
+import proviaPortraitData from './provia-portrait.json'
+import portraVibesData from './portra-vibes.json'
+import proviaVividData from './provia-vivid.json'
+
+// Velvia
+// import velviaCleanData from './velvia-clean.json'
+import vividSunsetData from './vivid-sunset.json'
+import warmSummerData from './warm-summer.json'
+import velviaSunsetData from './velvia-sunset.json'
+import velviaNatureData from './velvia-nature.json'
+import goldenHourData from './golden-hour.json'
+import velviaVibrantData from './velvia-vibrant.json'
+import velviaLandscapeData from './velvia-landscape.json'
+
+// Astia
+// import astiaCleanData from './astia-clean.json'
+import astiaPortraitData from './astia-portrait.json'
+import astiaSoftDaylightData from './astia-soft-daylight.json'
+import astiaNaturalData from './astia-natural.json'
+import astiaWarmData from './astia-warm.json'
+import astiaStudioData from './astia-studio.json'
+
+// Pro 400H
+// import pro400hCleanData from './pro400h-clean.json'
+import pro400hPortraitData from './pro400h-portrait.json'
+import pro400hOverexposedData from './pro400h-overexposed.json'
+import pro400hWeddingData from './pro400h-wedding.json'
+
+// Superia
+// import superiaCleanData from './superia-clean.json'
+import superia400Data from './superia-400.json'
+import superiaSummerData from './superia-summer.json'
+import superiaNostalgicData from './superia-nostalgic.json'
+import superiaVintageData from './superia-vintage.json'
+import superiaDaylightData from './superia-daylight.json'
+
+// Acros (B&W)
+// import acrosCleanData from './acros-clean.json'
+import acrosStandardData from './acros-standard.json'
+import acrosHighContrastData from './acros-high-contrast.json'
+import acrosSoftData from './acros-soft.json'
+import acrosYellowData from './acros-yellow.json'
+import acrosRedData from './acros-red.json'
+
+// Neopan (B&W)
+// import neopanCleanData from './neopan-clean.json'
+import neopan400Data from './neopan-400.json'
+import neopan1600Data from './neopan-1600.json'
+import neopanContrastData from './neopan-contrast.json'
+
+// Eterna (Cinema)
+// import eternaCleanData from './eterna-clean.json'
+import eternaCinemaData from './eterna-cinema.json'
+import eternaBleachBypassData from './eterna-bleach-bypass.json'
+import eternaTealOrangeData from './eterna-teal-orange.json'
+import eternaMutedData from './eterna-muted.json'
+import eternaNightData from './eterna-night.json'
 
 // Classic Chrome
+// import classicChromeCleanData from './classic-chrome-clean.json'
 import moodyChromeData from './moody-chrome.json'
 import cinematicTealData from './cinematic-teal.json'
 import classicChromeWarmData from './classic-chrome-warm.json'
@@ -15,56 +70,86 @@ import classicChromeFadedData from './classic-chrome-faded.json'
 import classicChromeCoolData from './classic-chrome-cool.json'
 import streetClassicData from './street-classic.json'
 import rainyDayData from './rainy-day.json'
+import classicChromeStreetData from './classic-chrome-street.json'
+import classicChromeVintageData from './classic-chrome-vintage.json'
 
-// Velvia
-import vividSunsetData from './vivid-sunset.json'
-import warmSummerData from './warm-summer.json'
-import velviaSunsetData from './velvia-sunset.json'
-import velviaNatureData from './velvia-nature.json'
-import goldenHourData from './golden-hour.json'
-
-// Provia
-import portraVibesData from './portra-vibes.json'
-import proviaPortraitData from './provia-portrait.json'
-import proviaCleanData from './provia-clean.json'
+// Classic Negative
+// import classicNegCleanData from './classic-neg-clean.json'
+import mapleLetterData from './maple-letter.json'
+import classicNegMutedData from './classic-neg-muted.json'
+import classicNegSoftData from './classic-neg-soft.json'
+import classicNegStreetData from './classic-neg-street.json'
 import fadedMemoriesData from './faded-memories.json'
-
-// Acros (B&W)
-import acrosStandardData from './acros-standard.json'
-import acrosHighContrastData from './acros-high-contrast.json'
-import acrosSoftData from './acros-soft.json'
-
-// Astia
-import astiaPortraitData from './astia-portrait.json'
-import astiaSoftDaylightData from './astia-soft-daylight.json'
-
-// Pro 400H
-import pro400hPortraitData from './pro400h-portrait.json'
-import pro400hOverexposedData from './pro400h-overexposed.json'
-import pro400hWeddingData from './pro400h-wedding.json'
-
-// Superia
-import superia400Data from './superia-400.json'
-import superiaSummerData from './superia-summer.json'
-import superiaNostalgicData from './superia-nostalgic.json'
-
-// Eterna (Cinema)
-import eternaCinemaData from './eterna-cinema.json'
-import eternaBleachBypassData from './eterna-bleach-bypass.json'
-import eternaTealOrangeData from './eterna-teal-orange.json'
+import classicNegWarmData from './classic-neg-warm.json'
+import classicNegVibrantData from './classic-neg-vibrant.json'
 
 /**
  * Raw recipe data organized by ID.
  * Will be validated and parsed at module load time.
  */
 const RAW_RECIPES: Record<string, unknown> = {
-  // Classic Negative based
-  'maple-letter': mapleLetterData,
-  'classic-neg-muted': classicNegMutedData,
-  'classic-neg-soft': classicNegSoftData,
-  'classic-neg-street': classicNegStreetData,
+  // Provia
+  // 'provia-clean': proviaCleanData,
+  'provia-portrait': proviaPortraitData,
+  'portra-vibes': portraVibesData,
+  'provia-vivid': proviaVividData,
+
+  // Velvia
+  // 'velvia-clean': velviaCleanData,
+  'vivid-sunset': vividSunsetData,
+  'warm-summer': warmSummerData,
+  'velvia-sunset': velviaSunsetData,
+  'velvia-nature': velviaNatureData,
+  'golden-hour': goldenHourData,
+  'velvia-vibrant': velviaVibrantData,
+  'velvia-landscape': velviaLandscapeData,
   
-  // Classic Chrome based
+  // Astia
+  // 'astia-clean': astiaCleanData,
+  'astia-portrait': astiaPortraitData,
+  'astia-soft-daylight': astiaSoftDaylightData,
+  'astia-natural': astiaNaturalData,
+  'astia-warm': astiaWarmData,
+  'astia-studio': astiaStudioData,
+
+  // Pro 400H
+  // 'pro400h-clean': pro400hCleanData,
+  'pro400h-portrait': pro400hPortraitData,
+  'pro400h-overexposed': pro400hOverexposedData,
+  'pro400h-wedding': pro400hWeddingData,
+
+  // Superia
+  // 'superia-clean': superiaCleanData,
+  'superia-400': superia400Data,
+  'superia-summer': superiaSummerData,
+  'superia-nostalgic': superiaNostalgicData,
+  'superia-vintage': superiaVintageData,
+  'superia-daylight': superiaDaylightData,
+
+  // Acros (B&W)
+  // 'acros-clean': acrosCleanData,
+  'acros-standard': acrosStandardData,
+  'acros-high-contrast': acrosHighContrastData,
+  'acros-soft': acrosSoftData,
+  'acros-yellow': acrosYellowData,
+  'acros-red': acrosRedData,
+
+  // Neopan (B&W)
+  // 'neopan-clean': neopanCleanData,
+  'neopan-400': neopan400Data,
+  'neopan-1600': neopan1600Data,
+  'neopan-contrast': neopanContrastData,
+
+  // Eterna (Cinema)
+  // 'eterna-clean': eternaCleanData,
+  'eterna-cinema': eternaCinemaData,
+  'eterna-bleach-bypass': eternaBleachBypassData,
+  'eterna-teal-orange': eternaTealOrangeData,
+  'eterna-muted': eternaMutedData,
+  'eterna-night': eternaNightData,
+
+  // Classic Chrome
+  // 'classic-chrome-clean': classicChromeCleanData,
   'moody-chrome': moodyChromeData,
   'cinematic-teal': cinematicTealData,
   'classic-chrome-warm': classicChromeWarmData,
@@ -72,43 +157,18 @@ const RAW_RECIPES: Record<string, unknown> = {
   'classic-chrome-cool': classicChromeCoolData,
   'street-classic': streetClassicData,
   'rainy-day': rainyDayData,
-  
-  // Velvia based
-  'vivid-sunset': vividSunsetData,
-  'warm-summer': warmSummerData,
-  'velvia-sunset': velviaSunsetData,
-  'velvia-nature': velviaNatureData,
-  'golden-hour': goldenHourData,
-  
-  // Provia based
-  'portra-vibes': portraVibesData,
-  'provia-portrait': proviaPortraitData,
-  'provia-clean': proviaCleanData,
+  'classic-chrome-street': classicChromeStreetData,
+  'classic-chrome-vintage': classicChromeVintageData,
+
+  // Classic Negative
+  // 'classic-neg-clean': classicNegCleanData,
+  'maple-letter': mapleLetterData,
+  'classic-neg-muted': classicNegMutedData,
+  'classic-neg-soft': classicNegSoftData,
+  'classic-neg-street': classicNegStreetData,
   'faded-memories': fadedMemoriesData,
-
-  // Acros (B&W) based
-  'acros-standard': acrosStandardData,
-  'acros-high-contrast': acrosHighContrastData,
-  'acros-soft': acrosSoftData,
-
-  // Astia based
-  'astia-portrait': astiaPortraitData,
-  'astia-soft-daylight': astiaSoftDaylightData,
-
-  // Pro 400H based
-  'pro400h-portrait': pro400hPortraitData,
-  'pro400h-overexposed': pro400hOverexposedData,
-  'pro400h-wedding': pro400hWeddingData,
-
-  // Superia based
-  'superia-400': superia400Data,
-  'superia-summer': superiaSummerData,
-  'superia-nostalgic': superiaNostalgicData,
-
-  // Eterna (Cinema) based
-  'eterna-cinema': eternaCinemaData,
-  'eterna-bleach-bypass': eternaBleachBypassData,
-  'eterna-teal-orange': eternaTealOrangeData,
+  'classic-neg-warm': classicNegWarmData,
+  'classic-neg-vibrant': classicNegVibrantData,
 }
 
 /**
@@ -144,6 +204,7 @@ export const SIMULATION_NAMES: Record<string, string> = {
   'superia': 'Superia',
   // Черно-белые
   'acros': 'Acros',
+  'neopan': 'Neopan',
   // Кинопленки
   'eterna': 'Eterna',
   // Цифровые симуляции
@@ -162,6 +223,7 @@ export const SIMULATION_ORDER = [
   'superia',
   // Черно-белые
   'acros',
+  'neopan',
   // Кинопленки
   'eterna',
   // Цифровые симуляции Fujifilm

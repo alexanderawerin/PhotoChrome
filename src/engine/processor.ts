@@ -206,6 +206,47 @@ export class ImageProcessor {
   }
 
   /**
+   * Добавляет водяной знак на изображение
+   */
+  static addWatermark(
+    imageData: ImageData,
+    leftText: string,
+    rightText: string
+  ): ImageData {
+    const canvas = document.createElement('canvas')
+    canvas.width = imageData.width
+    canvas.height = imageData.height
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return imageData
+
+    // Рисуем изображение
+    ctx.putImageData(imageData, 0, 0)
+
+    // Настройки текста - 1.5% от меньшей стороны изображения
+    const shortSide = Math.min(imageData.width, imageData.height)
+    const fontSize = Math.max(12, Math.round(shortSide * 0.015))
+    const padding = Math.round(shortSide * 0.015)
+    const bottomOffset = padding
+
+    ctx.font = `500 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`
+    ctx.textBaseline = 'bottom'
+
+    // Белый текст с прозрачностью
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
+
+    // Левый текст (made by Photochrome)
+    ctx.textAlign = 'left'
+    ctx.fillText(leftText, padding, imageData.height - bottomOffset)
+
+    // Правый текст (URL)
+    ctx.textAlign = 'right'
+    ctx.fillText(rightText, imageData.width - padding, imageData.height - bottomOffset)
+
+    return ctx.getImageData(0, 0, canvas.width, canvas.height)
+  }
+
+  /**
    * Конвертирует ImageData в Blob для скачивания
    */
   static imageDataToBlob(

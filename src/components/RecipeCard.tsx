@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, memo } from 'react'
 import { Heart } from 'lucide-react'
+import { Spinner } from './ui/spinner'
 import { Card } from './ui/card'
 import { Recipe } from '../engine/types'
 import { ImageProcessor } from '../engine/processor'
@@ -8,7 +9,8 @@ import {
   RECIPE_CARD_PREVIEW_SIZE, 
   PREVIEW_GENERATION_DELAY,
   PREVIEW_CACHE_MAX_SIZE,
-  SMALL_IMAGE_CACHE_MAX_SIZE
+  SMALL_IMAGE_CACHE_MAX_SIZE,
+  IMAGE_HASH_SAMPLE_COUNT
 } from '../constants'
 
 interface RecipeCardProps {
@@ -18,11 +20,14 @@ interface RecipeCardProps {
   isFavorite?: boolean
   onFavoriteToggle?: (recipeId: string) => void
   onClick: () => void
+  hideFavoriteButton?: boolean
+  /** Use larger touch targets for mobile */
+  largeTouchTargets?: boolean
 }
 
 /**
  * Кэш для уменьшенных изображений.
- * Ключ: строка вида "width_height_samplePixels"
+ * Ключ: строка вида "width_height_hash"
  * Значение: уменьшенное ImageData
  */
 const smallImageCache = new Map<string, ImageData>()
@@ -35,23 +40,75 @@ const smallImageCache = new Map<string, ImageData>()
 const processedPreviewCache = new Map<string, ImageData>()
 
 /**
+ * Переиспользуемые canvas элементы для уменьшения аллокаций памяти.
+ * Создаются лениво при первом использовании.
+ */
+let reusableSourceCanvas: HTMLCanvasElement | null = null
+let reusableSourceCtx: CanvasRenderingContext2D | null = null
+let reusableTargetCanvas: HTMLCanvasElement | null = null
+let reusableTargetCtx: CanvasRenderingContext2D | null = null
+
+/**
+ * Очищает все кэши превью.
+ * Вызывайте при смене изображения или для освобождения памяти.
+ */
+export function clearPreviewCaches(): void {
+  smallImageCache.clear()
+  processedPreviewCache.clear()
+}
+
+/**
+ * Возвращает размер кэшей для отладки.
+ */
+export function getPreviewCacheStats(): { smallImages: number; processedPreviews: number } {
+  return {
+    smallImages: smallImageCache.size,
+    processedPreviews: processedPreviewCache.size
+  }
+}
+
+/**
  * Создаёт уникальный ключ для кэширования на основе imageData.
- * Использует размеры и сэмпл пикселей для быстрого хэша.
+ * Использует размеры и множественные сэмплы пикселей для надёжного хэша.
+ * 
+ * Алгоритм: берём IMAGE_HASH_SAMPLE_COUNT точек равномерно распределённых
+ * по данным изображения и комбинируем их в строку.
  */
 function getImageKey(imageData: ImageData): string {
   const data = imageData.data
-  const sample = [
-    data[0],
-    data[Math.min(100, data.length - 1)],
-    data[Math.max(0, data.length - 100)],
-    data[data.length - 1]
-  ].join(',')
-  return `${imageData.width}x${imageData.height}_${sample}`
+  const len = data.length
+  
+  // Равномерно распределённые точки для сэмплирования
+  const samples: number[] = []
+  const step = Math.max(1, Math.floor(len / IMAGE_HASH_SAMPLE_COUNT))
+  
+  for (let i = 0; i < IMAGE_HASH_SAMPLE_COUNT; i++) {
+    const idx = Math.min(i * step, len - 1)
+    samples.push(data[idx])
+  }
+  
+  return `${imageData.width}x${imageData.height}_${samples.join(',')}`
+}
+
+/**
+ * Инициализирует переиспользуемые canvas элементы.
+ * Вызывается лениво при первой необходимости.
+ */
+function ensureCanvasElements(): boolean {
+  if (!reusableSourceCanvas) {
+    reusableSourceCanvas = document.createElement('canvas')
+    reusableSourceCtx = reusableSourceCanvas.getContext('2d', { willReadFrequently: true })
+  }
+  if (!reusableTargetCanvas) {
+    reusableTargetCanvas = document.createElement('canvas')
+    reusableTargetCtx = reusableTargetCanvas.getContext('2d', { willReadFrequently: true })
+  }
+  return !!(reusableSourceCtx && reusableTargetCtx)
 }
 
 /**
  * Создаёт уменьшенное изображение для превью с кэшированием.
- * Переиспользует canvas для уменьшения аллокаций памяти.
+ * Переиспользует canvas элементы для уменьшения аллокаций памяти.
  */
 function createSmallImage(sourceImage: ImageData): ImageData | null {
   const cacheKey = getImageKey(sourceImage)
@@ -60,6 +117,9 @@ function createSmallImage(sourceImage: ImageData): ImageData | null {
   const cached = smallImageCache.get(cacheKey)
   if (cached) return cached
 
+  // Инициализируем canvas элементы при необходимости
+  if (!ensureCanvasElements()) return null
+
   const scale = Math.min(
     RECIPE_CARD_PREVIEW_SIZE / sourceImage.width,
     RECIPE_CARD_PREVIEW_SIZE / sourceImage.height
@@ -67,29 +127,20 @@ function createSmallImage(sourceImage: ImageData): ImageData | null {
   const width = Math.round(sourceImage.width * scale)
   const height = Math.round(sourceImage.height * scale)
 
-  // Используем один canvas для обеих операций
-  const canvas = document.createElement('canvas')
-  const ctx = canvas.getContext('2d', { willReadFrequently: true })
-  if (!ctx) return null
+  // Устанавливаем размеры source canvas и рисуем исходное изображение
+  reusableSourceCanvas!.width = sourceImage.width
+  reusableSourceCanvas!.height = sourceImage.height
+  reusableSourceCtx!.putImageData(sourceImage, 0, 0)
 
-  // Рисуем исходное изображение
-  canvas.width = sourceImage.width
-  canvas.height = sourceImage.height
-  ctx.putImageData(sourceImage, 0, 0)
+  // Устанавливаем размеры target canvas и масштабируем
+  reusableTargetCanvas!.width = width
+  reusableTargetCanvas!.height = height
+  reusableTargetCtx!.drawImage(reusableSourceCanvas!, 0, 0, width, height)
+  
+  const result = reusableTargetCtx!.getImageData(0, 0, width, height)
 
-  // Создаём уменьшенную версию
-  const smallCanvas = document.createElement('canvas')
-  smallCanvas.width = width
-  smallCanvas.height = height
-  const smallCtx = smallCanvas.getContext('2d', { willReadFrequently: true })
-  if (!smallCtx) return null
-
-  smallCtx.drawImage(canvas, 0, 0, width, height)
-  const result = smallCtx.getImageData(0, 0, width, height)
-
-  // Сохраняем в кэш
+  // Сохраняем в кэш с FIFO-вытеснением
   if (smallImageCache.size >= SMALL_IMAGE_CACHE_MAX_SIZE) {
-    // Удаляем первый элемент (FIFO)
     const firstKey = smallImageCache.keys().next().value
     if (firstKey) smallImageCache.delete(firstKey)
   }
@@ -104,14 +155,16 @@ function RecipeCardComponent({
   isActive, 
   isFavorite = false,
   onFavoriteToggle,
-  onClick 
+  onClick,
+  hideFavoriteButton = false,
+  largeTouchTargets = false
 }: RecipeCardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [previewData, setPreviewData] = useState<ImageData | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent card click
+    e.stopPropagation() // Предотвращаем клик по карточке
     onFavoriteToggle?.(recipe.id)
   }
 
@@ -153,7 +206,7 @@ function RecipeCardComponent({
         })
 
         if (!cancelled) {
-          // Сохраняем в кэш
+          // Сохраняем в кэш с FIFO-вытеснением
           if (processedPreviewCache.size >= PREVIEW_CACHE_MAX_SIZE) {
             const firstKey = processedPreviewCache.keys().next().value
             if (firstKey) processedPreviewCache.delete(firstKey)
@@ -163,7 +216,7 @@ function RecipeCardComponent({
           setPreviewData(processed)
         }
       } catch (err) {
-        console.error('Failed to generate preview:', err)
+        console.error('Ошибка генерации превью:', err)
       } finally {
         if (!cancelled) {
           setIsGenerating(false)
@@ -221,40 +274,45 @@ function RecipeCardComponent({
           <div 
             className="w-full h-full flex items-center justify-center"
             role="status"
-            aria-label="Загрузка превью"
+            aria-label="Loading preview"
           >
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+            <Spinner className="size-4" randomColor />
           </div>
         )}
         {isGenerating && previewData && (
           <div 
             className="absolute inset-0 bg-black/30 flex items-center justify-center"
             role="status"
-            aria-label="Обновление превью"
+            aria-label="Updating preview"
           >
-            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
+            <Spinner className="size-3" randomColor />
           </div>
         )}
         
-        {/* Favorite heart button */}
-        <button
-          type="button"
-          onClick={handleFavoriteClick}
-          className={`
-            absolute top-1.5 right-1.5 p-1 rounded-full
-            transition-all duration-200
-            ${isFavorite 
-              ? 'bg-red-500 text-white shadow-lg' 
-              : 'bg-black/40 text-white/70 hover:bg-black/60 hover:text-white'
-            }
-          `}
-          aria-label={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
-          aria-pressed={isFavorite}
-        >
-          <Heart 
-            className={`w-3 h-3 ${isFavorite ? 'fill-current' : ''}`} 
-          />
-        </button>
+        {/* Кнопка избранного */}
+        {!hideFavoriteButton && (
+          <button
+            type="button"
+            onClick={handleFavoriteClick}
+            className={`
+              absolute rounded-full transition-all duration-200
+              ${largeTouchTargets 
+                ? 'top-1 right-1 p-1.5' 
+                : 'top-1.5 right-1.5 p-1'
+              }
+              ${isFavorite 
+                ? 'bg-zinc-700 text-white shadow-lg' 
+                : 'bg-black/40 text-white/70 hover:bg-black/60 hover:text-white'
+              }
+            `}
+            aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            aria-pressed={isFavorite}
+          >
+            <Heart 
+              className={`${largeTouchTargets ? 'w-4 h-4' : 'w-3 h-3'} ${isFavorite ? 'fill-current' : ''}`} 
+            />
+          </button>
+        )}
       </div>
       <div className="p-2">
         <h3 className="font-medium text-xs truncate">{recipe.name}</h3>
@@ -270,6 +328,8 @@ export const RecipeCard = memo(RecipeCardComponent, (prevProps, nextProps) => {
     prevProps.recipe.id === nextProps.recipe.id &&
     prevProps.isActive === nextProps.isActive &&
     prevProps.isFavorite === nextProps.isFavorite &&
-    prevProps.sourceImage === nextProps.sourceImage
+    prevProps.sourceImage === nextProps.sourceImage &&
+    prevProps.hideFavoriteButton === nextProps.hideFavoriteButton &&
+    prevProps.largeTouchTargets === nextProps.largeTouchTargets
   )
 })

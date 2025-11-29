@@ -1,0 +1,21 @@
+{
+  "id": "classic-chrome-street",
+  "name": "Chrome Street",
+  "author": "Community",
+  "filmSimulation": "classic-chrome",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": 0,
+    "shadow": 2,
+    "color": -1,
+    "sharpness": 2,
+    "clarity": 2,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": -1,
+    "wbShiftBlue": 1
+  }
+}
+

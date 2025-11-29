@@ -1,0 +1,18 @@
+{
+  "id": "acros-clean",
+  "name": "Acros Clean",
+  "author": "Community",
+  "filmSimulation": "acros",
+  "settings": {
+    "dynamicRange": "DR100",
+    "highlight": 0,
+    "shadow": 0,
+    "sharpness": 0,
+    "clarity": 0,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 0
+  }
+}
+

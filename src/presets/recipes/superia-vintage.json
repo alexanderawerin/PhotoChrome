@@ -1,0 +1,21 @@
+{
+  "id": "superia-vintage",
+  "name": "Superia Vintage",
+  "author": "Community",
+  "filmSimulation": "superia",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": 1,
+    "shadow": 2,
+    "color": -1,
+    "sharpness": 0,
+    "clarity": -1,
+    "grainEffect": "weak",
+    "grainSize": "large",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 2,
+    "wbShiftBlue": 2
+  }
+}
+

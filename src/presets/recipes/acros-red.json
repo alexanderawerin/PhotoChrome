@@ -1,0 +1,18 @@
+{
+  "id": "acros-red",
+  "name": "Acros + Red",
+  "author": "Community",
+  "filmSimulation": "acros",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": -1,
+    "shadow": 0,
+    "sharpness": 1,
+    "clarity": 1,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "wbShiftRed": 6,
+    "wbShiftBlue": -6
+  }
+}
+

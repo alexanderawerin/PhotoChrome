@@ -69,3 +69,72 @@
   }
 }
 
+/* Right panel (aside) slide animation */
+.right-panel {
+  position: fixed !important;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  z-index: 40;
+  transition: transform 300ms ease-out;
+}
+
+.right-panel-open {
+  transform: translateX(0) !important;
+}
+
+.right-panel-closed {
+  transform: translateX(100%) !important;
+}
+
+/* Tuning Panel slide animation */
+.tuning-panel-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: black;
+  transition: transform 300ms ease-out;
+}
+
+.tuning-panel-open {
+  transform: translateX(0%);
+}
+
+.tuning-panel-closed {
+  transform: translateX(100%);
+}
+
+/* Hide scrollbar for horizontal scroll areas */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe area inset for devices with notches */
+.safe-area-inset {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Loading text fade animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
