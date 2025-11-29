@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { Loader2 } from "lucide-react"
+import { LoaderIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -18,7 +18,7 @@ function Spinner({ className, randomColor = false, ...props }: React.ComponentPr
   }, [randomColor])
 
   return (
-    <Loader2
+    <LoaderIcon
       role="status"
       aria-label="Loading"
       className={cn("size-4 animate-spin", randomColor && colorClass, className)}
@@ -28,4 +28,3 @@ function Spinner({ className, randomColor = false, ...props }: React.ComponentPr
 }
 
 export { Spinner }
-

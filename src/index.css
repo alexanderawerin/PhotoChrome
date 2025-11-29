@@ -63,9 +63,17 @@
   * {
     border-color: hsl(var(--border));
   }
-  body {
+  html, body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    /* Prevent overscroll bounce on mobile */
+    overscroll-behavior: none;
+    overflow: hidden;
+    /* Fixed height for mobile - use smallest viewport to ensure fit */
+    height: 100vh;
+    height: 100svh; /* Small viewport height - accounts for browser chrome */
+    /* Prevent pull-to-refresh */
+    touch-action: pan-x pan-y;
   }
 }
 
@@ -124,17 +132,17 @@
 
 /* Loading text fade animation */
 @keyframes fadeIn {
-  from {
+  0% {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(8px);
   }
-  to {
+  100% {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.35s ease-out forwards;
 }
 

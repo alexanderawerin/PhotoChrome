@@ -22,12 +22,13 @@ const LOADING_MESSAGES = [
   'Worth the wait...',
 ] as const
 
-/** Interval between message changes (ms) */
-const MESSAGE_INTERVAL = 1500
+/** Interval between message changes (ms) - 1 second */
+const MESSAGE_INTERVAL = 1000
 
 /**
  * Loading overlay shown while image is being processed.
  * Cycles through helpful messages on slow connections.
+ * Styled like shadcn/ui Item component with muted variant.
  */
 function LoadingOverlay() {
   const [messageIndex, setMessageIndex] = useState(0)
@@ -42,16 +43,17 @@ function LoadingOverlay() {
 
   return (
     <div 
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[200] p-4"
       role="status"
       aria-label="Loading image"
       aria-live="polite"
     >
-      <div className="text-center">
-        <Spinner className="size-10 mx-auto mb-4" randomColor />
+      {/* Item-like container with muted background */}
+      <div className="flex items-center gap-3 pl-4 pr-4 py-3 rounded-xl bg-zinc-800/80">
+        <Spinner className="size-5 text-zinc-400 flex-shrink-0" />
         <p 
           key={messageIndex}
-          className="text-zinc-400 animate-fade-in"
+          className="text-sm text-zinc-300 animate-fade-in whitespace-nowrap"
         >
           {LOADING_MESSAGES[messageIndex]}
         </p>

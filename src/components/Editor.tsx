@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useLayoutEffect } from 'react'
 import { ArrowLeft, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { APP_VERSION, APP_URL } from '../constants'
 import { Button } from './ui/button'
@@ -39,6 +39,26 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
 
   // Избранные рецепты
   const { getFavoriteIds, toggleFavorite } = useFavorites()
+
+  // Track actual viewport height for mobile browsers
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null)
+  
+  useLayoutEffect(() => {
+    const updateHeight = () => {
+      setViewportHeight(window.innerHeight)
+    }
+    
+    updateHeight()
+    window.addEventListener('resize', updateHeight)
+    // Also update on orientation change
+    window.addEventListener('orientationchange', () => {
+      setTimeout(updateHeight, 100)
+    })
+    
+    return () => {
+      window.removeEventListener('resize', updateHeight)
+    }
+  }, [])
 
   /**
    * Объединяет настройки рецепта с пользовательскими настройками
@@ -379,9 +399,12 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
   const displayImage = showOriginal ? transformedThumbnail : previewImage
 
   return (
-    <div className="h-screen flex flex-col md:flex-row overflow-hidden">
+    <div 
+      className="flex flex-col md:flex-row overflow-hidden"
+      style={{ height: viewportHeight ? `${viewportHeight}px` : '100dvh' }}
+    >
       {/* Главный блок: фото + toolbar */}
-      <div className="flex-1 flex flex-col bg-zinc-950 min-w-0 min-h-0">
+      <div className="flex-1 flex flex-col bg-zinc-950 min-w-0 min-h-0 overflow-hidden">
         {/* Header - компактный на мобильных */}
         <header className="flex-shrink-0 px-3 py-2 md:p-4">
           <div className="relative flex items-center justify-between">
@@ -416,8 +439,8 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
           </div>
         </header>
 
-        {/* Preview area - add bottom padding on mobile when crop panel is open */}
-        <div className={`flex-1 min-h-0 px-3 md:px-6 relative transition-[padding] duration-300 ${isCropping ? 'pb-48 md:pb-0' : ''}`}>
+        {/* Preview area - shrinks to fit, add bottom padding on mobile when crop panel is open */}
+        <div className={`flex-1 min-h-0 px-3 md:px-6 relative overflow-hidden transition-[padding] duration-300 ${isCropping ? 'pb-48 md:pb-0' : ''}`}>
           {isProcessing && (
             <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
               <p className="text-sm text-zinc-400 bg-zinc-900/80 px-3 py-1 rounded">Processing...</p>
