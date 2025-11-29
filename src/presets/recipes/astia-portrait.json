@@ -1,0 +1,17 @@
+{
+  "id": "astia-portrait",
+  "name": "Astia Портрет",
+  "filmSimulation": "astia",
+  "settings": {
+    "highlight": -1,
+    "shadow": 0,
+    "color": 1,
+    "sharpness": 0,
+    "clarity": 0,
+    "grainEffect": "off",
+    "colorChromeEffect": "weak",
+    "wbShiftRed": 1,
+    "wbShiftBlue": -1
+  }
+}
+

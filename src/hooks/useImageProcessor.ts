@@ -1,20 +1,32 @@
 import { useState, useCallback } from 'react'
 import { ImageProcessor } from '../engine/processor'
-import { ProcessingOptions, Recipe } from '../engine/types'
+import { Recipe } from '../engine/types'
 import { getSimulation } from '../presets/simulations'
+import { THUMBNAIL_MAX_SIZE } from '../constants'
 
 export interface ProcessedImage {
+  /** Оригинальное изображение в полном разрешении */
   original: ImageData
+  /** Копия оригинала для возможного отката изменений */
   processed: ImageData
+  /** Уменьшенная версия для быстрого превью */
   thumbnail: ImageData
 }
 
+/**
+ * Хук для загрузки и обработки изображений.
+ * Управляет состоянием загрузки, ошибками и предоставляет методы обработки.
+ */
 export function useImageProcessor() {
   const [image, setImage] = useState<File | null>(null)
   const [imageData, setImageData] = useState<ProcessedImage | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  /**
+   * Загружает изображение из файла.
+   * Создаёт оригинал и thumbnail параллельно.
+   */
   const loadImage = useCallback(async (file: File) => {
     setIsLoading(true)
     setError(null)
@@ -22,10 +34,10 @@ export function useImageProcessor() {
     try {
       setImage(file)
       
-      // Загружаем оригинал и создаём thumbnail
+      // Загружаем оригинал и создаём thumbnail параллельно
       const [original, thumbnail] = await Promise.all([
         ImageProcessor.loadImage(file),
-        ImageProcessor.createThumbnail(file, 1600)
+        ImageProcessor.createThumbnail(file, THUMBNAIL_MAX_SIZE)
       ])
 
       setImageData({
@@ -38,84 +50,73 @@ export function useImageProcessor() {
         thumbnail
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load image')
+      const message = err instanceof Error ? err.message : 'Не удалось загрузить изображение'
+      setError(message)
+      console.error('Image loading failed:', err)
     } finally {
       setIsLoading(false)
     }
   }, [])
 
+  /**
+   * Обрабатывает thumbnail с применением рецепта.
+   * Используется для быстрого предпросмотра.
+   */
   const processImage = useCallback(
-    async (recipe: Recipe): Promise<ImageData | null> => {
+    (recipe: Recipe): ImageData | null => {
       if (!imageData) return null
 
       try {
         const simulation = getSimulation(recipe.filmSimulation)
         if (!simulation) {
-          throw new Error(`Simulation ${recipe.filmSimulation} not found`)
+          throw new Error(`Симуляция ${recipe.filmSimulation} не найдена`)
         }
 
-        const options: ProcessingOptions = {
+        return ImageProcessor.process(imageData.thumbnail, {
           simulation,
           settings: recipe.settings
-        }
-
-        // Обрабатываем thumbnail для быстрого предпросмотра
-        const processed = ImageProcessor.process(imageData.thumbnail, options)
-        return processed
+        })
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to process image')
+        const message = err instanceof Error ? err.message : 'Не удалось обработать изображение'
+        setError(message)
+        console.error('Image processing failed:', err)
         return null
       }
     },
     [imageData]
   )
 
+  /**
+   * Обрабатывает полное изображение с применением рецепта.
+   * Используется для финального экспорта.
+   */
   const processFullImage = useCallback(
-    async (recipe: Recipe): Promise<ImageData | null> => {
+    (recipe: Recipe): ImageData | null => {
       if (!imageData) return null
 
       try {
         const simulation = getSimulation(recipe.filmSimulation)
         if (!simulation) {
-          throw new Error(`Simulation ${recipe.filmSimulation} not found`)
+          throw new Error(`Симуляция ${recipe.filmSimulation} не найдена`)
         }
 
-        const options: ProcessingOptions = {
+        return ImageProcessor.process(imageData.original, {
           simulation,
           settings: recipe.settings
-        }
-
-        // Обрабатываем полное изображение
-        const processed = ImageProcessor.process(imageData.original, options)
-        return processed
+        })
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to process image')
+        const message = err instanceof Error ? err.message : 'Не удалось обработать изображение'
+        setError(message)
+        console.error('Full image processing failed:', err)
         return null
       }
     },
     [imageData]
   )
 
-  const exportImage = useCallback(
-    async (processedImageData: ImageData, filename: string) => {
-      try {
-        const blob = await ImageProcessor.imageDataToBlob(processedImageData)
-        const url = URL.createObjectURL(blob)
-        
-        const a = document.createElement('a')
-        a.href = url
-        a.download = filename
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to export image')
-      }
-    },
-    []
-  )
-
+  /**
+   * Сбрасывает состояние хука к начальному.
+   */
   const reset = useCallback(() => {
     setImage(null)
     setImageData(null)
@@ -123,14 +124,21 @@ export function useImageProcessor() {
   }, [])
 
   return {
+    /** Загруженный файл изображения */
     image,
+    /** Данные изображения (оригинал, обработанное, thumbnail) */
     imageData,
+    /** Флаг загрузки */
     isLoading,
+    /** Сообщение об ошибке */
     error,
+    /** Загрузить изображение из файла */
     loadImage,
+    /** Обработать thumbnail (быстрый превью) */
     processImage,
+    /** Обработать полное изображение (для экспорта) */
     processFullImage,
-    exportImage,
+    /** Сбросить состояние */
     reset
   }
 }

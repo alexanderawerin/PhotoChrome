@@ -1,4 +1,6 @@
-// Градиенты для имитации разных фото с плёночными эффектами
+import { PHOTO_ARC } from '../constants'
+
+/** Gradient backgrounds for decorative cards representing different film looks */
 const CARD_GRADIENTS = [
   'linear-gradient(135deg, #2d1f3d 0%, #614385 50%, #516395 100%)',
   'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
@@ -11,55 +13,91 @@ const CARD_GRADIENTS = [
   'linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #4a90a4 100%)',
   'linear-gradient(135deg, #2c3e50 0%, #3498db 50%, #87ceeb 100%)',
   'linear-gradient(135deg, #355c7d 0%, #6c5b7b 50%, #c06c84 100%)',
-]
+] as const
 
-const CARD_SIZE = 110
+/** Rotation factor for cards based on their angle in the arc */
+const ROTATION_FACTOR = 0.35
 
-export function PhotoArc() {
-  const totalCards = 11
-  const arcRadius = 300 // уменьшенный радиус
-  const arcSpan = 180
-  
-  const positions = Array.from({ length: totalCards }, (_, i) => {
-    const angle = -arcSpan / 2 + (arcSpan / (totalCards - 1)) * i
+/** Y-axis scaling factor for the arc (makes it elliptical) */
+const Y_SCALE_FACTOR = 0.6
+
+/** Vertical offset for the entire arc */
+const Y_OFFSET = -60
+
+/**
+ * Calculates position for each card in the arc.
+ */
+function calculateCardPositions(cardCount: number, radius: number, spanDegrees: number) {
+  return Array.from({ length: cardCount }, (_, i) => {
+    const angle = -spanDegrees / 2 + (spanDegrees / (cardCount - 1)) * i
     const angleRad = (angle * Math.PI) / 180
     
-    const x = Math.sin(angleRad) * arcRadius
-    const y = -Math.cos(angleRad) * arcRadius * 0.6
+    const x = Math.sin(angleRad) * radius
+    const y = -Math.cos(angleRad) * radius * Y_SCALE_FACTOR
     
-    const distFromCenter = Math.abs(i - (totalCards - 1) / 2)
-    const z = totalCards - Math.floor(distFromCenter)
+    // Cards closer to center have higher z-index
+    const distFromCenter = Math.abs(i - (cardCount - 1) / 2)
+    const z = cardCount - Math.floor(distFromCenter)
     
-    return { rotate: angle * 0.35, translateX: x, translateY: y, z }
+    return { 
+      rotate: angle * ROTATION_FACTOR, 
+      translateX: x, 
+      translateY: y + Y_OFFSET, 
+      z 
+    }
   })
+}
+
+/**
+ * Decorative arc of gradient cards displayed on the landing screen.
+ * Purely visual element, hidden from screen readers.
+ */
+export function PhotoArc() {
+  const positions = calculateCardPositions(
+    PHOTO_ARC.CARD_COUNT,
+    PHOTO_ARC.RADIUS,
+    PHOTO_ARC.SPAN_DEGREES
+  )
 
   return (
-    <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
-      {/* Карточки */}
+    <div 
+      className="absolute inset-0 pointer-events-none" 
+      style={{ zIndex: 10 }}
+      aria-hidden="true"
+      role="presentation"
+    >
+      {/* Decorative cards */}
       <div className="absolute inset-0 flex items-center justify-center">
         {positions.map((pos, index) => (
           <div
             key={index}
             className="absolute"
             style={{
-              transform: `translateX(${pos.translateX}px) translateY(${pos.translateY - 60}px) rotate(${pos.rotate}deg)`,
+              transform: `translateX(${pos.translateX}px) translateY(${pos.translateY}px) rotate(${pos.rotate}deg)`,
               zIndex: pos.z,
             }}
           >
             <div 
               className="rounded-2xl overflow-hidden shadow-2xl shadow-black/70"
-              style={{ width: CARD_SIZE, height: CARD_SIZE, background: CARD_GRADIENTS[index] }}
+              style={{ 
+                width: PHOTO_ARC.CARD_SIZE, 
+                height: PHOTO_ARC.CARD_SIZE, 
+                background: CARD_GRADIENTS[index % CARD_GRADIENTS.length] 
+              }}
             >
+              {/* Light reflection effect */}
               <div 
                 className="w-full h-full"
-                style={{ background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.12) 0%, transparent 50%)' }}
+                style={{ 
+                  background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.12) 0%, transparent 50%)' 
+                }}
               />
             </div>
           </div>
         ))}
       </div>
       
-      {/* Fade слева */}
+      {/* Left fade gradient */}
       <div 
         className="absolute left-0 top-0 bottom-0"
         style={{
@@ -68,7 +106,7 @@ export function PhotoArc() {
           zIndex: 20,
         }}
       />
-      {/* Fade справа */}
+      {/* Right fade gradient */}
       <div 
         className="absolute right-0 top-0 bottom-0"
         style={{

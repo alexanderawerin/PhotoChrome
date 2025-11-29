@@ -1,0 +1,17 @@
+{
+  "id": "pro400h-wedding",
+  "name": "Pro 400H Свадьба",
+  "filmSimulation": "pro-400h",
+  "settings": {
+    "highlight": -1,
+    "shadow": 0,
+    "color": 1,
+    "sharpness": 1,
+    "clarity": 0,
+    "grainEffect": "off",
+    "colorChromeEffect": "weak",
+    "wbShiftRed": 1,
+    "wbShiftBlue": 0
+  }
+}
+

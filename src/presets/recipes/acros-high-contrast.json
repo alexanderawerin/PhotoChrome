@@ -1,0 +1,14 @@
+{
+  "id": "acros-high-contrast",
+  "name": "Acros Контраст",
+  "filmSimulation": "acros",
+  "settings": {
+    "highlight": 2,
+    "shadow": -2,
+    "sharpness": 2,
+    "clarity": 3,
+    "grainEffect": "strong",
+    "grainSize": "large"
+  }
+}
+

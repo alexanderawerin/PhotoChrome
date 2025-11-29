@@ -1,0 +1,18 @@
+{
+  "id": "pro400h-portrait",
+  "name": "Pro 400H Портрет",
+  "filmSimulation": "pro-400h",
+  "settings": {
+    "highlight": -1,
+    "shadow": 1,
+    "color": 0,
+    "sharpness": 0,
+    "clarity": 0,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "off",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 1
+  }
+}
+

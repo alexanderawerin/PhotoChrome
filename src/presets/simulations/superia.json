@@ -1,0 +1,27 @@
+{
+  "id": "superia",
+  "name": "Superia",
+  "curve": {
+    "points": [
+      [0, 8],
+      [64, 72],
+      [128, 135],
+      [192, 195],
+      [255, 250]
+    ]
+  },
+  "colorBalance": {
+    "shadows": {
+      "r": -4,
+      "g": 4,
+      "b": 8
+    },
+    "highlights": {
+      "r": 6,
+      "g": -2,
+      "b": -6
+    }
+  },
+  "saturation": 0.08
+}
+

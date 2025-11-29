@@ -1,0 +1,18 @@
+{
+  "id": "superia-400",
+  "name": "Superia 400",
+  "filmSimulation": "superia",
+  "settings": {
+    "highlight": 0,
+    "shadow": 0,
+    "color": 2,
+    "sharpness": 1,
+    "clarity": 1,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "weak",
+    "wbShiftRed": 0,
+    "wbShiftBlue": -1
+  }
+}
+

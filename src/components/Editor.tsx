@@ -9,6 +9,7 @@ import { ImageProcessor } from '../engine/processor'
 import { getSimulation } from '../presets/simulations'
 import { getAllRecipes } from '../presets/recipes'
 import { rotateImage, cropImage, calculateCropArea, AspectRatio } from '../engine/transform'
+import { useFavorites } from '../hooks/useFavorites'
 
 interface EditorProps {
   originalImage: ImageData
@@ -29,6 +30,9 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
   // Трансформированные изображения
   const [transformedOriginal, setTransformedOriginal] = useState<ImageData>(originalImage)
   const [transformedThumbnail, setTransformedThumbnail] = useState<ImageData>(thumbnail)
+
+  // Избранные рецепты
+  const { getFavoriteIds, toggleFavorite } = useFavorites()
 
   // Проверка, были ли изменения (для кнопки сброса)
   const hasChanges = transformedOriginal !== originalImage || transformedThumbnail !== thumbnail || activeRecipe !== null
@@ -330,8 +334,10 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
         <RecipePanel
           sourceImage={transformedThumbnail}
           activeRecipeId={activeRecipe?.id ?? null}
+          favoriteIds={getFavoriteIds()}
           onRecipeSelect={handleRecipeSelect}
           onRandomRecipe={handleRandomRecipe}
+          onFavoriteToggle={toggleFavorite}
         />
       </aside>
     </div>

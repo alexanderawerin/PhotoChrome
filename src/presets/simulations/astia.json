@@ -1,0 +1,27 @@
+{
+  "id": "astia",
+  "name": "Astia",
+  "curve": {
+    "points": [
+      [0, 5],
+      [64, 68],
+      [128, 130],
+      [192, 190],
+      [255, 250]
+    ]
+  },
+  "colorBalance": {
+    "shadows": {
+      "r": 2,
+      "g": 1,
+      "b": -1
+    },
+    "highlights": {
+      "r": 3,
+      "g": 0,
+      "b": -2
+    }
+  },
+  "saturation": -0.05
+}
+

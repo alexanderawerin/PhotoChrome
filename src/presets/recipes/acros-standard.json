@@ -1,0 +1,14 @@
+{
+  "id": "acros-standard",
+  "name": "Acros Standard",
+  "filmSimulation": "acros",
+  "settings": {
+    "highlight": 0,
+    "shadow": 0,
+    "sharpness": 1,
+    "clarity": 1,
+    "grainEffect": "weak",
+    "grainSize": "small"
+  }
+}
+

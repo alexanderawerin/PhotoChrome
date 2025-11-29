@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { CropOverlay } from './CropOverlay'
 import { AspectRatio } from '../engine/transform'
+import { RESIZE_DEBOUNCE_DELAY } from '../constants'
 
 interface PreviewProps {
   imageData: ImageData | null
@@ -73,7 +74,7 @@ export function Preview({
     window.addEventListener('resize', updateSize)
     
     // Также обновляем через небольшую задержку (для случаев когда layout ещё не стабилизировался)
-    const timeoutId = setTimeout(updateSize, 100)
+    const timeoutId = setTimeout(updateSize, RESIZE_DEBOUNCE_DELAY)
 
     return () => {
       window.removeEventListener('resize', updateSize)

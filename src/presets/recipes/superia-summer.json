@@ -1,0 +1,18 @@
+{
+  "id": "superia-summer",
+  "name": "Superia Лето",
+  "filmSimulation": "superia",
+  "settings": {
+    "highlight": -1,
+    "shadow": 1,
+    "color": 3,
+    "sharpness": 1,
+    "clarity": 0,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "wbShiftRed": 2,
+    "wbShiftBlue": -2
+  }
+}
+

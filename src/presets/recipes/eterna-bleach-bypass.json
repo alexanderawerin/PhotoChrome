@@ -1,0 +1,18 @@
+{
+  "id": "eterna-bleach-bypass",
+  "name": "Eterna Bleach",
+  "filmSimulation": "eterna",
+  "settings": {
+    "highlight": 1,
+    "shadow": -1,
+    "color": -2,
+    "sharpness": 1,
+    "clarity": 2,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "off",
+    "wbShiftRed": -1,
+    "wbShiftBlue": 1
+  }
+}
+

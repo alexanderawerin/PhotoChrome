@@ -1,0 +1,14 @@
+{
+  "id": "acros-soft",
+  "name": "Acros Мягкий",
+  "filmSimulation": "acros",
+  "settings": {
+    "highlight": -1,
+    "shadow": 1,
+    "sharpness": 0,
+    "clarity": -1,
+    "grainEffect": "weak",
+    "grainSize": "small"
+  }
+}
+

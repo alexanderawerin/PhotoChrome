@@ -1,4 +1,5 @@
 import { Recipe } from '../../engine/types'
+import { parseRecipe } from '../../engine/schemas'
 
 // Classic Negative
 import mapleLetterData from './maple-letter.json'
@@ -28,46 +29,145 @@ import proviaPortraitData from './provia-portrait.json'
 import proviaCleanData from './provia-clean.json'
 import fadedMemoriesData from './faded-memories.json'
 
-export const RECIPES: Record<string, Recipe> = {
+// Acros (B&W)
+import acrosStandardData from './acros-standard.json'
+import acrosHighContrastData from './acros-high-contrast.json'
+import acrosSoftData from './acros-soft.json'
+
+// Astia
+import astiaPortraitData from './astia-portrait.json'
+import astiaSoftDaylightData from './astia-soft-daylight.json'
+
+// Pro 400H
+import pro400hPortraitData from './pro400h-portrait.json'
+import pro400hOverexposedData from './pro400h-overexposed.json'
+import pro400hWeddingData from './pro400h-wedding.json'
+
+// Superia
+import superia400Data from './superia-400.json'
+import superiaSummerData from './superia-summer.json'
+import superiaNostalgicData from './superia-nostalgic.json'
+
+// Eterna (Cinema)
+import eternaCinemaData from './eterna-cinema.json'
+import eternaBleachBypassData from './eterna-bleach-bypass.json'
+import eternaTealOrangeData from './eterna-teal-orange.json'
+
+/**
+ * Raw recipe data organized by ID.
+ * Will be validated and parsed at module load time.
+ */
+const RAW_RECIPES: Record<string, unknown> = {
   // Classic Negative based
-  'maple-letter': mapleLetterData as Recipe,
-  'classic-neg-muted': classicNegMutedData as Recipe,
-  'classic-neg-soft': classicNegSoftData as Recipe,
-  'classic-neg-street': classicNegStreetData as Recipe,
+  'maple-letter': mapleLetterData,
+  'classic-neg-muted': classicNegMutedData,
+  'classic-neg-soft': classicNegSoftData,
+  'classic-neg-street': classicNegStreetData,
   
   // Classic Chrome based
-  'moody-chrome': moodyChromeData as Recipe,
-  'cinematic-teal': cinematicTealData as Recipe,
-  'classic-chrome-warm': classicChromeWarmData as Recipe,
-  'classic-chrome-faded': classicChromeFadedData as Recipe,
-  'classic-chrome-cool': classicChromeCoolData as Recipe,
-  'street-classic': streetClassicData as Recipe,
-  'rainy-day': rainyDayData as Recipe,
+  'moody-chrome': moodyChromeData,
+  'cinematic-teal': cinematicTealData,
+  'classic-chrome-warm': classicChromeWarmData,
+  'classic-chrome-faded': classicChromeFadedData,
+  'classic-chrome-cool': classicChromeCoolData,
+  'street-classic': streetClassicData,
+  'rainy-day': rainyDayData,
   
   // Velvia based
-  'vivid-sunset': vividSunsetData as Recipe,
-  'warm-summer': warmSummerData as Recipe,
-  'velvia-sunset': velviaSunsetData as Recipe,
-  'velvia-nature': velviaNatureData as Recipe,
-  'golden-hour': goldenHourData as Recipe,
+  'vivid-sunset': vividSunsetData,
+  'warm-summer': warmSummerData,
+  'velvia-sunset': velviaSunsetData,
+  'velvia-nature': velviaNatureData,
+  'golden-hour': goldenHourData,
   
   // Provia based
-  'portra-vibes': portraVibesData as Recipe,
-  'provia-portrait': proviaPortraitData as Recipe,
-  'provia-clean': proviaCleanData as Recipe,
-  'faded-memories': fadedMemoriesData as Recipe,
+  'portra-vibes': portraVibesData,
+  'provia-portrait': proviaPortraitData,
+  'provia-clean': proviaCleanData,
+  'faded-memories': fadedMemoriesData,
+
+  // Acros (B&W) based
+  'acros-standard': acrosStandardData,
+  'acros-high-contrast': acrosHighContrastData,
+  'acros-soft': acrosSoftData,
+
+  // Astia based
+  'astia-portrait': astiaPortraitData,
+  'astia-soft-daylight': astiaSoftDaylightData,
+
+  // Pro 400H based
+  'pro400h-portrait': pro400hPortraitData,
+  'pro400h-overexposed': pro400hOverexposedData,
+  'pro400h-wedding': pro400hWeddingData,
+
+  // Superia based
+  'superia-400': superia400Data,
+  'superia-summer': superiaSummerData,
+  'superia-nostalgic': superiaNostalgicData,
+
+  // Eterna (Cinema) based
+  'eterna-cinema': eternaCinemaData,
+  'eterna-bleach-bypass': eternaBleachBypassData,
+  'eterna-teal-orange': eternaTealOrangeData,
 }
+
+/**
+ * Parses and validates all recipe JSON files at module load time.
+ * Throws early if any recipe data is invalid.
+ */
+function loadRecipes(): Record<string, Recipe> {
+  const parsed: Record<string, Recipe> = {}
+  
+  for (const [key, data] of Object.entries(RAW_RECIPES)) {
+    try {
+      parsed[key] = parseRecipe(data)
+    } catch (err) {
+      console.error(`Failed to parse recipe "${key}":`, err)
+      throw new Error(`Invalid recipe data for "${key}": ${err instanceof Error ? err.message : 'unknown error'}`)
+    }
+  }
+  
+  return parsed
+}
+
+/** All available recipes, validated at load time */
+export const RECIPES: Record<string, Recipe> = loadRecipes()
 
 // Названия симуляций для отображения
 export const SIMULATION_NAMES: Record<string, string> = {
-  'classic-neg': 'Classic Neg.',
-  'classic-chrome': 'Classic Chrome',
-  'velvia': 'Velvia',
+  // Цветные позитивные
   'provia': 'Provia',
+  'velvia': 'Velvia',
+  'astia': 'Astia',
+  // Цветные негативные
+  'pro-400h': 'Pro 400H',
+  'superia': 'Superia',
+  // Черно-белые
+  'acros': 'Acros',
+  // Кинопленки
+  'eterna': 'Eterna',
+  // Цифровые симуляции
+  'classic-chrome': 'Classic Chrome',
+  'classic-neg': 'Classic Neg.',
 }
 
 // Порядок отображения групп
-export const SIMULATION_ORDER = ['classic-neg', 'classic-chrome', 'velvia', 'provia']
+export const SIMULATION_ORDER = [
+  // Цветные позитивные (Reversal)
+  'provia',
+  'velvia', 
+  'astia',
+  // Цветные негативные
+  'pro-400h',
+  'superia',
+  // Черно-белые
+  'acros',
+  // Кинопленки
+  'eterna',
+  // Цифровые симуляции Fujifilm
+  'classic-chrome',
+  'classic-neg',
+]
 
 export interface RecipeGroup {
   simulationId: string

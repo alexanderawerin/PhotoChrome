@@ -1,0 +1,17 @@
+{
+  "id": "astia-soft-daylight",
+  "name": "Astia Дневной свет",
+  "filmSimulation": "astia",
+  "settings": {
+    "highlight": 0,
+    "shadow": 1,
+    "color": 2,
+    "sharpness": 1,
+    "clarity": 1,
+    "grainEffect": "off",
+    "colorChromeEffect": "weak",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 0
+  }
+}
+

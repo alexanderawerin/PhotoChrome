@@ -1,0 +1,18 @@
+{
+  "id": "pro400h-overexposed",
+  "name": "Pro 400H Пересвет",
+  "filmSimulation": "pro-400h",
+  "settings": {
+    "highlight": -2,
+    "shadow": 2,
+    "color": -1,
+    "sharpness": 0,
+    "clarity": -1,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "off",
+    "wbShiftRed": 1,
+    "wbShiftBlue": 2
+  }
+}
+

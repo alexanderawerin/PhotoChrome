@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { Upload, Camera } from 'lucide-react'
 import { Button } from './ui/button'
 import { PhotoArc } from './PhotoArc'
@@ -7,42 +7,52 @@ interface LandingScreenProps {
   onImageSelect: (file: File) => void
 }
 
+/** Accepted image MIME types */
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+
+/**
+ * Validates that a file is an accepted image type.
+ */
+function isValidImageFile(file: File): boolean {
+  return file.type.startsWith('image/') || ACCEPTED_IMAGE_TYPES.includes(file.type)
+}
+
 export function LandingScreen({ onImageSelect }: LandingScreenProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file && file.type.startsWith('image/')) {
+    if (file && isValidImageFile(file)) {
       onImageSelect(file)
     }
-  }
+  }, [onImageSelect])
 
-  const handleButtonClick = () => {
+  const handleButtonClick = useCallback(() => {
     fileInputRef.current?.click()
-  }
+  }, [])
 
-  const handleDrop = (event: React.DragEvent) => {
+  const handleDrop = useCallback((event: React.DragEvent) => {
     event.preventDefault()
     setIsDragging(false)
     const file = event.dataTransfer.files[0]
-    if (file && file.type.startsWith('image/')) {
+    if (file && isValidImageFile(file)) {
       onImageSelect(file)
     }
-  }
+  }, [onImageSelect])
 
-  const handleDragOver = (event: React.DragEvent) => {
+  const handleDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault()
     setIsDragging(true)
-  }
+  }, [])
 
-  const handleDragLeave = (event: React.DragEvent) => {
+  const handleDragLeave = useCallback((event: React.DragEvent) => {
     event.preventDefault()
     setIsDragging(false)
-  }
+  }, [])
 
   return (
-    <div
+    <main
       className={`
         min-h-screen relative
         transition-colors duration-300 overflow-hidden
@@ -51,17 +61,19 @@ export function LandingScreen({ onImageSelect }: LandingScreenProps) {
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
+      role="main"
+      aria-label="Стартовый экран Photochrome"
     >
       {/* Background */}
-      <div className="absolute inset-0 bg-zinc-950" />
+      <div className="absolute inset-0 bg-zinc-950" aria-hidden="true" />
 
-      {/* Арка из фото - слой 1 */}
+      {/* Декоративная арка из фото */}
       <PhotoArc />
 
-      {/* Текст и кнопка - слой 2 (поверх всего, по центру) */}
+      {/* Основной контент */}
       <div className="absolute inset-0 flex flex-col items-center justify-center z-[100]">
-        <div className="text-center space-y-3">
-          <div className="flex items-center justify-center mb-2">
+        <header className="text-center space-y-3">
+          <div className="flex items-center justify-center mb-2" aria-hidden="true">
             <Camera className="w-6 h-6 text-zinc-500" />
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-white">
@@ -70,7 +82,7 @@ export function LandingScreen({ onImageSelect }: LandingScreenProps) {
           <p className="text-sm text-zinc-500 max-w-xs mx-auto leading-relaxed">
             Плёночные симуляции Fujifilm<br/>для ваших фотографий
           </p>
-        </div>
+        </header>
 
         <div className="mt-6">
           <input
@@ -78,26 +90,32 @@ export function LandingScreen({ onImageSelect }: LandingScreenProps) {
             type="file"
             accept="image/*"
             onChange={handleFileSelect}
-            className="hidden"
+            className="sr-only"
+            id="image-upload"
+            aria-label="Выбрать изображение для обработки"
           />
           
           <Button
             size="lg"
             onClick={handleButtonClick}
             className="gap-2.5 text-sm px-6 py-5 bg-white text-black hover:bg-zinc-200 transition-all duration-200 rounded-xl pointer-events-auto"
+            aria-controls="image-upload"
           >
-            <Upload className="w-4 h-4" />
+            <Upload className="w-4 h-4" aria-hidden="true" />
             Загрузить фото
           </Button>
           
-          <p className={`
-            text-xs mt-4 text-center transition-colors duration-300
-            ${isDragging ? 'text-white' : 'text-zinc-600'}
-          `}>
+          <p 
+            className={`
+              text-xs mt-4 text-center transition-colors duration-300
+              ${isDragging ? 'text-white' : 'text-zinc-600'}
+            `}
+            aria-live="polite"
+          >
             {isDragging ? 'Отпустите для загрузки' : 'или перетащите фото сюда'}
           </p>
         </div>
       </div>
-    </div>
+    </main>
   )
 }

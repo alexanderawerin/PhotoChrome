@@ -19,13 +19,14 @@ interface ToolbarProps {
   onCropCancel?: () => void
 }
 
-const CROP_RATIOS: { value: AspectRatio; label: string }[] = [
-  { value: '1:1', label: '1:1' },
-  { value: '4:3', label: '4:3' },
-  { value: '3:4', label: '3:4' },
-  { value: '16:9', label: '16:9' },
-  { value: '9:16', label: '9:16' },
-  { value: 'free', label: 'Отмена' },
+/** Available crop aspect ratios with labels */
+const CROP_RATIOS: { value: AspectRatio; label: string; ariaLabel: string }[] = [
+  { value: '1:1', label: '1:1', ariaLabel: 'Квадрат 1 к 1' },
+  { value: '4:3', label: '4:3', ariaLabel: '4 к 3 горизонтальный' },
+  { value: '3:4', label: '3:4', ariaLabel: '3 к 4 вертикальный' },
+  { value: '16:9', label: '16:9', ariaLabel: '16 к 9 широкий' },
+  { value: '9:16', label: '9:16', ariaLabel: '9 к 16 высокий' },
+  { value: 'free', label: 'Отмена', ariaLabel: 'Отменить обрезку' },
 ]
 
 export function Toolbar({
@@ -46,7 +47,11 @@ export function Toolbar({
   // Режим кропа
   if (cropMode) {
     return (
-      <div className="flex items-center justify-center gap-2 flex-wrap">
+      <div 
+        className="flex items-center justify-center gap-2 flex-wrap"
+        role="toolbar"
+        aria-label="Выбор соотношения сторон для обрезки"
+      >
         {CROP_RATIOS.map((ratio) => (
           <Button
             key={ratio.value}
@@ -60,6 +65,8 @@ export function Toolbar({
               }
             }}
             className={ratio.value === 'free' ? 'text-zinc-400' : ''}
+            aria-label={ratio.ariaLabel}
+            aria-pressed={cropRatio === ratio.value}
           >
             {ratio.label}
           </Button>
@@ -69,8 +76,9 @@ export function Toolbar({
           onClick={onCropApply}
           className="gap-2 ml-2"
           disabled={cropRatio === 'free'}
+          aria-label="Применить обрезку"
         >
-          <Check className="w-4 h-4" />
+          <Check className="w-4 h-4" aria-hidden="true" />
           Применить
         </Button>
       </div>
@@ -79,43 +87,47 @@ export function Toolbar({
 
   // Обычный режим - все по центру
   return (
-    <div className="flex items-center justify-center gap-3">
+    <div 
+      className="flex items-center justify-center gap-3"
+      role="toolbar"
+      aria-label="Инструменты редактирования"
+    >
       <Button
         variant="ghost"
         size="sm"
         onClick={onReset}
         disabled={!canReset}
         className="text-zinc-500 hover:text-zinc-300 disabled:opacity-30"
-        title="Сбросить изменения"
+        aria-label="Сбросить все изменения"
       >
-        <Reset className="w-4 h-4 mr-1.5" />
+        <Reset className="w-4 h-4 mr-1.5" aria-hidden="true" />
         Сбросить
       </Button>
 
-      <ButtonGroup>
+      <ButtonGroup role="group" aria-label="Инструменты поворота и обрезки">
         <Button
           variant="outline"
           size="icon"
           onClick={onRotateCounterClockwise}
-          title="Повернуть влево (Shift+R)"
+          aria-label="Повернуть против часовой стрелки (Shift+R)"
         >
-          <RotateCcw className="w-4 h-4" />
+          <RotateCcw className="w-4 h-4" aria-hidden="true" />
         </Button>
         <Button
           variant="outline"
           size="icon"
           onClick={onRotateClockwise}
-          title="Повернуть вправо (R)"
+          aria-label="Повернуть по часовой стрелке (R)"
         >
-          <RotateCw className="w-4 h-4" />
+          <RotateCw className="w-4 h-4" aria-hidden="true" />
         </Button>
         <Button
           variant="outline"
           size="icon"
           onClick={onCropClick}
-          title="Обрезать (C)"
+          aria-label="Обрезать изображение (C)"
         >
-          <Crop className="w-4 h-4" />
+          <Crop className="w-4 h-4" aria-hidden="true" />
         </Button>
       </ButtonGroup>
       
@@ -124,8 +136,10 @@ export function Toolbar({
         onClick={onExport}
         disabled={!canExport || isExporting}
         className="gap-2"
+        aria-label={isExporting ? 'Экспорт в процессе' : 'Скачать обработанное изображение (Ctrl+S)'}
+        aria-busy={isExporting}
       >
-        <Download className="w-4 h-4" />
+        <Download className="w-4 h-4" aria-hidden="true" />
         {isExporting ? 'Экспорт...' : 'Скачать'}
       </Button>
     </div>
