@@ -1,0 +1,25 @@
+# Robots.txt for Photochrome
+# https://photochrome.netdesigner.ru
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://photochrome.netdesigner.ru/sitemap.xml
+
+# Disallow accessing card images directly (decorative only)
+Disallow: /cards/
+
+# Allow all major crawlers
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: YandexBot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+

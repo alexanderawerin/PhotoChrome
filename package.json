@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "process-cards": "node scripts/process-card-images.mjs"
+    "process-cards": "node scripts/process-card-images.mjs",
+    "generate-seo": "node scripts/generate-seo-assets.mjs"
   },
   "dependencies": {
     "@radix-ui/react-separator": "^1.1.8",
