@@ -237,6 +237,100 @@ export interface RecipeGroup {
   recipes: Recipe[]
 }
 
+// Категории использования
+export type UseCase = 'portrait' | 'landscape' | 'street' | 'cinema' | 'bw' | 'everyday'
+
+export const USE_CASE_NAMES: Record<UseCase, string> = {
+  'portrait': 'Portrait',
+  'landscape': 'Landscape',
+  'street': 'Street',
+  'cinema': 'Cinema',
+  'bw': 'B&W',
+  'everyday': 'Everyday',
+}
+
+export const USE_CASE_ORDER: UseCase[] = [
+  'portrait',
+  'landscape', 
+  'street',
+  'cinema',
+  'bw',
+  'everyday',
+]
+
+// Маппинг рецептов по категориям использования
+export const RECIPE_USE_CASES: Record<string, UseCase> = {
+  // Portrait
+  'provia-portrait': 'portrait',
+  'astia-portrait': 'portrait',
+  'astia-soft-daylight': 'portrait',
+  'astia-natural': 'portrait',
+  'astia-warm': 'portrait',
+  'astia-studio': 'portrait',
+  'pro400h-portrait': 'portrait',
+  'pro400h-overexposed': 'portrait',
+  'pro400h-wedding': 'portrait',
+  'portra-vibes': 'portrait',
+  
+  // Landscape
+  'velvia-landscape': 'landscape',
+  'velvia-nature': 'landscape',
+  'velvia-vibrant': 'landscape',
+  'velvia-sunset': 'landscape',
+  'vivid-sunset': 'landscape',
+  'golden-hour': 'landscape',
+  'warm-summer': 'landscape',
+  'provia-vivid': 'landscape',
+  
+  // Street
+  'classic-chrome-street': 'street',
+  'classic-neg-street': 'street',
+  'street-classic': 'street',
+  'classic-chrome-vintage': 'street',
+  'classic-chrome-faded': 'street',
+  'classic-chrome-cool': 'street',
+  'classic-chrome-warm': 'street',
+  'classic-neg-muted': 'street',
+  'classic-neg-soft': 'street',
+  'classic-neg-warm': 'street',
+  'classic-neg-vibrant': 'street',
+  'maple-letter': 'street',
+  'faded-memories': 'street',
+  'rainy-day': 'street',
+  
+  // Cinema
+  'eterna-cinema': 'cinema',
+  'eterna-bleach-bypass': 'cinema',
+  'eterna-teal-orange': 'cinema',
+  'eterna-muted': 'cinema',
+  'eterna-night': 'cinema',
+  'moody-chrome': 'cinema',
+  'cinematic-teal': 'cinema',
+  
+  // B&W
+  'acros-standard': 'bw',
+  'acros-high-contrast': 'bw',
+  'acros-soft': 'bw',
+  'acros-yellow': 'bw',
+  'acros-red': 'bw',
+  'neopan-400': 'bw',
+  'neopan-1600': 'bw',
+  'neopan-contrast': 'bw',
+  
+  // Everyday
+  'superia-400': 'everyday',
+  'superia-summer': 'everyday',
+  'superia-nostalgic': 'everyday',
+  'superia-vintage': 'everyday',
+  'superia-daylight': 'everyday',
+}
+
+export interface UseCaseGroup {
+  useCaseId: UseCase
+  useCaseName: string
+  recipes: Recipe[]
+}
+
 export const getRecipe = (id: string): Recipe | undefined => {
   return RECIPES[id]
 }
@@ -268,5 +362,31 @@ export const getRecipesGroupedBySimulation = (): RecipeGroup[] => {
       simulationId: simId,
       simulationName: SIMULATION_NAMES[simId] || simId,
       recipes: groups[simId]
+    }))
+}
+
+export const getRecipesGroupedByUseCase = (): UseCaseGroup[] => {
+  const groups: Record<UseCase, Recipe[]> = {
+    portrait: [],
+    landscape: [],
+    street: [],
+    cinema: [],
+    bw: [],
+    everyday: [],
+  }
+  
+  // Группируем рецепты по категории использования
+  Object.entries(RECIPES).forEach(([id, recipe]) => {
+    const useCase = RECIPE_USE_CASES[id] || 'everyday'
+    groups[useCase].push(recipe)
+  })
+  
+  // Возвращаем в заданном порядке
+  return USE_CASE_ORDER
+    .filter(useCaseId => groups[useCaseId]?.length > 0)
+    .map(useCaseId => ({
+      useCaseId,
+      useCaseName: USE_CASE_NAMES[useCaseId],
+      recipes: groups[useCaseId]
     }))
 }

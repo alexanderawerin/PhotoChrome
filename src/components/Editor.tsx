@@ -275,11 +275,7 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
       const processed = applyRecipeToImage(transformedOriginal, activeRecipe, mergedSettings)
       
       // Добавляем водяной знак
-      const withWatermark = ImageProcessor.addWatermark(
-        processed,
-        'made by Photochrome',
-        APP_URL
-      )
+      const withWatermark = ImageProcessor.addWatermark(processed, APP_URL)
       
       const blob = await ImageProcessor.imageDataToBlob(withWatermark)
       const url = URL.createObjectURL(blob)

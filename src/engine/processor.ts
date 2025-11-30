@@ -210,8 +210,7 @@ export class ImageProcessor {
    */
   static addWatermark(
     imageData: ImageData,
-    leftText: string,
-    rightText: string
+    text: string
   ): ImageData {
     const canvas = document.createElement('canvas')
     canvas.width = imageData.width
@@ -226,22 +225,15 @@ export class ImageProcessor {
     // Настройки текста - 1.5% от меньшей стороны изображения
     const shortSide = Math.min(imageData.width, imageData.height)
     const fontSize = Math.max(12, Math.round(shortSide * 0.015))
-    const padding = Math.round(shortSide * 0.015)
-    const bottomOffset = padding
+    const bottomOffset = Math.round(shortSide * 0.015)
 
     ctx.font = `500 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`
     ctx.textBaseline = 'bottom'
 
-    // Белый текст с прозрачностью
+    // Белый текст с прозрачностью по центру
     ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
-
-    // Левый текст (made by Photochrome)
-    ctx.textAlign = 'left'
-    ctx.fillText(leftText, padding, imageData.height - bottomOffset)
-
-    // Правый текст (URL)
-    ctx.textAlign = 'right'
-    ctx.fillText(rightText, imageData.width - padding, imageData.height - bottomOffset)
+    ctx.textAlign = 'center'
+    ctx.fillText(text, imageData.width / 2, imageData.height - bottomOffset)
 
     return ctx.getImageData(0, 0, canvas.width, canvas.height)
   }

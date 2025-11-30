@@ -1,4 +1,4 @@
-import { RotateCw, RotateCcw, Crop, Check, Download, Settings2, Film } from 'lucide-react'
+import { RotateCw, RotateCcw, Crop, Check, Share, Settings2, Film } from 'lucide-react'
 import { Spinner } from './ui/spinner'
 import { Button } from './ui/button'
 import { ButtonGroup } from './ui/button-group'
@@ -115,16 +115,16 @@ export function Toolbar({
         size="default"
         onClick={onExport}
         disabled={!canExport || isExporting}
-        aria-label={isExporting ? 'Exporting...' : 'Download processed image'}
+        aria-label={isExporting ? 'Exporting...' : 'Export processed image'}
         aria-busy={isExporting}
         className="w-full"
       >
         {isExporting ? (
           <Spinner className="size-4" randomColor />
         ) : (
-          <Download className="w-4 h-4" aria-hidden="true" />
+          <Share className="w-4 h-4" aria-hidden="true" />
         )}
-        {isExporting ? 'Exporting...' : 'Download'}
+        {isExporting ? 'Exporting...' : 'Export'}
       </Button>
     )
   }
@@ -261,21 +261,21 @@ export function Toolbar({
         </Button>
       </ButtonGroup>
 
-      {/* Download */}
+      {/* Export */}
       <Button
-        variant="outline"
+        variant="default"
         size="default"
         onClick={onExport}
         disabled={!canExport || isExporting}
-        aria-label={isExporting ? 'Exporting...' : 'Download processed image (Ctrl+S)'}
+        aria-label={isExporting ? 'Exporting...' : 'Export processed image (Ctrl+S)'}
         aria-busy={isExporting}
       >
         {isExporting ? (
           <Spinner className="size-4" randomColor />
         ) : (
-          <Download className="w-4 h-4" aria-hidden="true" />
+          <Share className="w-4 h-4" aria-hidden="true" />
         )}
-        {isExporting ? 'Exporting...' : 'Download'}
+        {isExporting ? 'Exporting...' : 'Export'}
       </Button>
     </div>
   )

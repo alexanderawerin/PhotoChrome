@@ -1,9 +1,12 @@
-import { useMemo, Fragment, useRef, useEffect } from 'react'
-import { Shuffle, Heart } from 'lucide-react'
+import { useMemo, Fragment, useRef, useEffect, useState } from 'react'
+import { Shuffle, Heart, Film, Layers } from 'lucide-react'
 import { Button } from './ui/button'
+import { ButtonGroup } from './ui/button-group'
 import { Recipe } from '../engine/types'
 import { RecipeCard } from './RecipeCard'
-import { getAllRecipes, getRecipesGroupedBySimulation, RECIPES } from '../presets/recipes'
+import { getAllRecipes, getRecipesGroupedBySimulation, getRecipesGroupedByUseCase, RECIPES } from '../presets/recipes'
+
+type GroupingMode = 'film' | 'useCase'
 
 /** Width of a recipe card including gap (w-24 = 96px + gap-2 = 8px) */
 const CARD_WIDTH_WITH_GAP = 104
@@ -33,7 +36,9 @@ export function RecipePanel({
   horizontal = false
 }: RecipePanelProps) {
   const recipes = getAllRecipes()
-  const groupedRecipes = getRecipesGroupedBySimulation()
+  const [groupingMode, setGroupingMode] = useState<GroupingMode>('film')
+  const groupedByFilm = getRecipesGroupedBySimulation()
+  const groupedByUseCase = getRecipesGroupedByUseCase()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const prevFavoritesCountRef = useRef(favoriteIds.length)
   
@@ -134,44 +139,84 @@ export function RecipePanel({
             </div>
           )}
           
-          {/* Section groups */}
-          {groupedRecipes.map((group) => (
-            <Fragment key={group.simulationId}>
-              {/* Section header card */}
-              <div 
-                className="flex-shrink-0 flex items-center"
-                role="listitem"
-              >
-                <div className="w-20 h-full flex flex-col items-center justify-center px-2 py-3 rounded-xl bg-zinc-900/50 border border-zinc-800">
-                  <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider text-center leading-tight">
-                    {group.simulationName}
-                  </span>
-                  <span className="text-[10px] text-zinc-600 mt-1">
-                    {group.recipes.length}
-                  </span>
-                </div>
-              </div>
-              
-              {/* Section recipes */}
-              {group.recipes.map((recipe) => (
+          {/* Section groups - by film or use case */}
+          {groupingMode === 'film' ? (
+            groupedByFilm.map((group) => (
+              <Fragment key={group.simulationId}>
+                {/* Section header card */}
                 <div 
-                  key={recipe.id} 
+                  className="flex-shrink-0 flex items-center"
                   role="listitem"
-                  className="flex-shrink-0 w-24"
                 >
-                  <RecipeCard
-                    recipe={recipe}
-                    sourceImage={sourceImage}
-                    isActive={activeRecipeId === recipe.id}
-                    isFavorite={favoritesSet.has(recipe.id)}
-                    onFavoriteToggle={onFavoriteToggle}
-                    onClick={() => onRecipeSelect(recipe)}
-                    largeTouchTargets
-                  />
+                  <div className="w-20 h-full flex flex-col items-center justify-center px-2 py-3 rounded-xl bg-zinc-900/50 border border-zinc-800">
+                    <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider text-center leading-tight">
+                      {group.simulationName}
+                    </span>
+                    <span className="text-[10px] text-zinc-600 mt-1">
+                      {group.recipes.length}
+                    </span>
+                  </div>
                 </div>
-              ))}
-            </Fragment>
-          ))}
+                
+                {/* Section recipes */}
+                {group.recipes.map((recipe) => (
+                  <div 
+                    key={recipe.id} 
+                    role="listitem"
+                    className="flex-shrink-0 w-24"
+                  >
+                    <RecipeCard
+                      recipe={recipe}
+                      sourceImage={sourceImage}
+                      isActive={activeRecipeId === recipe.id}
+                      isFavorite={favoritesSet.has(recipe.id)}
+                      onFavoriteToggle={onFavoriteToggle}
+                      onClick={() => onRecipeSelect(recipe)}
+                      largeTouchTargets
+                    />
+                  </div>
+                ))}
+              </Fragment>
+            ))
+          ) : (
+            groupedByUseCase.map((group) => (
+              <Fragment key={group.useCaseId}>
+                {/* Section header card */}
+                <div 
+                  className="flex-shrink-0 flex items-center"
+                  role="listitem"
+                >
+                  <div className="w-20 h-full flex flex-col items-center justify-center px-2 py-3 rounded-xl bg-zinc-900/50 border border-zinc-800">
+                    <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider text-center leading-tight">
+                      {group.useCaseName}
+                    </span>
+                    <span className="text-[10px] text-zinc-600 mt-1">
+                      {group.recipes.length}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Section recipes */}
+                {group.recipes.map((recipe) => (
+                  <div 
+                    key={recipe.id} 
+                    role="listitem"
+                    className="flex-shrink-0 w-24"
+                  >
+                    <RecipeCard
+                      recipe={recipe}
+                      sourceImage={sourceImage}
+                      isActive={activeRecipeId === recipe.id}
+                      isFavorite={favoritesSet.has(recipe.id)}
+                      onFavoriteToggle={onFavoriteToggle}
+                      onClick={() => onRecipeSelect(recipe)}
+                      largeTouchTargets
+                    />
+                  </div>
+                ))}
+              </Fragment>
+            ))
+          )}
         </div>
       </nav>
     )
@@ -184,24 +229,50 @@ export function RecipePanel({
       aria-label="Film presets panel"
     >
       {/* Header */}
-      <div className="flex-shrink-0 px-4 py-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-semibold text-white" id="recipes-heading">
-            Films
-          </h2>
-          <p className="text-xs text-zinc-500" aria-live="polite">
-            {recipes.length} presets
-          </p>
+      <div className="flex-shrink-0 px-4 py-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-white" id="recipes-heading">
+              Films
+            </h2>
+            <p className="text-xs text-zinc-500" aria-live="polite">
+              {recipes.length} presets
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onRandomRecipe}
+            aria-label="Random preset"
+            className="text-zinc-400 hover:text-white"
+          >
+            <Shuffle className="w-4 h-4" aria-hidden="true" />
+          </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onRandomRecipe}
-          aria-label="Random preset"
-          className="text-zinc-400 hover:text-white"
-        >
-          <Shuffle className="w-4 h-4" aria-hidden="true" />
-        </Button>
+        
+        {/* Grouping toggle */}
+        <ButtonGroup className="w-full" role="group" aria-label="Group presets by">
+          <Button
+            variant={groupingMode === 'film' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setGroupingMode('film')}
+            className="flex-1 text-xs"
+            aria-pressed={groupingMode === 'film'}
+          >
+            <Film className="w-3 h-3" aria-hidden="true" />
+            Film
+          </Button>
+          <Button
+            variant={groupingMode === 'useCase' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setGroupingMode('useCase')}
+            className="flex-1 text-xs"
+            aria-pressed={groupingMode === 'useCase'}
+          >
+            <Layers className="w-3 h-3" aria-hidden="true" />
+            Use
+          </Button>
+        </ButtonGroup>
       </div>
       
       {/* Scrollable content with sections */}
@@ -262,50 +333,96 @@ export function RecipePanel({
             )}
           </section>
 
-          {/* Other simulation groups */}
-          {groupedRecipes.map((group) => (
-            <section 
-              key={group.simulationId}
-              aria-label={`${group.simulationName} presets`}
-            >
-              {/* Section header */}
-              <div className="flex items-center gap-2 mb-2 px-1">
-                <h3 
-                  className="text-xs font-medium text-zinc-400 uppercase tracking-wider"
-                  id={`group-${group.simulationId}`}
-                >
-                  {group.simulationName}
-                </h3>
-                <div className="flex-1 h-px bg-zinc-800" aria-hidden="true" />
-                <span 
-                  className="text-[10px] text-zinc-600"
-                  aria-label={`${group.recipes.length} presets`}
-                >
-                  {group.recipes.length}
-                </span>
-              </div>
-              
-              {/* Recipe grid */}
-              <div 
-                className="grid grid-cols-2 gap-2"
-                role="list"
-                aria-labelledby={`group-${group.simulationId}`}
+          {/* Groups - by film or use case */}
+          {groupingMode === 'film' ? (
+            groupedByFilm.map((group) => (
+              <section 
+                key={group.simulationId}
+                aria-label={`${group.simulationName} presets`}
               >
-                {group.recipes.map((recipe) => (
-                  <div key={recipe.id} role="listitem">
-                    <RecipeCard
-                      recipe={recipe}
-                      sourceImage={sourceImage}
-                      isActive={activeRecipeId === recipe.id}
-                      isFavorite={favoritesSet.has(recipe.id)}
-                      onFavoriteToggle={onFavoriteToggle}
-                      onClick={() => onRecipeSelect(recipe)}
-                    />
-                  </div>
-                ))}
-              </div>
-            </section>
-          ))}
+                {/* Section header */}
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <h3 
+                    className="text-xs font-medium text-zinc-400 uppercase tracking-wider"
+                    id={`group-${group.simulationId}`}
+                  >
+                    {group.simulationName}
+                  </h3>
+                  <div className="flex-1 h-px bg-zinc-800" aria-hidden="true" />
+                  <span 
+                    className="text-[10px] text-zinc-600"
+                    aria-label={`${group.recipes.length} presets`}
+                  >
+                    {group.recipes.length}
+                  </span>
+                </div>
+                
+                {/* Recipe grid */}
+                <div 
+                  className="grid grid-cols-2 gap-2"
+                  role="list"
+                  aria-labelledby={`group-${group.simulationId}`}
+                >
+                  {group.recipes.map((recipe) => (
+                    <div key={recipe.id} role="listitem">
+                      <RecipeCard
+                        recipe={recipe}
+                        sourceImage={sourceImage}
+                        isActive={activeRecipeId === recipe.id}
+                        isFavorite={favoritesSet.has(recipe.id)}
+                        onFavoriteToggle={onFavoriteToggle}
+                        onClick={() => onRecipeSelect(recipe)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))
+          ) : (
+            groupedByUseCase.map((group) => (
+              <section 
+                key={group.useCaseId}
+                aria-label={`${group.useCaseName} presets`}
+              >
+                {/* Section header */}
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <h3 
+                    className="text-xs font-medium text-zinc-400 uppercase tracking-wider"
+                    id={`group-${group.useCaseId}`}
+                  >
+                    {group.useCaseName}
+                  </h3>
+                  <div className="flex-1 h-px bg-zinc-800" aria-hidden="true" />
+                  <span 
+                    className="text-[10px] text-zinc-600"
+                    aria-label={`${group.recipes.length} presets`}
+                  >
+                    {group.recipes.length}
+                  </span>
+                </div>
+                
+                {/* Recipe grid */}
+                <div 
+                  className="grid grid-cols-2 gap-2"
+                  role="list"
+                  aria-labelledby={`group-${group.useCaseId}`}
+                >
+                  {group.recipes.map((recipe) => (
+                    <div key={recipe.id} role="listitem">
+                      <RecipeCard
+                        recipe={recipe}
+                        sourceImage={sourceImage}
+                        isActive={activeRecipeId === recipe.id}
+                        isFavorite={favoritesSet.has(recipe.id)}
+                        onFavoriteToggle={onFavoriteToggle}
+                        onClick={() => onRecipeSelect(recipe)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))
+          )}
         </div>
       </div>
     </nav>
