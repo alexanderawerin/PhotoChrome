@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { LandingScreen } from './components/LandingScreen'
 import { Editor } from './components/Editor'
+import { VideoEditor } from './components/VideoEditor'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Spinner } from './components/ui/spinner'
 import { useImageProcessor } from './hooks/useImageProcessor'
+import { useVideoProcessor } from './hooks/useVideoProcessor'
 
 /**
  * Loading messages that cycle while waiting.
@@ -62,21 +64,64 @@ function LoadingOverlay() {
   )
 }
 
+type MediaType = 'image' | 'video' | null
+
 /**
  * Main application component.
- * Handles routing between landing screen and editor based on loaded image state.
+ * Handles routing between landing screen and editor based on loaded media state.
  */
 function AppContent() {
-  const { image, imageData, isLoading, error, loadImage, reset } = useImageProcessor()
+  const [mediaType, setMediaType] = useState<MediaType>(null)
+  const [fileName, setFileName] = useState<string>('')
+  
+  const {
+    imageData,
+    isLoading: isImageLoading,
+    error: imageError,
+    loadImage,
+    reset: resetImage,
+  } = useImageProcessor()
 
-  // Show error state if image loading failed
+  const {
+    videoData,
+    isLoading: isVideoLoading,
+    error: videoError,
+    exportState,
+    loadVideoFile,
+    exportVideoWithEffects,
+    cancelExport,
+    reset: resetVideo,
+  } = useVideoProcessor()
+
+  const isLoading = isImageLoading || isVideoLoading
+  const error = imageError || videoError
+
+  const handleFileSelect = useCallback(async (file: File, type: 'image' | 'video') => {
+    setFileName(file.name)
+    setMediaType(type)
+    
+    if (type === 'image') {
+      await loadImage(file)
+    } else {
+      await loadVideoFile(file)
+    }
+  }, [loadImage, loadVideoFile])
+
+  const handleReset = useCallback(() => {
+    setMediaType(null)
+    setFileName('')
+    resetImage()
+    resetVideo()
+  }, [resetImage, resetVideo])
+
+  // Show error state
   if (error) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
         <div className="text-center space-y-4">
           <p className="text-red-400">{error}</p>
           <button
-            onClick={reset}
+            onClick={handleReset}
             className="text-sm text-zinc-400 hover:text-white underline"
           >
             Try again
@@ -86,25 +131,43 @@ function AppContent() {
     )
   }
 
-  // Show landing screen if no image loaded
-  if (!image || !imageData) {
+  // Show landing screen if no media loaded
+  if (mediaType === null || (mediaType === 'image' && !imageData) || (mediaType === 'video' && !videoData)) {
     return (
       <>
-        <LandingScreen onImageSelect={loadImage} />
+        <LandingScreen onFileSelect={handleFileSelect} />
         {isLoading && <LoadingOverlay />}
       </>
     )
   }
 
-  // Show editor with loaded image
-  return (
-    <Editor
-      originalImage={imageData.original}
-      thumbnail={imageData.thumbnail}
-      fileName={image.name}
-      onBack={reset}
-    />
-  )
+  // Show image editor
+  if (mediaType === 'image' && imageData) {
+    return (
+      <Editor
+        originalImage={imageData.original}
+        thumbnail={imageData.thumbnail}
+        fileName={fileName}
+        onBack={handleReset}
+      />
+    )
+  }
+
+  // Show video editor
+  if (mediaType === 'video' && videoData) {
+    return (
+      <VideoEditor
+        videoData={videoData}
+        fileName={fileName}
+        onBack={handleReset}
+        onExport={exportVideoWithEffects}
+        exportState={exportState}
+        onCancelExport={cancelExport}
+      />
+    )
+  }
+
+  return null
 }
 
 /**

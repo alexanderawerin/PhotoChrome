@@ -4,11 +4,14 @@ import { Button } from './ui/button'
 import { PhotoArc } from './PhotoArc'
 
 interface LandingScreenProps {
-  onImageSelect: (file: File) => void
+  onFileSelect: (file: File, type: 'image' | 'video') => void
 }
 
 /** Accepted image MIME types */
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+
+/** Accepted video MIME types */
+const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/mov']
 
 /**
  * Validates that a file is an accepted image type.
@@ -17,16 +20,35 @@ function isValidImageFile(file: File): boolean {
   return file.type.startsWith('image/') || ACCEPTED_IMAGE_TYPES.includes(file.type)
 }
 
-export function LandingScreen({ onImageSelect }: LandingScreenProps) {
+/**
+ * Validates that a file is an accepted video type.
+ */
+function isValidVideoFile(file: File): boolean {
+  return file.type.startsWith('video/') || ACCEPTED_VIDEO_TYPES.includes(file.type)
+}
+
+/**
+ * Determines file type and validates it.
+ */
+function getFileType(file: File): 'image' | 'video' | null {
+  if (isValidImageFile(file)) return 'image'
+  if (isValidVideoFile(file)) return 'video'
+  return null
+}
+
+export function LandingScreen({ onFileSelect }: LandingScreenProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file && isValidImageFile(file)) {
-      onImageSelect(file)
+    if (file) {
+      const type = getFileType(file)
+      if (type) {
+        onFileSelect(file, type)
+      }
     }
-  }, [onImageSelect])
+  }, [onFileSelect])
 
   const handleButtonClick = useCallback(() => {
     fileInputRef.current?.click()
@@ -36,10 +58,13 @@ export function LandingScreen({ onImageSelect }: LandingScreenProps) {
     event.preventDefault()
     setIsDragging(false)
     const file = event.dataTransfer.files[0]
-    if (file && isValidImageFile(file)) {
-      onImageSelect(file)
+    if (file) {
+      const type = getFileType(file)
+      if (type) {
+        onFileSelect(file, type)
+      }
     }
-  }, [onImageSelect])
+  }, [onFileSelect])
 
   const handleDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault()
@@ -80,7 +105,7 @@ export function LandingScreen({ onImageSelect }: LandingScreenProps) {
             Photochrome
           </h1>
           <p className="text-sm text-zinc-500 max-w-xs mx-auto leading-relaxed">
-            Fujifilm film simulations<br/>for your photos
+            Fujifilm film simulations<br/>for your photos and videos
           </p>
         </header>
 
@@ -88,21 +113,21 @@ export function LandingScreen({ onImageSelect }: LandingScreenProps) {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,video/*"
             onChange={handleFileSelect}
             className="sr-only"
-            id="image-upload"
-            aria-label="Select image for processing"
+            id="media-upload"
+            aria-label="Select image or video for processing"
           />
           
           <Button
             size="lg"
             onClick={handleButtonClick}
             className="gap-2.5 text-sm px-6 py-5 bg-white text-black hover:bg-zinc-200 transition-all duration-200 rounded-xl pointer-events-auto"
-            aria-controls="image-upload"
+            aria-controls="media-upload"
           >
             <Upload className="w-4 h-4" aria-hidden="true" />
-            Upload Photo
+            Upload Photo or Video
           </Button>
           
           <p 
