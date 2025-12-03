@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect, useLayoutEffect, useMemo } from 'react'
-import { ArrowLeft, PanelRightClose, PanelRightOpen, Film, X, Settings2, Share } from 'lucide-react'
+import { ArrowLeft, PanelRightClose, PanelRightOpen, Film, X, Settings2, Share, HelpCircle } from 'lucide-react'
 import { APP_VERSION } from '../constants'
 import { Button } from './ui/button'
 import { VideoPreview } from './VideoPreview'
 import { RecipePanel } from './RecipePanel'
 import { TuningPanel } from './TuningPanel'
+import { HelpDialog } from './HelpDialog'
 import { Recipe, RecipeSettings, ProcessingOptions } from '../engine/types'
 import { getSimulation } from '../presets/simulations'
 import { getAllRecipes } from '../presets/recipes'
@@ -87,6 +88,7 @@ export function VideoEditor({
   const [isTuning, setIsTuning] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
   const [isPanelOpen, setIsPanelOpen] = useState(true)
+  const [isHelpOpen, setIsHelpOpen] = useState(false)
 
   // Favorites
   const { getFavoriteIds, toggleFavorite } = useFavorites()
@@ -321,6 +323,7 @@ export function VideoEditor({
               </div>
             </div>
 
+            {/* Desktop: Panel toggle */}
             <Button
               variant="ghost"
               size="icon"
@@ -334,6 +337,7 @@ export function VideoEditor({
                 <PanelRightOpen className="w-5 h-5" />
               )}
             </Button>
+            {/* Spacer for mobile */}
             <div className="w-8 h-8 md:hidden" />
           </div>
         </header>
@@ -357,9 +361,19 @@ export function VideoEditor({
           </div>
         </div>
 
-        {/* Video toolbar - simplified (no rotate/crop) */}
+        {/* Video toolbar - Order: Help → Preset settings → Export */}
         <div className="flex-shrink-0 p-3 md:p-4">
           <div className="flex items-center justify-center gap-3">
+            {/* Help button */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setIsHelpOpen(true)}
+              aria-label="Help"
+            >
+              <HelpCircle className="w-4 h-4" aria-hidden="true" />
+            </Button>
+
             {/* Recipe chip — toggle tuning panel */}
             {activeRecipe ? (
               <Button
@@ -485,6 +499,12 @@ export function VideoEditor({
           onCancel={onCancelExport}
         />
       )}
+
+      {/* Help dialog */}
+      <HelpDialog
+        isOpen={isHelpOpen}
+        onClose={() => setIsHelpOpen(false)}
+      />
     </div>
   )
 }

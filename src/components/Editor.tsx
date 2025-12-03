@@ -7,6 +7,7 @@ import { RecipePanel } from './RecipePanel'
 import { TuningPanel } from './TuningPanel'
 import { CropPanel } from './CropPanel'
 import { Toolbar } from './Toolbar'
+import { HelpDialog } from './HelpDialog'
 import { Recipe, RecipeSettings } from '../engine/types'
 import { ImageProcessor } from '../engine/processor'
 import { getSimulation } from '../presets/simulations'
@@ -44,6 +45,7 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
   const [isExporting, setIsExporting] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
   const [isPanelOpen, setIsPanelOpen] = useState(true)
+  const [isHelpOpen, setIsHelpOpen] = useState(false)
 
   // ============================================================================
   // Custom Hooks
@@ -317,6 +319,7 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
             activeRecipe={activeRecipe}
             tuningMode={tuning.isTuning}
             onTuningOpen={handleTuningOpen}
+            onHelpClick={() => setIsHelpOpen(true)}
           />
         </div>
 
@@ -332,6 +335,7 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
             activeRecipe={activeRecipe}
             tuningMode={tuning.isTuning}
             onTuningOpen={handleTuningOpen}
+            onHelpClick={() => setIsHelpOpen(true)}
             mobileMode
           />
         </div>
@@ -405,6 +409,12 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
         onApply={transform.applyCrop}
         onCancel={transform.cancelCrop}
       />
+
+      {/* Help dialog */}
+      <HelpDialog
+        isOpen={isHelpOpen}
+        onClose={() => setIsHelpOpen(false)}
+      />
     </div>
   )
 }
@@ -435,6 +445,7 @@ function Header({ fileName, isPanelOpen, onBack, onPanelToggle }: HeaderProps) {
           <p className="text-[10px] md:text-xs text-zinc-500 truncate max-w-[140px] md:max-w-none">{fileName}</p>
         </div>
         
+        {/* Desktop: Panel toggle */}
         <Button
           variant="ghost"
           size="icon"
@@ -445,6 +456,7 @@ function Header({ fileName, isPanelOpen, onBack, onPanelToggle }: HeaderProps) {
         >
           {isPanelOpen ? <PanelRightClose className="w-5 h-5" /> : <PanelRightOpen className="w-5 h-5" />}
         </Button>
+        {/* Spacer for mobile */}
         <div className="w-8 h-8 md:hidden" />
       </div>
     </header>

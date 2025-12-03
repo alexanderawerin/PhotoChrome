@@ -1,4 +1,4 @@
-import { RotateCw, RotateCcw, Crop, Check, Share, Settings2, Film } from 'lucide-react'
+import { RotateCw, RotateCcw, Crop, Check, Share, Settings2, Film, HelpCircle } from 'lucide-react'
 import { Spinner } from './ui/spinner'
 import { Button } from './ui/button'
 import { ButtonGroup } from './ui/button-group'
@@ -22,6 +22,8 @@ interface ToolbarProps {
   activeRecipe?: Recipe | null
   tuningMode?: boolean
   onTuningOpen?: () => void
+  // Help
+  onHelpClick?: () => void
   // Mobile modes
   mobileMode?: boolean  // Show only tools without download
   downloadOnly?: boolean // Show only download button
@@ -51,6 +53,7 @@ export function Toolbar({
   activeRecipe,
   tuningMode = false,
   onTuningOpen,
+  onHelpClick,
   mobileMode = false,
   downloadOnly = false
 }: ToolbarProps) {
@@ -131,6 +134,7 @@ export function Toolbar({
 
   // ═══════════════════════════════════════════════════════════════════════════
   // MOBILE MODE (tools without download)
+  // Order: Help → Rotate/Crop → Preset settings
   // ═══════════════════════════════════════════════════════════════════════════
   if (mobileMode) {
     return (
@@ -139,31 +143,16 @@ export function Toolbar({
         role="toolbar"
         aria-label="Editing tools"
       >
-        {/* Recipe chip — toggle panel */}
-        {activeRecipe ? (
+        {/* Help button */}
+        {onHelpClick && (
           <Button
             variant="outline"
-            size="default"
-            onClick={onTuningOpen}
-            aria-label={`Tune ${activeRecipe.name}`}
-            aria-pressed={tuningMode}
-            className="text-xs min-w-0 flex-1"
+            size="icon"
+            onClick={onHelpClick}
+            aria-label="Help"
+            className="flex-shrink-0"
           >
-            <Film className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
-            <span className="truncate">
-              {activeRecipe.name}
-            </span>
-            <Settings2 className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
-          </Button>
-        ) : (
-          <Button
-            variant="outline"
-            size="default"
-            disabled
-            className="text-xs flex-1"
-          >
-            <Film className="w-4 h-4" aria-hidden="true" />
-            <span>Select preset</span>
+            <HelpCircle className="w-4 h-4" aria-hidden="true" />
           </Button>
         )}
 
@@ -194,12 +183,41 @@ export function Toolbar({
             <Crop className="w-4 h-4" aria-hidden="true" />
           </Button>
         </ButtonGroup>
+
+        {/* Recipe chip — toggle tuning panel */}
+        {activeRecipe ? (
+          <Button
+            variant="outline"
+            size="default"
+            onClick={onTuningOpen}
+            aria-label={`Tune ${activeRecipe.name}`}
+            aria-pressed={tuningMode}
+            className="text-xs min-w-0 flex-1"
+          >
+            <Film className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+            <span className="truncate">
+              {activeRecipe.name}
+            </span>
+            <Settings2 className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="default"
+            disabled
+            className="text-xs flex-1"
+          >
+            <Film className="w-4 h-4" aria-hidden="true" />
+            <span>Select preset</span>
+          </Button>
+        )}
       </div>
     )
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DESKTOP MODE (full toolbar)
+  // Order: Help → Rotate/Crop → Preset settings → Export
   // ═══════════════════════════════════════════════════════════════════════════
   return (
     <div 
@@ -207,29 +225,15 @@ export function Toolbar({
       role="toolbar"
       aria-label="Editing tools"
     >
-      {/* Recipe chip — toggle panel */}
-      {activeRecipe ? (
+      {/* Help button */}
+      {onHelpClick && (
         <Button
           variant="outline"
-          size="default"
-          onClick={onTuningOpen}
-          aria-label={`Tune ${activeRecipe.name}`}
-          aria-pressed={tuningMode}
+          size="icon"
+          onClick={onHelpClick}
+          aria-label="Help"
         >
-          <Film className="w-4 h-4" aria-hidden="true" />
-          <span className="max-w-32 truncate">
-            {activeRecipe.name}
-          </span>
-          <Settings2 className="w-4 h-4" aria-hidden="true" />
-        </Button>
-      ) : (
-        <Button
-          variant="outline"
-          size="default"
-          disabled
-        >
-          <Film className="w-4 h-4" aria-hidden="true" />
-          Select preset
+          <HelpCircle className="w-4 h-4" aria-hidden="true" />
         </Button>
       )}
 
@@ -260,6 +264,32 @@ export function Toolbar({
           <Crop className="w-4 h-4" aria-hidden="true" />
         </Button>
       </ButtonGroup>
+
+      {/* Recipe chip — toggle tuning panel */}
+      {activeRecipe ? (
+        <Button
+          variant="outline"
+          size="default"
+          onClick={onTuningOpen}
+          aria-label={`Tune ${activeRecipe.name}`}
+          aria-pressed={tuningMode}
+        >
+          <Film className="w-4 h-4" aria-hidden="true" />
+          <span className="max-w-32 truncate">
+            {activeRecipe.name}
+          </span>
+          <Settings2 className="w-4 h-4" aria-hidden="true" />
+        </Button>
+      ) : (
+        <Button
+          variant="outline"
+          size="default"
+          disabled
+        >
+          <Film className="w-4 h-4" aria-hidden="true" />
+          Select preset
+        </Button>
+      )}
 
       {/* Export */}
       <Button
