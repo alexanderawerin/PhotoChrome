@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useLayoutEffect } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { ArrowLeft, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { APP_VERSION, APP_URL } from '../constants'
 import { Button } from './ui/button'
@@ -11,8 +11,12 @@ import { Recipe, RecipeSettings } from '../engine/types'
 import { ImageProcessor } from '../engine/processor'
 import { getSimulation } from '../presets/simulations'
 import { getAllRecipes } from '../presets/recipes'
-import { rotateImage, cropImage, calculateCropArea, AspectRatio } from '../engine/transform'
+import { AspectRatio } from '../engine/transform'
 import { useFavorites } from '../hooks/useFavorites'
+import { useTransform } from '../hooks/useTransform'
+import { useTuning } from '../hooks/useTuning'
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
+import { useViewportHeight, getViewportHeightStyle } from '../hooks/useViewportHeight'
 
 interface EditorProps {
   originalImage: ImageData
@@ -21,66 +25,96 @@ interface EditorProps {
   onBack: () => void
 }
 
+/**
+ * Главный компонент редактора.
+ * Использует композицию хуков для разделения ответственности:
+ * - useTransform: повороты и обрезка
+ * - useTuning: режим тонкой настройки
+ * - useKeyboardShortcuts: горячие клавиши
+ * - useViewportHeight: корректная высота на мобильных
+ */
 export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorProps) {
-  const [previewImage, setPreviewImage] = useState<ImageData>(thumbnail)
+  // ============================================================================
+  // State
+  // ============================================================================
+  
   const [activeRecipe, setActiveRecipe] = useState<Recipe | null>(null)
-  const [customSettings, setCustomSettings] = useState<RecipeSettings>({})
+  const [previewImage, setPreviewImage] = useState<ImageData>(thumbnail)
   const [isProcessing, setIsProcessing] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
-  const [isCropping, setIsCropping] = useState(false)
-  const [isTuning, setIsTuning] = useState(false)
-  const [cropRatio, setCropRatio] = useState<AspectRatio>('1:1')
   const [showOriginal, setShowOriginal] = useState(false)
   const [isPanelOpen, setIsPanelOpen] = useState(true)
-  
-  // Трансформированные изображения
-  const [transformedOriginal, setTransformedOriginal] = useState<ImageData>(originalImage)
-  const [transformedThumbnail, setTransformedThumbnail] = useState<ImageData>(thumbnail)
 
-  // Избранные рецепты
+  // ============================================================================
+  // Custom Hooks
+  // ============================================================================
+
+  const viewportHeight = useViewportHeight()
   const { getFavoriteIds, toggleFavorite } = useFavorites()
 
-  // Track actual viewport height for mobile browsers
-  const [viewportHeight, setViewportHeight] = useState<number | null>(null)
-  
-  useLayoutEffect(() => {
-    const updateHeight = () => {
-      setViewportHeight(window.innerHeight)
-    }
-    
-    updateHeight()
-    window.addEventListener('resize', updateHeight)
-    // Also update on orientation change
-    window.addEventListener('orientationchange', () => {
-      setTimeout(updateHeight, 100)
-    })
-    
-    return () => {
-      window.removeEventListener('resize', updateHeight)
+  // Refs для доступа к актуальным значениям из callbacks (избегаем stale closures)
+  const customSettingsRef = useRef<RecipeSettings>({})
+  const transformedThumbnailRef = useRef<ImageData>(thumbnail)
+
+  /**
+   * Обновляет превью с заданными параметрами
+   */
+  const updatePreview = useCallback((
+    thumbData: ImageData,
+    recipe: Recipe | null,
+    settings: RecipeSettings
+  ) => {
+    if (recipe) {
+      const simulation = getSimulation(recipe.filmSimulation)
+      if (simulation) {
+        const mergedSettings = { ...recipe.settings, ...settings }
+        const processed = ImageProcessor.process(thumbData, {
+          simulation,
+          settings: mergedSettings
+        })
+        setPreviewImage(processed)
+      }
+    } else {
+      setPreviewImage(thumbData)
     }
   }, [])
 
-  /**
-   * Объединяет настройки рецепта с пользовательскими настройками
-   */
-  const getMergedSettings = useCallback((recipe: Recipe | null): RecipeSettings => {
-    if (!recipe) return {}
-    return {
-      ...recipe.settings,
-      ...customSettings
-    }
-  }, [customSettings])
+  // Transform hook (rotation, crop)
+  const transform = useTransform({
+    originalImage,
+    thumbnail,
+    onTransformChange: useCallback((_original: ImageData, newThumbnail: ImageData) => {
+      transformedThumbnailRef.current = newThumbnail
+      updatePreview(newThumbnail, activeRecipe, customSettingsRef.current)
+    }, [activeRecipe, updatePreview])
+  })
+
+  // Синхронизируем ref с актуальным состоянием transform
+  transformedThumbnailRef.current = transform.transformedThumbnail
+
+  // Tuning hook (fine-tune settings)
+  const tuning = useTuning({
+    onSettingsChange: useCallback((newSettings: RecipeSettings) => {
+      customSettingsRef.current = newSettings
+      updatePreview(transformedThumbnailRef.current, activeRecipe, newSettings)
+    }, [activeRecipe, updatePreview])
+  })
+
+  // Синхронизируем ref с актуальным состоянием tuning
+  customSettingsRef.current = tuning.customSettings
+
+  // ============================================================================
+  // Recipe Processing
+  // ============================================================================
 
   /**
-   * Применяет текущий рецепт к изображению
+   * Применяет рецепт к изображению
    */
   const applyRecipeToImage = useCallback((
     imageData: ImageData,
-    recipe: Recipe | null,
+    recipe: Recipe,
     settings?: RecipeSettings
   ): ImageData => {
-    if (!recipe) return imageData
-
     const simulation = getSimulation(recipe.filmSimulation)
     if (!simulation) {
       console.error(`Simulation ${recipe.filmSimulation} not found`)
@@ -94,36 +128,20 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
   }, [])
 
   /**
-   * Обновляет превью с текущим рецептом и настройками
-   */
-  const updatePreview = useCallback((
-    thumbData: ImageData, 
-    recipe: Recipe | null = activeRecipe,
-    settings?: RecipeSettings
-  ) => {
-    if (recipe) {
-      const mergedSettings = settings ?? getMergedSettings(recipe)
-      const processed = applyRecipeToImage(thumbData, recipe, mergedSettings)
-      setPreviewImage(processed)
-    } else {
-      setPreviewImage(thumbData)
-    }
-  }, [activeRecipe, getMergedSettings, applyRecipeToImage])
-
-  /**
    * Выбор рецепта
    */
-  const handleRecipeSelect = useCallback(async (recipe: Recipe) => {
+  const handleRecipeSelect = useCallback((recipe: Recipe) => {
     setActiveRecipe(recipe)
-    setCustomSettings({}) // Сбрасываем кастомные настройки при выборе нового рецепта
+    tuning.resetSettings()
     setIsProcessing(true)
 
     try {
-      updatePreview(transformedThumbnail, recipe, recipe.settings)
+      const processed = applyRecipeToImage(transform.transformedThumbnail, recipe, recipe.settings)
+      setPreviewImage(processed)
     } finally {
       setIsProcessing(false)
     }
-  }, [transformedThumbnail, updatePreview])
+  }, [transform.transformedThumbnail, applyRecipeToImage, tuning])
 
   /**
    * Случайный рецепт
@@ -131,7 +149,7 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
   const handleRandomRecipe = useCallback(() => {
     const recipes = getAllRecipes()
     const availableRecipes = activeRecipe 
-      ? recipes.filter(r => r.id !== activeRecipe.id)
+      ? recipes.filter((r: Recipe) => r.id !== activeRecipe.id)
       : recipes
     
     if (availableRecipes.length > 0) {
@@ -140,139 +158,55 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
     }
   }, [activeRecipe, handleRecipeSelect])
 
-  /**
-   * Обработка изменения настроек в режиме тюнинга
-   */
-  const handleSettingsChange = useCallback((newSettings: RecipeSettings) => {
-    setCustomSettings(newSettings)
-    if (activeRecipe) {
-      const mergedSettings = { ...activeRecipe.settings, ...newSettings }
-      updatePreview(transformedThumbnail, activeRecipe, mergedSettings)
-    }
-  }, [activeRecipe, transformedThumbnail, updatePreview])
-
-  /**
-   * Сохраняем настройки перед входом в режим тюнинга для возможности отмены
-   */
-  const [settingsBeforeTuning, setSettingsBeforeTuning] = useState<RecipeSettings>({})
-
-  /**
-   * Toggle режима тюнинга (открыть/закрыть)
-   */
-  const handleTuningOpen = useCallback(() => {
-    if (isTuning) {
-      // Если уже открыто — закрываем (применяем настройки), панель остаётся
-      setIsTuning(false)
-    } else {
-      // Открываем — сохраняем настройки для возможности отмены
-      setSettingsBeforeTuning(customSettings)
-      setIsTuning(true)
-      // Убеждаемся что панель открыта
-      if (!isPanelOpen) {
-        setIsPanelOpen(true)
-      }
-    }
-  }, [isTuning, customSettings, isPanelOpen])
-
-  /**
-   * Применить настройки и закрыть тюнинг (панель остаётся открытой)
-   */
-  const handleTuningApply = useCallback(() => {
-    setIsTuning(false)
-  }, [])
-
-  /**
-   * Отменить настройки и закрыть тюнинг (панель остаётся открытой)
-   */
-  const handleTuningCancel = useCallback(() => {
-    // Восстанавливаем настройки до входа в режим тюнинга
-    setCustomSettings(settingsBeforeTuning)
-    if (activeRecipe) {
-      const mergedSettings = { ...activeRecipe.settings, ...settingsBeforeTuning }
-      updatePreview(transformedThumbnail, activeRecipe, mergedSettings)
-    }
-    setIsTuning(false)
-  }, [settingsBeforeTuning, activeRecipe, transformedThumbnail, updatePreview])
+  // ============================================================================
+  // Panel & UI
+  // ============================================================================
 
   /**
    * Переключение видимости панели
    */
   const handlePanelToggle = useCallback(() => {
     setIsPanelOpen(prev => !prev)
-    if (isTuning) {
-      setIsTuning(false)
+    if (tuning.isTuning) {
+      tuning.applyTuning()
     }
-  }, [isTuning])
+  }, [tuning])
 
   /**
-   * Поворот изображения
+   * Открытие тюнинга с проверкой панели
    */
-  const handleRotate = useCallback((angle: 90 | 270) => {
-    const rotatedOriginal = rotateImage(transformedOriginal, angle)
-    const rotatedThumbnail = rotateImage(transformedThumbnail, angle)
-    
-    setTransformedOriginal(rotatedOriginal)
-    setTransformedThumbnail(rotatedThumbnail)
-    updatePreview(rotatedThumbnail)
-  }, [transformedOriginal, transformedThumbnail, updatePreview])
-
-  const handleRotateClockwise = useCallback(() => handleRotate(90), [handleRotate])
-  const handleRotateCounterClockwise = useCallback(() => handleRotate(270), [handleRotate])
+  const handleTuningOpen = useCallback(() => {
+    if (tuning.isTuning) {
+      tuning.applyTuning()
+    } else {
+      tuning.toggleTuning()
+      if (!isPanelOpen) {
+        setIsPanelOpen(true)
+      }
+    }
+  }, [tuning, isPanelOpen])
 
   /**
-   * Crop
+   * Открытие crop с закрытием tuning
    */
   const handleCropClick = useCallback(() => {
-    setCropRatio('1:1')
-    setIsCropping(true)
-    setIsTuning(false) // Закрываем тюнинг при входе в crop
-  }, [])
-
-  const handleCropCancel = useCallback(() => {
-    setIsCropping(false)
-  }, [])
-
-  const handleCropRatioChange = useCallback((ratio: AspectRatio) => {
-    setCropRatio(ratio)
-  }, [])
-
-  const handleCropApply = useCallback(() => {
-    if (cropRatio === 'free') {
-      setIsCropping(false)
-      return
+    if (tuning.isTuning) {
+      tuning.applyTuning()
     }
+    transform.openCrop()
+  }, [tuning, transform])
 
-    // Вычисляем crop area отдельно для оригинала и thumbnail
-    const cropAreaOriginal = calculateCropArea(
-      transformedOriginal.width,
-      transformedOriginal.height,
-      cropRatio
-    )
-    const cropAreaThumbnail = calculateCropArea(
-      transformedThumbnail.width,
-      transformedThumbnail.height,
-      cropRatio
-    )
+  // ============================================================================
+  // Export
+  // ============================================================================
 
-    const croppedOriginal = cropImage(transformedOriginal, cropAreaOriginal)
-    const croppedThumbnail = cropImage(transformedThumbnail, cropAreaThumbnail)
-
-    setTransformedOriginal(croppedOriginal)
-    setTransformedThumbnail(croppedThumbnail)
-    updatePreview(croppedThumbnail)
-    setIsCropping(false)
-  }, [cropRatio, transformedOriginal, transformedThumbnail, updatePreview])
-
-  /**
-   * Экспорт
-   */
   const handleExport = useCallback(async () => {
     if (!activeRecipe) return
 
     setIsExporting(true)
     try {
-      const mergedSettings = getMergedSettings(activeRecipe)
-      const processed = applyRecipeToImage(transformedOriginal, activeRecipe, mergedSettings)
+      const mergedSettings = tuning.getMergedSettings(activeRecipe)
+      const processed = applyRecipeToImage(transform.transformedOriginal, activeRecipe, mergedSettings)
       
       // Добавляем водяной знак
       const withWatermark = ImageProcessor.addWatermark(processed, APP_URL)
@@ -292,151 +226,65 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
     } finally {
       setIsExporting(false)
     }
-  }, [activeRecipe, transformedOriginal, fileName, getMergedSettings, applyRecipeToImage])
+  }, [activeRecipe, transform.transformedOriginal, fileName, tuning, applyRecipeToImage])
 
-  /**
-   * Сравнение до/после
-   */
+  // ============================================================================
+  // Compare (before/after)
+  // ============================================================================
+
   const handleCompareStart = useCallback(() => setShowOriginal(true), [])
   const handleCompareEnd = useCallback(() => setShowOriginal(false), [])
 
-  /**
-   * Keyboard shortcuts
-   */
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return
-      }
+  // ============================================================================
+  // Keyboard Shortcuts
+  // ============================================================================
 
-      switch (e.key.toLowerCase()) {
-        case 'r':
-          if (!isCropping && !isTuning) {
-            if (e.shiftKey) {
-              handleRotateCounterClockwise()
-            } else {
-              handleRotateClockwise()
-            }
-          }
-          break
-        case 'c':
-          if (!e.metaKey && !e.ctrlKey && !isCropping && !isTuning) {
-            handleCropClick()
-          }
-          break
-        case 't':
-          if (!e.metaKey && !e.ctrlKey && !isCropping && activeRecipe) {
-            handleTuningOpen()
-          }
-          break
-        case 'p':
-          if (!e.metaKey && !e.ctrlKey) {
-            handlePanelToggle()
-          }
-          break
-        case 'escape':
-          if (isCropping) {
-            handleCropCancel()
-          } else if (isTuning) {
-            handleTuningCancel()
-          }
-          break
-        case 'enter':
-          if (isCropping && cropRatio !== 'free') {
-            handleCropApply()
-          } else if (isTuning) {
-            setIsTuning(false) // Применяем
-          }
-          break
-        case ' ':
-          if (activeRecipe && !isCropping && !isTuning) {
-            e.preventDefault()
-            setShowOriginal(true)
-          }
-          break
-        case 's':
-          if ((e.metaKey || e.ctrlKey) && activeRecipe) {
-            e.preventDefault()
-            handleExport()
-          }
-          break
-      }
+  useKeyboardShortcuts(
+    {
+      isCropping: transform.isCropping,
+      isTuning: tuning.isTuning,
+      cropRatio: transform.cropRatio,
+      activeRecipe,
+    },
+    {
+      onRotateClockwise: transform.rotateClockwise,
+      onRotateCounterClockwise: transform.rotateCounterClockwise,
+      onCropOpen: handleCropClick,
+      onCropCancel: transform.cancelCrop,
+      onCropApply: transform.applyCrop,
+      onTuningToggle: handleTuningOpen,
+      onTuningCancel: tuning.cancelTuning,
+      onTuningApply: tuning.applyTuning,
+      onPanelToggle: handlePanelToggle,
+      onExport: handleExport,
+      onCompareStart: handleCompareStart,
+      onCompareEnd: handleCompareEnd,
     }
+  )
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === ' ') {
-        setShowOriginal(false)
-      }
-    }
+  // ============================================================================
+  // Render
+  // ============================================================================
 
-    window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('keyup', handleKeyUp)
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('keyup', handleKeyUp)
-    }
-  }, [
-    isCropping,
-    isTuning,
-    cropRatio,
-    activeRecipe,
-    handleRotateClockwise,
-    handleRotateCounterClockwise,
-    handleCropClick,
-    handleCropCancel,
-    handleCropApply,
-    handleTuningApply,
-    handleTuningCancel,
-    handlePanelToggle,
-    handleExport
-  ])
-
-  const displayImage = showOriginal ? transformedThumbnail : previewImage
+  const displayImage = showOriginal ? transform.transformedThumbnail : previewImage
 
   return (
     <div 
       className="flex flex-col md:flex-row overflow-hidden"
-      style={{ height: viewportHeight ? `${viewportHeight}px` : '100dvh' }}
+      style={{ height: getViewportHeightStyle(viewportHeight) }}
     >
       {/* Главный блок: фото + toolbar */}
       <div className="flex-1 flex flex-col bg-zinc-950 min-w-0 min-h-0 overflow-hidden">
-        {/* Header - компактный на мобильных */}
-        <header className="flex-shrink-0 px-3 py-2 md:p-4">
-          <div className="relative flex items-center justify-between">
-            {/* Left: Back button */}
-            <Button variant="ghost" size="sm" onClick={onBack} className="text-zinc-400 hover:text-white h-8 w-8 p-0" aria-label="Back">
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            
-            {/* Center: Title and filename */}
-            <div className="absolute left-1/2 -translate-x-1/2 text-center">
-              <h1 className="text-sm md:text-lg font-semibold text-white">Photochrome<sup className="text-[8px] md:text-[10px] text-zinc-500 ml-0.5">{APP_VERSION}</sup></h1>
-              <p className="text-[10px] md:text-xs text-zinc-500 truncate max-w-[140px] md:max-w-none">{fileName}</p>
-            </div>
-            
-            {/* Right: Panel toggle - desktop only */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handlePanelToggle}
-              className="text-zinc-500 hover:text-white hidden md:flex"
-              aria-label={isPanelOpen ? 'Hide panel' : 'Show panel'}
-              aria-expanded={isPanelOpen}
-            >
-              {isPanelOpen ? (
-                <PanelRightClose className="w-5 h-5" />
-              ) : (
-                <PanelRightOpen className="w-5 h-5" />
-              )}
-            </Button>
-            {/* Spacer for mobile to keep title centered */}
-            <div className="w-8 h-8 md:hidden" />
-          </div>
-        </header>
+        {/* Header */}
+        <Header 
+          fileName={fileName}
+          isPanelOpen={isPanelOpen}
+          onBack={onBack}
+          onPanelToggle={handlePanelToggle}
+        />
 
-        {/* Preview area - shrinks to fit, add bottom padding on mobile when crop panel is open */}
-        <div className={`flex-1 min-h-0 px-3 md:px-6 relative overflow-hidden transition-[padding] duration-300 ${isCropping ? 'pb-48 md:pb-0' : ''}`}>
+        {/* Preview area */}
+        <div className={`flex-1 min-h-0 px-3 md:px-6 relative overflow-hidden transition-[padding] duration-300 ${transform.isCropping ? 'pb-48 md:pb-0' : ''}`}>
           {isProcessing && (
             <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
               <p className="text-sm text-zinc-400 bg-zinc-900/80 px-3 py-1 rounded">Processing...</p>
@@ -444,54 +292,54 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
           )}
           <Preview 
             imageData={displayImage}
-            cropMode={isCropping}
-            cropRatio={cropRatio}
+            cropMode={transform.isCropping}
+            cropRatio={transform.cropRatio}
             onMouseDown={handleCompareStart}
             onMouseUp={handleCompareEnd}
             onMouseLeave={handleCompareEnd}
           />
         </div>
 
-        {/* Toolbar - desktop version */}
+        {/* Desktop Toolbar */}
         <div className="flex-shrink-0 p-3 md:p-4 hidden md:block">
           <Toolbar
-            onRotateClockwise={handleRotateClockwise}
-            onRotateCounterClockwise={handleRotateCounterClockwise}
+            onRotateClockwise={transform.rotateClockwise}
+            onRotateCounterClockwise={transform.rotateCounterClockwise}
             onCropClick={handleCropClick}
             onExport={handleExport}
             canExport={!!activeRecipe}
             isExporting={isExporting}
-            cropMode={isCropping}
-            cropRatio={cropRatio}
-            onCropRatioChange={handleCropRatioChange}
-            onCropApply={handleCropApply}
-            onCropCancel={handleCropCancel}
+            cropMode={transform.isCropping}
+            cropRatio={transform.cropRatio}
+            onCropRatioChange={transform.setCropRatio}
+            onCropApply={transform.applyCrop}
+            onCropCancel={transform.cancelCrop}
             activeRecipe={activeRecipe}
-            tuningMode={isTuning}
+            tuningMode={tuning.isTuning}
             onTuningOpen={handleTuningOpen}
           />
         </div>
 
-        {/* Mobile: Toolbar (без кнопки скачать, crop открывает шторку) */}
-        <div className={`flex-shrink-0 p-3 md:hidden ${isCropping ? 'hidden' : ''}`}>
+        {/* Mobile: Toolbar */}
+        <div className={`flex-shrink-0 p-3 md:hidden ${transform.isCropping ? 'hidden' : ''}`}>
           <Toolbar
-            onRotateClockwise={handleRotateClockwise}
-            onRotateCounterClockwise={handleRotateCounterClockwise}
+            onRotateClockwise={transform.rotateClockwise}
+            onRotateCounterClockwise={transform.rotateCounterClockwise}
             onCropClick={handleCropClick}
             onExport={handleExport}
             canExport={!!activeRecipe}
             isExporting={isExporting}
             activeRecipe={activeRecipe}
-            tuningMode={isTuning}
+            tuningMode={tuning.isTuning}
             onTuningOpen={handleTuningOpen}
             mobileMode
           />
         </div>
 
         {/* Mobile: Horizontal recipe panel */}
-        <div className={`flex-shrink-0 md:hidden ${isCropping ? 'hidden' : ''}`}>
+        <div className={`flex-shrink-0 md:hidden ${transform.isCropping ? 'hidden' : ''}`}>
           <RecipePanel
-            sourceImage={transformedThumbnail}
+            sourceImage={transform.transformedThumbnail}
             activeRecipeId={activeRecipe?.id ?? null}
             favoriteIds={getFavoriteIds()}
             onRecipeSelect={handleRecipeSelect}
@@ -502,100 +350,240 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
         </div>
 
         {/* Mobile: Download button */}
-        <div className={`flex-shrink-0 p-3 md:hidden ${isCropping ? 'hidden' : ''}`}>
+        <div className={`flex-shrink-0 p-3 md:hidden ${transform.isCropping ? 'hidden' : ''}`}>
           <Toolbar
-            onRotateClockwise={handleRotateClockwise}
-            onRotateCounterClockwise={handleRotateCounterClockwise}
+            onRotateClockwise={transform.rotateClockwise}
+            onRotateCounterClockwise={transform.rotateCounterClockwise}
             onCropClick={handleCropClick}
             onExport={handleExport}
             canExport={!!activeRecipe}
             isExporting={isExporting}
-            cropMode={isCropping}
-            cropRatio={cropRatio}
-            onCropRatioChange={handleCropRatioChange}
-            onCropApply={handleCropApply}
-            onCropCancel={handleCropCancel}
+            cropMode={transform.isCropping}
+            cropRatio={transform.cropRatio}
+            onCropRatioChange={transform.setCropRatio}
+            onCropApply={transform.applyCrop}
+            onCropCancel={transform.cancelCrop}
             activeRecipe={activeRecipe}
-            tuningMode={isTuning}
+            tuningMode={tuning.isTuning}
             onTuningOpen={handleTuningOpen}
             downloadOnly
           />
         </div>
       </div>
 
-      {/* Desktop: Правый блок с пресетами */}
-      <aside 
-        className={`
-          hidden md:block flex-shrink-0 h-full overflow-hidden
-          bg-black border-l border-zinc-800
-          transition-[width] duration-300 ease-out
-          ${isPanelOpen ? 'w-72' : 'w-0 border-l-0'}
-        `}
-      >
-        <div className="w-72 h-full relative">
-          {/* RecipePanel - vertical for desktop */}
-          <RecipePanel
-            sourceImage={transformedThumbnail}
-            activeRecipeId={activeRecipe?.id ?? null}
-            favoriteIds={getFavoriteIds()}
-            onRecipeSelect={handleRecipeSelect}
-            onRandomRecipe={handleRandomRecipe}
-            onFavoriteToggle={toggleFavorite}
-          />
-          
-          {/* TuningPanel - выезжает поверх */}
-          <div 
-            className={`tuning-panel-overlay ${isTuning && activeRecipe ? 'tuning-panel-open' : 'tuning-panel-closed'}`}
-          >
-            {activeRecipe && (
-              <TuningPanel
-                recipe={activeRecipe}
-                customSettings={customSettings}
-                onSettingsChange={handleSettingsChange}
-                onApply={handleTuningApply}
-                onCancel={handleTuningCancel}
-              />
-            )}
-          </div>
+      {/* Desktop: Recipe panel */}
+      <DesktopSidePanel
+        isOpen={isPanelOpen}
+        isTuning={tuning.isTuning}
+        activeRecipe={activeRecipe}
+        transformedThumbnail={transform.transformedThumbnail}
+        customSettings={tuning.customSettings}
+        favoriteIds={getFavoriteIds()}
+        onRecipeSelect={handleRecipeSelect}
+        onRandomRecipe={handleRandomRecipe}
+        onFavoriteToggle={toggleFavorite}
+        onSettingsChange={tuning.updateSettings}
+        onTuningApply={tuning.applyTuning}
+        onTuningCancel={tuning.cancelTuning}
+      />
+
+      {/* Mobile: TuningPanel */}
+      <MobileTuningPanel
+        isOpen={tuning.isTuning && !!activeRecipe}
+        activeRecipe={activeRecipe}
+        customSettings={tuning.customSettings}
+        onSettingsChange={tuning.updateSettings}
+        onApply={tuning.applyTuning}
+        onCancel={tuning.cancelTuning}
+      />
+
+      {/* Mobile: CropPanel */}
+      <MobileCropPanel
+        isOpen={transform.isCropping}
+        cropRatio={transform.cropRatio}
+        onCropRatioChange={transform.setCropRatio}
+        onApply={transform.applyCrop}
+        onCancel={transform.cancelCrop}
+      />
+    </div>
+  )
+}
+
+// ============================================================================
+// Sub-components
+// ============================================================================
+
+interface HeaderProps {
+  fileName: string
+  isPanelOpen: boolean
+  onBack: () => void
+  onPanelToggle: () => void
+}
+
+function Header({ fileName, isPanelOpen, onBack, onPanelToggle }: HeaderProps) {
+  return (
+    <header className="flex-shrink-0 px-3 py-2 md:p-4">
+      <div className="relative flex items-center justify-between">
+        <Button variant="ghost" size="sm" onClick={onBack} className="text-zinc-400 hover:text-white h-8 w-8 p-0" aria-label="Back">
+          <ArrowLeft className="w-4 h-4" />
+        </Button>
+        
+        <div className="absolute left-1/2 -translate-x-1/2 text-center">
+          <h1 className="text-sm md:text-lg font-semibold text-white">
+            Photochrome<sup className="text-[8px] md:text-[10px] text-zinc-500 ml-0.5">{APP_VERSION}</sup>
+          </h1>
+          <p className="text-[10px] md:text-xs text-zinc-500 truncate max-w-[140px] md:max-w-none">{fileName}</p>
         </div>
-      </aside>
-
-      {/* Mobile: TuningPanel - полноэкранный */}
-      <div 
-        className={`
-          md:hidden fixed inset-0 z-50
-          bg-black
-          transition-transform duration-300 ease-out
-          ${isTuning && activeRecipe ? 'translate-y-0' : 'translate-y-full'}
-        `}
-      >
-        {activeRecipe && (
-          <TuningPanel
-            recipe={activeRecipe}
-            customSettings={customSettings}
-            onSettingsChange={handleSettingsChange}
-            onApply={handleTuningApply}
-            onCancel={handleTuningCancel}
-          />
-        )}
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onPanelToggle}
+          className="text-zinc-500 hover:text-white hidden md:flex"
+          aria-label={isPanelOpen ? 'Hide panel' : 'Show panel'}
+          aria-expanded={isPanelOpen}
+        >
+          {isPanelOpen ? <PanelRightClose className="w-5 h-5" /> : <PanelRightOpen className="w-5 h-5" />}
+        </Button>
+        <div className="w-8 h-8 md:hidden" />
       </div>
+    </header>
+  )
+}
 
-      {/* Mobile: CropPanel - компактная шторка снизу */}
-      <div 
-        className={`
-          md:hidden fixed inset-x-0 bottom-0 z-50
-          bg-black border-t border-zinc-800
-          transition-transform duration-300 ease-out
-          ${isCropping ? 'translate-y-0' : 'translate-y-full'}
-        `}
-      >
-        <CropPanel
-          cropRatio={cropRatio}
-          onCropRatioChange={handleCropRatioChange}
-          onApply={handleCropApply}
-          onCancel={handleCropCancel}
+interface DesktopSidePanelProps {
+  isOpen: boolean
+  isTuning: boolean
+  activeRecipe: Recipe | null
+  transformedThumbnail: ImageData
+  customSettings: RecipeSettings
+  favoriteIds: string[]
+  onRecipeSelect: (recipe: Recipe) => void
+  onRandomRecipe: () => void
+  onFavoriteToggle: (id: string) => void
+  onSettingsChange: (settings: RecipeSettings) => void
+  onTuningApply: () => void
+  onTuningCancel: () => void
+}
+
+function DesktopSidePanel({
+  isOpen,
+  isTuning,
+  activeRecipe,
+  transformedThumbnail,
+  customSettings,
+  favoriteIds,
+  onRecipeSelect,
+  onRandomRecipe,
+  onFavoriteToggle,
+  onSettingsChange,
+  onTuningApply,
+  onTuningCancel,
+}: DesktopSidePanelProps) {
+  return (
+    <aside 
+      className={`
+        hidden md:block flex-shrink-0 h-full overflow-hidden
+        bg-black border-l border-zinc-800
+        transition-[width] duration-300 ease-out
+        ${isOpen ? 'w-72' : 'w-0 border-l-0'}
+      `}
+    >
+      <div className="w-72 h-full relative">
+        <RecipePanel
+          sourceImage={transformedThumbnail}
+          activeRecipeId={activeRecipe?.id ?? null}
+          favoriteIds={favoriteIds}
+          onRecipeSelect={onRecipeSelect}
+          onRandomRecipe={onRandomRecipe}
+          onFavoriteToggle={onFavoriteToggle}
         />
+        
+        <div className={`tuning-panel-overlay ${isTuning && activeRecipe ? 'tuning-panel-open' : 'tuning-panel-closed'}`}>
+          {activeRecipe && (
+            <TuningPanel
+              recipe={activeRecipe}
+              customSettings={customSettings}
+              onSettingsChange={onSettingsChange}
+              onApply={onTuningApply}
+              onCancel={onTuningCancel}
+            />
+          )}
+        </div>
       </div>
+    </aside>
+  )
+}
+
+interface MobileTuningPanelProps {
+  isOpen: boolean
+  activeRecipe: Recipe | null
+  customSettings: RecipeSettings
+  onSettingsChange: (settings: RecipeSettings) => void
+  onApply: () => void
+  onCancel: () => void
+}
+
+function MobileTuningPanel({
+  isOpen,
+  activeRecipe,
+  customSettings,
+  onSettingsChange,
+  onApply,
+  onCancel,
+}: MobileTuningPanelProps) {
+  return (
+    <div 
+      className={`
+        md:hidden fixed inset-0 z-50
+        bg-black
+        transition-transform duration-300 ease-out
+        ${isOpen ? 'translate-y-0' : 'translate-y-full'}
+      `}
+    >
+      {activeRecipe && (
+        <TuningPanel
+          recipe={activeRecipe}
+          customSettings={customSettings}
+          onSettingsChange={onSettingsChange}
+          onApply={onApply}
+          onCancel={onCancel}
+        />
+      )}
+    </div>
+  )
+}
+
+interface MobileCropPanelProps {
+  isOpen: boolean
+  cropRatio: AspectRatio
+  onCropRatioChange: (ratio: AspectRatio) => void
+  onApply: () => void
+  onCancel: () => void
+}
+
+function MobileCropPanel({
+  isOpen,
+  cropRatio,
+  onCropRatioChange,
+  onApply,
+  onCancel,
+}: MobileCropPanelProps) {
+  return (
+    <div 
+      className={`
+        md:hidden fixed inset-x-0 bottom-0 z-50
+        bg-black border-t border-zinc-800
+        transition-transform duration-300 ease-out
+        ${isOpen ? 'translate-y-0' : 'translate-y-full'}
+      `}
+    >
+      <CropPanel
+        cropRatio={cropRatio}
+        onCropRatioChange={onCropRatioChange}
+        onApply={onApply}
+        onCancel={onCancel}
+      />
     </div>
   )
 }
