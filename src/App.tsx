@@ -1,9 +1,19 @@
 import { useState, useEffect, useCallback } from 'react'
+import { ImageOff, Film, RefreshCw } from 'lucide-react'
 import { LandingScreen } from './components/LandingScreen'
 import { Editor } from './components/Editor'
 import { VideoEditor } from './components/VideoEditor'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Spinner } from './components/ui/spinner'
+import { Button } from './components/ui/button'
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from './components/ui/empty'
 import { useImageProcessor } from './hooks/useImageProcessor'
 import { useVideoProcessor } from './hooks/useVideoProcessor'
 
@@ -73,7 +83,6 @@ type MediaType = 'image' | 'video' | null
 function AppContent() {
   const [mediaType, setMediaType] = useState<MediaType>(null)
   const [fileName, setFileName] = useState<string>('')
-  
   const {
     imageData,
     isLoading: isImageLoading,
@@ -114,19 +123,41 @@ function AppContent() {
     resetVideo()
   }, [resetImage, resetVideo])
 
+  // Determine error type for contextual icon
+  const isVideoError = mediaType === 'video'
+  const ErrorIcon = isVideoError ? Film : ImageOff
+
   // Show error state
   if (error) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-        <div className="text-center space-y-4">
-          <p className="text-red-400">{error}</p>
-          <button
-            onClick={handleReset}
-            className="text-sm text-zinc-400 hover:text-white underline"
-          >
-            Try again
-          </button>
-        </div>
+        <Empty className="max-w-md border-0">
+          <EmptyHeader>
+            <EmptyMedia 
+              variant="icon" 
+              className="bg-rose-500/10 text-rose-400 size-16 rounded-2xl [&_svg]:size-8"
+            >
+              <ErrorIcon />
+            </EmptyMedia>
+            <EmptyTitle className="text-xl text-white">
+              {isVideoError ? 'Failed to load video' : 'Failed to load image'}
+            </EmptyTitle>
+            <EmptyDescription className="text-zinc-400">
+              {error}
+            </EmptyDescription>
+          </EmptyHeader>
+
+          <EmptyContent>
+            <Button
+              onClick={handleReset}
+              variant="outline"
+              className="gap-2 border-zinc-700 hover:bg-zinc-800 hover:text-white"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Try again
+            </Button>
+          </EmptyContent>
+        </Empty>
       </div>
     )
   }

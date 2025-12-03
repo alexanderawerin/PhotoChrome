@@ -74,7 +74,7 @@ export function useVideoProcessor() {
         thumbnail,
       })
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load video'
+      const message = err instanceof Error ? err.message : 'Failed to load video. The file may be corrupted or in an unsupported format.'
       setError(message)
       console.error('Video loading failed:', err)
     } finally {

@@ -1,6 +1,14 @@
 import { Component, ErrorInfo, ReactNode } from 'react'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { AlertTriangle, RefreshCw, Zap } from 'lucide-react'
 import { Button } from './ui/button'
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from './ui/empty'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -50,47 +58,46 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
       return (
         <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-          <div className="max-w-md w-full text-center space-y-6">
-            <div className="flex justify-center">
-              <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center">
-                <AlertTriangle className="w-8 h-8 text-red-500" />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <h1 className="text-xl font-semibold text-white">
-                Что-то пошло не так
-              </h1>
-              <p className="text-sm text-zinc-400">
-                Произошла непредвиденная ошибка. Попробуйте перезагрузить страницу.
-              </p>
-            </div>
+          <Empty className="max-w-md border-0">
+            <EmptyHeader>
+              <EmptyMedia variant="icon" className="bg-red-500/10 text-red-400 size-14 rounded-2xl [&_svg]:size-7">
+                <Zap className="fill-current" />
+              </EmptyMedia>
+              <EmptyTitle className="text-xl text-white">
+                Something went wrong
+              </EmptyTitle>
+              <EmptyDescription className="text-zinc-400">
+                An unexpected error occurred. Please try reloading the page.
+              </EmptyDescription>
+            </EmptyHeader>
 
             {this.state.error && (
-              <div className="bg-zinc-900 rounded-lg p-4 text-left">
-                <p className="text-xs text-zinc-500 font-mono break-all">
+              <div className="w-full max-w-sm bg-zinc-900/60 rounded-xl p-4 border border-zinc-800/50">
+                <p className="text-xs text-zinc-500 font-mono break-all leading-relaxed">
                   {this.state.error.message}
                 </p>
               </div>
             )}
 
-            <div className="flex gap-3 justify-center">
-              <Button
-                variant="outline"
-                onClick={this.handleReset}
-                className="gap-2"
-              >
-                Попробовать снова
-              </Button>
-              <Button
-                onClick={this.handleReload}
-                className="gap-2"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Перезагрузить
-              </Button>
-            </div>
-          </div>
+            <EmptyContent>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={this.handleReset}
+                  className="gap-2 border-zinc-700 hover:bg-zinc-800"
+                >
+                  Try again
+                </Button>
+                <Button
+                  onClick={this.handleReload}
+                  className="gap-2 bg-white text-zinc-900 hover:bg-zinc-200"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Reload
+                </Button>
+              </div>
+            </EmptyContent>
+          </Empty>
         </div>
       )
     }
@@ -108,24 +115,32 @@ interface ErrorFallbackProps {
 }
 
 export function ErrorFallback({ 
-  message = 'Ошибка загрузки', 
+  message = 'Failed to load', 
   onRetry 
 }: ErrorFallbackProps): JSX.Element {
   return (
-    <div className="flex flex-col items-center justify-center p-4 text-center">
-      <AlertTriangle className="w-6 h-6 text-red-500 mb-2" />
-      <p className="text-sm text-zinc-400">{message}</p>
+    <Empty className="border-0 p-6 min-h-0 flex-none">
+      <EmptyHeader className="gap-1.5">
+        <EmptyMedia variant="icon" className="bg-red-500/10 text-red-400 size-10 rounded-xl [&_svg]:size-5">
+          <AlertTriangle />
+        </EmptyMedia>
+        <EmptyDescription className="text-zinc-400 text-sm">
+          {message}
+        </EmptyDescription>
+      </EmptyHeader>
       {onRetry && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onRetry}
-          className="mt-2"
-        >
-          Повторить
-        </Button>
+        <EmptyContent>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRetry}
+            className="text-zinc-400 hover:text-white hover:bg-zinc-800"
+          >
+            Retry
+          </Button>
+        </EmptyContent>
       )}
-    </div>
+    </Empty>
   )
 }
 

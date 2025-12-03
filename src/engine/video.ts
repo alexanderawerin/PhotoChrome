@@ -55,7 +55,7 @@ export async function loadVideo(file: File): Promise<{
 
     video.onerror = () => {
       URL.revokeObjectURL(url)
-      reject(new Error('Failed to load video'))
+      reject(new Error('Failed to load video. The file may be corrupted or in an unsupported format.'))
     }
 
     video.src = url
@@ -70,7 +70,7 @@ export async function extractFirstFrame(video: HTMLVideoElement): Promise<ImageD
   if (video.readyState < 2) {
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error('Video loading timed out'))
+        reject(new Error('Video loading timed out. The file may be too large or the connection is slow.'))
       }, SEEK_TIMEOUT_MS)
 
       const onCanPlay = () => {
@@ -111,7 +111,7 @@ export async function createVideoThumbnail(
   if (video.readyState < 2) {
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error('Video loading timed out'))
+        reject(new Error('Video loading timed out. The file may be too large or the connection is slow.'))
       }, SEEK_TIMEOUT_MS)
 
       const onCanPlay = () => {
