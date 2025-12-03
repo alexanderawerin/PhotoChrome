@@ -74,7 +74,10 @@ export function VideoPreview({
   useEffect(() => {
     if (!wrapperRef.current || !video || video.videoWidth === 0) return
 
+    let isActive = true
+    
     const updateSize = () => {
+      if (!isActive) return
       const wrapper = wrapperRef.current
       if (!wrapper || !video) return
 
@@ -108,6 +111,7 @@ export function VideoPreview({
     resizeObserver.observe(wrapperRef.current)
 
     return () => {
+      isActive = false
       clearTimeout(timeoutId)
       resizeObserver.disconnect()
     }
@@ -211,33 +215,49 @@ export function VideoPreview({
   }, [video])
 
   /**
+   * Track if component is mounted (prevents state updates after unmount)
+   */
+  const isMountedRef = useRef(true)
+  
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  /**
    * Sync video events with state
    */
   useEffect(() => {
     if (!video) return
 
     const handlePlay = () => {
+      if (!isMountedRef.current) return
       setIsPlaying(true)
       startLoop()
     }
     
     const handlePause = () => {
+      if (!isMountedRef.current) return
       setIsPlaying(false)
       stopLoop()
       renderFrame()
     }
     
     const handleEnded = () => {
+      if (!isMountedRef.current) return
       setIsPlaying(false)
       stopLoop()
       // Loop video
       video.currentTime = 0
       video.play().catch(() => {
-        renderFrame()
+        if (isMountedRef.current) renderFrame()
       })
     }
 
     const handleSeeked = () => {
+      if (!isMountedRef.current) return
       renderFrame()
     }
 
@@ -284,13 +304,15 @@ export function VideoPreview({
 
     // Try to autoplay
     const tryAutoplay = async () => {
+      if (!isMountedRef.current) return
       try {
         await video.play()
+        if (!isMountedRef.current) return
         setIsPlaying(true)
         startLoop()
       } catch {
         // Autoplay blocked - just render first frame
-        renderFrame()
+        if (isMountedRef.current) renderFrame()
       }
     }
 

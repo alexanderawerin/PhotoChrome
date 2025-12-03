@@ -21,6 +21,14 @@ export interface VideoMetadata {
 }
 
 /**
+ * Detect Safari browser
+ */
+function isSafari(): boolean {
+  const ua = navigator.userAgent
+  return ua.includes('Safari') && !ua.includes('Chrome') && !ua.includes('Chromium')
+}
+
+/**
  * Load video file and get metadata
  */
 export async function loadVideo(file: File): Promise<{
@@ -31,11 +39,33 @@ export async function loadVideo(file: File): Promise<{
     const video = document.createElement('video')
     video.muted = true
     video.playsInline = true
-    video.preload = 'metadata'
+    // Safari needs 'auto' to properly load video data for frame extraction
+    video.preload = isSafari() ? 'auto' : 'metadata'
+    // Safari requires explicit crossOrigin for blob URLs in some cases
+    video.crossOrigin = 'anonymous'
 
     const url = URL.createObjectURL(file)
+    
+    // Timeout for initial load
+    const loadTimeout = setTimeout(() => {
+      cleanup()
+      URL.revokeObjectURL(url)
+      reject(new Error('Video loading timed out. The file may be too large or the format is not supported.'))
+    }, SEEK_TIMEOUT_MS)
 
-    video.onloadedmetadata = () => {
+    const cleanup = () => {
+      clearTimeout(loadTimeout)
+      video.onloadedmetadata = null
+      video.oncanplay = null
+      video.onerror = null
+    }
+
+    const handleReady = () => {
+      // Wait for both metadata AND enough data to extract frame
+      if (video.readyState < 1 || video.videoWidth === 0) return
+      
+      cleanup()
+      
       const metadata: VideoMetadata = {
         duration: video.duration,
         width: video.videoWidth,
@@ -53,13 +83,124 @@ export async function loadVideo(file: File): Promise<{
       resolve({ video, metadata })
     }
 
+    video.onloadedmetadata = handleReady
+    // Safari may need canplay event instead
+    video.oncanplay = handleReady
+
     video.onerror = () => {
+      cleanup()
       URL.revokeObjectURL(url)
       reject(new Error('Failed to load video. The file may be corrupted or in an unsupported format.'))
     }
 
     video.src = url
+    // Safari sometimes needs explicit load() call
+    video.load()
   })
+}
+
+/**
+ * Wait for video to be ready for frame extraction
+ */
+async function waitForVideoReady(video: HTMLVideoElement): Promise<void> {
+  // readyState 2+ means HAVE_CURRENT_DATA - enough to render current frame
+  if (video.readyState >= 2) return
+
+  return new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      cleanup()
+      reject(new Error('Video loading timed out. The file may be too large or the connection is slow.'))
+    }, SEEK_TIMEOUT_MS)
+
+    const cleanup = () => {
+      clearTimeout(timeout)
+      video.removeEventListener('canplay', onReady)
+      video.removeEventListener('canplaythrough', onReady)
+      video.removeEventListener('loadeddata', onReady)
+    }
+
+    const onReady = () => {
+      if (video.readyState >= 2) {
+        cleanup()
+        resolve()
+      }
+    }
+
+    // Listen to multiple events for Safari compatibility
+    video.addEventListener('canplay', onReady)
+    video.addEventListener('canplaythrough', onReady)
+    video.addEventListener('loadeddata', onReady)
+    
+    // Safari may need a play() attempt to trigger loading
+    if (isSafari() && video.readyState < 2) {
+      video.play().then(() => {
+        video.pause()
+      }).catch(() => {
+        // Autoplay blocked, that's fine
+      })
+    }
+  })
+}
+
+/**
+ * Extract a frame from video with Safari workaround.
+ * Safari sometimes needs multiple attempts or a brief play to render frames.
+ */
+async function extractFrameWithRetry(
+  video: HTMLVideoElement,
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+  maxAttempts: number = 3
+): Promise<ImageData> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    
+    // Check if frame is not completely black (Safari issue)
+    if (!isImageDataBlack(imageData)) {
+      return imageData
+    }
+    
+    // Safari workaround: try play/pause to force frame render
+    if (isSafari() && attempt < maxAttempts - 1) {
+      try {
+        await video.play()
+        await new Promise(r => setTimeout(r, 50))
+        video.pause()
+        video.currentTime = 0
+        await new Promise(r => setTimeout(r, 50))
+      } catch {
+        // Ignore play errors
+      }
+    } else {
+      // Small delay between attempts
+      await new Promise(r => setTimeout(r, 100))
+    }
+  }
+  
+  // Return whatever we got on last attempt
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+  return ctx.getImageData(0, 0, canvas.width, canvas.height)
+}
+
+/**
+ * Check if ImageData is completely black (all pixels are 0 or near 0)
+ */
+function isImageDataBlack(imageData: ImageData): boolean {
+  const data = imageData.data
+  const sampleStep = Math.max(1, Math.floor(data.length / 100)) // Sample ~100 pixels
+  let totalBrightness = 0
+  let samples = 0
+  
+  for (let i = 0; i < data.length; i += sampleStep * 4) {
+    // Check RGB values (skip alpha)
+    totalBrightness += data[i] + data[i + 1] + data[i + 2]
+    samples++
+  }
+  
+  // If average brightness is very low, consider it black
+  const avgBrightness = totalBrightness / (samples * 3)
+  return avgBrightness < 5
 }
 
 /**
@@ -67,23 +208,13 @@ export async function loadVideo(file: File): Promise<{
  */
 export async function extractFirstFrame(video: HTMLVideoElement): Promise<ImageData> {
   // Ensure video is ready for playback
-  if (video.readyState < 2) {
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Video loading timed out. The file may be too large or the connection is slow.'))
-      }, SEEK_TIMEOUT_MS)
-
-      const onCanPlay = () => {
-        clearTimeout(timeout)
-        video.removeEventListener('canplay', onCanPlay)
-        resolve()
-      }
-      video.addEventListener('canplay', onCanPlay)
-    })
-  }
+  await waitForVideoReady(video)
 
   // Always seek to ensure frame is ready (even if currentTime is 0)
   await seekVideoWithTimeout(video, 0)
+  
+  // Wait a frame for Safari to render
+  await new Promise(r => requestAnimationFrame(() => r(undefined)))
 
   const canvas = document.createElement('canvas')
   canvas.width = video.videoWidth
@@ -94,8 +225,7 @@ export async function extractFirstFrame(video: HTMLVideoElement): Promise<ImageD
     throw new Error('Failed to get canvas context')
   }
 
-  ctx.drawImage(video, 0, 0)
-  return ctx.getImageData(0, 0, canvas.width, canvas.height)
+  return extractFrameWithRetry(video, canvas, ctx)
 }
 
 /**
@@ -108,23 +238,7 @@ export async function createVideoThumbnail(
 ): Promise<ImageData> {
   // Video should already be ready from extractFirstFrame call
   // But ensure it's ready just in case called independently
-  if (video.readyState < 2) {
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Video loading timed out. The file may be too large or the connection is slow.'))
-      }, SEEK_TIMEOUT_MS)
-
-      const onCanPlay = () => {
-        clearTimeout(timeout)
-        video.removeEventListener('canplay', onCanPlay)
-        resolve()
-      }
-      video.addEventListener('canplay', onCanPlay)
-    })
-    
-    // Seek to first frame
-    await seekVideoWithTimeout(video, 0)
-  }
+  await waitForVideoReady(video)
 
   // Calculate dimensions
   let width = video.videoWidth
@@ -145,8 +259,7 @@ export async function createVideoThumbnail(
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Failed to get canvas context')
 
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-  return ctx.getImageData(0, 0, canvas.width, canvas.height)
+  return extractFrameWithRetry(video, canvas, ctx)
 }
 
 /**

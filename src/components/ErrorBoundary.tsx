@@ -24,6 +24,22 @@ interface ErrorBoundaryState {
 }
 
 /**
+ * Detect browser name from user agent
+ */
+function getBrowserName(): string {
+  const ua = navigator.userAgent
+  
+  if (ua.includes('YaBrowser')) return 'Yandex Browser'
+  if (ua.includes('Opera') || ua.includes('OPR')) return 'Opera'
+  if (ua.includes('Edg')) return 'Edge'
+  if (ua.includes('Chrome')) return 'Chrome'
+  if (ua.includes('Safari')) return 'Safari'
+  if (ua.includes('Firefox')) return 'Firefox'
+  
+  return 'Unknown'
+}
+
+/**
  * Error boundary component that catches JavaScript errors in child components.
  * Displays a fallback UI instead of crashing the entire app.
  */
@@ -72,10 +88,21 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             </EmptyHeader>
 
             {this.state.error && (
-              <div className="w-full max-w-sm bg-zinc-900/60 rounded-xl p-4 border border-zinc-800/50">
-                <p className="text-xs text-zinc-500 font-mono break-all leading-relaxed">
-                  {this.state.error.message}
-                </p>
+              <div className="w-full max-w-sm space-y-3">
+                <div className="bg-zinc-900/60 rounded-xl p-4 border border-zinc-800/50 space-y-2">
+                  <p className="text-xs text-zinc-500 font-mono break-all leading-relaxed">
+                    {this.state.error.message}
+                  </p>
+                  <p className="text-[10px] text-zinc-600 font-mono">
+                    Browser: {getBrowserName()}
+                  </p>
+                </div>
+                {/* Hint about browser extensions for common DOM errors */}
+                {this.state.error.message?.includes('removeChild') && (
+                  <p className="text-xs text-zinc-600 text-center">
+                    This error is often caused by browser extensions. Try disabling them or using a different browser.
+                  </p>
+                )}
               </div>
             )}
 
