@@ -1,12 +1,11 @@
-import { useState, useCallback, useEffect, useLayoutEffect } from 'react'
+import { useState, useCallback, useEffect, useLayoutEffect, useMemo } from 'react'
 import { ArrowLeft, PanelRightClose, PanelRightOpen, Film, X, Settings2, Share } from 'lucide-react'
 import { APP_VERSION } from '../constants'
 import { Button } from './ui/button'
-import { Preview } from './Preview'
+import { VideoPreview } from './VideoPreview'
 import { RecipePanel } from './RecipePanel'
 import { TuningPanel } from './TuningPanel'
 import { Recipe, RecipeSettings, ProcessingOptions } from '../engine/types'
-import { ImageProcessor } from '../engine/processor'
 import { getSimulation } from '../presets/simulations'
 import { getAllRecipes } from '../presets/recipes'
 import { useFavorites } from '../hooks/useFavorites'
@@ -82,11 +81,9 @@ export function VideoEditor({
   exportState,
   onCancelExport,
 }: VideoEditorProps) {
-  const { thumbnail, metadata } = videoData
-  const [previewImage, setPreviewImage] = useState<ImageData>(thumbnail)
+  const { video, thumbnail, metadata } = videoData
   const [activeRecipe, setActiveRecipe] = useState<Recipe | null>(null)
   const [customSettings, setCustomSettings] = useState<RecipeSettings>({})
-  const [isProcessing, setIsProcessing] = useState(false)
   const [isTuning, setIsTuning] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
   const [isPanelOpen, setIsPanelOpen] = useState(true)
@@ -112,73 +109,30 @@ export function VideoEditor({
   }, [])
 
   /**
-   * Merge recipe settings with custom settings
+   * Calculate processing options for WebGL preview
    */
-  const getMergedSettings = useCallback(
-    (recipe: Recipe | null): RecipeSettings => {
-      if (!recipe) return {}
-      return {
-        ...recipe.settings,
+  const processingOptions = useMemo((): ProcessingOptions | null => {
+    if (!activeRecipe) return null
+
+    const simulation = getSimulation(activeRecipe.filmSimulation)
+    if (!simulation) return null
+
+    return {
+      simulation,
+      settings: {
+        ...activeRecipe.settings,
         ...customSettings,
-      }
-    },
-    [customSettings]
-  )
-
-  /**
-   * Apply recipe to image (CPU processor for preview)
-   */
-  const applyRecipeToImage = useCallback(
-    (imageData: ImageData, recipe: Recipe | null, settings?: RecipeSettings): ImageData => {
-      if (!recipe) return imageData
-
-      const simulation = getSimulation(recipe.filmSimulation)
-      if (!simulation) {
-        console.error(`Simulation ${recipe.filmSimulation} not found`)
-        return imageData
-      }
-
-      return ImageProcessor.process(imageData, {
-        simulation,
-        settings: settings ?? recipe.settings,
-      })
-    },
-    []
-  )
-
-  /**
-   * Update preview with current recipe and settings
-   */
-  const updatePreview = useCallback(
-    (recipe: Recipe | null = activeRecipe, settings?: RecipeSettings) => {
-      if (recipe) {
-        const mergedSettings = settings ?? getMergedSettings(recipe)
-        const processed = applyRecipeToImage(thumbnail, recipe, mergedSettings)
-        setPreviewImage(processed)
-      } else {
-        setPreviewImage(thumbnail)
-      }
-    },
-    [activeRecipe, thumbnail, getMergedSettings, applyRecipeToImage]
-  )
+      },
+    }
+  }, [activeRecipe, customSettings])
 
   /**
    * Handle recipe selection
    */
-  const handleRecipeSelect = useCallback(
-    async (recipe: Recipe) => {
-      setActiveRecipe(recipe)
-      setCustomSettings({})
-      setIsProcessing(true)
-
-      try {
-        updatePreview(recipe, recipe.settings)
-      } finally {
-        setIsProcessing(false)
-      }
-    },
-    [updatePreview]
-  )
+  const handleRecipeSelect = useCallback((recipe: Recipe) => {
+    setActiveRecipe(recipe)
+    setCustomSettings({})
+  }, [])
 
   /**
    * Random recipe
@@ -198,16 +152,9 @@ export function VideoEditor({
   /**
    * Handle settings change in tuning mode
    */
-  const handleSettingsChange = useCallback(
-    (newSettings: RecipeSettings) => {
-      setCustomSettings(newSettings)
-      if (activeRecipe) {
-        const mergedSettings = { ...activeRecipe.settings, ...newSettings }
-        updatePreview(activeRecipe, mergedSettings)
-      }
-    },
-    [activeRecipe, updatePreview]
-  )
+  const handleSettingsChange = useCallback((newSettings: RecipeSettings) => {
+    setCustomSettings(newSettings)
+  }, [])
 
   // Settings before tuning for cancel
   const [settingsBeforeTuning, setSettingsBeforeTuning] = useState<RecipeSettings>({})
@@ -230,12 +177,8 @@ export function VideoEditor({
 
   const handleTuningCancel = useCallback(() => {
     setCustomSettings(settingsBeforeTuning)
-    if (activeRecipe) {
-      const mergedSettings = { ...activeRecipe.settings, ...settingsBeforeTuning }
-      updatePreview(activeRecipe, mergedSettings)
-    }
     setIsTuning(false)
-  }, [settingsBeforeTuning, activeRecipe, updatePreview])
+  }, [settingsBeforeTuning])
 
   const handlePanelToggle = useCallback(() => {
     setIsPanelOpen((prev) => !prev)
@@ -248,18 +191,10 @@ export function VideoEditor({
    * Export video
    */
   const handleExport = useCallback(async () => {
-    if (!activeRecipe) return
-
-    const simulation = getSimulation(activeRecipe.filmSimulation)
-    if (!simulation) return
-
-    const mergedSettings = getMergedSettings(activeRecipe)
+    if (!activeRecipe || !processingOptions) return
 
     try {
-      const blob = await onExport({
-        simulation,
-        settings: mergedSettings,
-      })
+      const blob = await onExport(processingOptions)
 
       if (blob) {
         // Download
@@ -275,7 +210,7 @@ export function VideoEditor({
     } catch (err) {
       console.error('Export failed:', err)
     }
-  }, [activeRecipe, fileName, getMergedSettings, onExport])
+  }, [activeRecipe, fileName, processingOptions, onExport])
 
   /**
    * Compare before/after
@@ -351,8 +286,6 @@ export function VideoEditor({
     handleExport,
   ])
 
-  const displayImage = showOriginal ? thumbnail : previewImage
-
   return (
     <div
       className="flex flex-col md:flex-row overflow-hidden"
@@ -407,23 +340,16 @@ export function VideoEditor({
 
         {/* Preview area */}
         <div className="flex-1 min-h-0 px-3 md:px-6 relative overflow-hidden">
-          {isProcessing && (
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
-              <p className="text-sm text-zinc-400 bg-zinc-900/80 px-3 py-1 rounded">
-                Processing...
-              </p>
-            </div>
-          )}
-          <Preview
-            imageData={displayImage}
-            cropMode={false}
+          <VideoPreview
+            video={video}
+            processingOptions={showOriginal ? null : processingOptions}
             onMouseDown={handleCompareStart}
             onMouseUp={handleCompareEnd}
             onMouseLeave={handleCompareEnd}
           />
           
           {/* Video info badge */}
-          <div className="absolute bottom-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+          <div className="absolute bottom-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-lg pointer-events-none">
             <Film className="w-3.5 h-3.5 text-zinc-400" />
             <span className="text-xs text-zinc-300">
               {Math.round(metadata.duration * 10) / 10}s • {metadata.width}×{metadata.height}
