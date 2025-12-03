@@ -34,48 +34,53 @@ export function VideoPreview({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const animationRef = useRef<number>(0)
-  const processorRef = useRef(getWebGLProcessor())
+  const isRunningRef = useRef(false)
+  
+  // Use refs to avoid stale closures in animation loop
+  const processingOptionsRef = useRef(processingOptions)
+  processingOptionsRef.current = processingOptions
   
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(true)
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 })
-  const [isInitialized, setIsInitialized] = useState(false)
+  const [isReady, setIsReady] = useState(false)
 
   /**
-   * Initialize WebGL processor and canvas size
+   * Initialize WebGL processor
    */
   useEffect(() => {
-    if (!video) return
+    if (!video || video.videoWidth === 0) return
 
-    const processor = processorRef.current
-    
     try {
+      const processor = getWebGLProcessor()
       processor.init(video.videoWidth, video.videoHeight)
-      setIsInitialized(true)
+      setIsReady(true)
     } catch (err) {
       console.error('Failed to initialize WebGL processor:', err)
-      setIsInitialized(false)
+      setIsReady(true) // Still allow fallback rendering
     }
 
     return () => {
-      // Cancel animation frame on cleanup
+      isRunningRef.current = false
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [video])
+  }, [video, video?.videoWidth, video?.videoHeight])
 
   /**
    * Calculate display size based on container
    */
   useEffect(() => {
-    if (!wrapperRef.current || !video) return
+    if (!wrapperRef.current || !video || video.videoWidth === 0) return
 
     const updateSize = () => {
       const wrapper = wrapperRef.current
-      if (!wrapper) return
+      if (!wrapper || !video) return
 
       const rect = wrapper.getBoundingClientRect()
+      if (rect.width === 0 || rect.height === 0) return
+
       const videoAspect = video.videoWidth / video.videoHeight
       const containerAspect = rect.width / rect.height
 
@@ -93,52 +98,86 @@ export function VideoPreview({
       setCanvasSize({ width: displayWidth, height: displayHeight })
     }
 
+    // Initial update with delay to ensure layout is ready
+    const timeoutId = setTimeout(updateSize, 50)
     updateSize()
 
-    const resizeObserver = new ResizeObserver(updateSize)
+    const resizeObserver = new ResizeObserver(() => {
+      requestAnimationFrame(updateSize)
+    })
     resizeObserver.observe(wrapperRef.current)
-    window.addEventListener('resize', updateSize)
 
     return () => {
+      clearTimeout(timeoutId)
       resizeObserver.disconnect()
-      window.removeEventListener('resize', updateSize)
     }
-  }, [video])
+  }, [video, video?.videoWidth, video?.videoHeight])
 
   /**
-   * Render loop - continuously renders video frames with effects
+   * Render a single frame to canvas
    */
   const renderFrame = useCallback(() => {
-    if (!canvasRef.current || !video || !isInitialized) return
-
     const canvas = canvasRef.current
+    if (!canvas || !video || video.videoWidth === 0) return
+
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const processor = processorRef.current
+    const options = processingOptionsRef.current
 
     try {
-      if (processingOptions) {
+      if (options) {
         // Use WebGL processor for filtered output
-        const currentTime = video.currentTime
-        const outputCanvas = processor.processFrame(video, processingOptions, currentTime)
+        const processor = getWebGLProcessor()
         
-        // Draw to display canvas
+        // Ensure processor is initialized with correct dimensions
+        processor.init(video.videoWidth, video.videoHeight)
+        
+        const outputCanvas = processor.processFrame(video, options, video.currentTime)
         ctx.drawImage(outputCanvas, 0, 0, canvas.width, canvas.height)
       } else {
         // No filter - draw video directly
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
       }
     } catch (err) {
-      // Fallback to unfiltered video on WebGL error
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      // Fallback to unfiltered video on error
+      try {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      } catch {
+        // Video might not be ready
+      }
+    }
+  }, [video])
+
+  /**
+   * Animation loop
+   */
+  const startLoop = useCallback(() => {
+    if (isRunningRef.current) return
+    isRunningRef.current = true
+
+    const loop = () => {
+      if (!isRunningRef.current) return
+      
+      renderFrame()
+      
+      if (!video?.paused && !video?.ended) {
+        animationRef.current = requestAnimationFrame(loop)
+      } else {
+        isRunningRef.current = false
+      }
     }
 
-    // Continue loop if playing
-    if (!video.paused && !video.ended) {
-      animationRef.current = requestAnimationFrame(renderFrame)
+    animationRef.current = requestAnimationFrame(loop)
+  }, [video, renderFrame])
+
+  const stopLoop = useCallback(() => {
+    isRunningRef.current = false
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current)
+      animationRef.current = 0
     }
-  }, [video, processingOptions, isInitialized])
+  }, [])
 
   /**
    * Handle play/pause
@@ -149,16 +188,18 @@ export function VideoPreview({
     if (video.paused) {
       video.play().then(() => {
         setIsPlaying(true)
-        animationRef.current = requestAnimationFrame(renderFrame)
-      }).catch(console.error)
+        startLoop()
+      }).catch(err => {
+        console.error('Play failed:', err)
+        renderFrame() // At least show current frame
+      })
     } else {
       video.pause()
       setIsPlaying(false)
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
-      }
+      stopLoop()
+      renderFrame() // Render paused frame
     }
-  }, [video, renderFrame])
+  }, [video, startLoop, stopLoop, renderFrame])
 
   /**
    * Handle mute toggle
@@ -177,66 +218,100 @@ export function VideoPreview({
 
     const handlePlay = () => {
       setIsPlaying(true)
-      animationRef.current = requestAnimationFrame(renderFrame)
+      startLoop()
     }
+    
     const handlePause = () => {
       setIsPlaying(false)
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
-      }
+      stopLoop()
+      renderFrame()
     }
+    
     const handleEnded = () => {
       setIsPlaying(false)
+      stopLoop()
       // Loop video
       video.currentTime = 0
-      video.play().catch(() => {})
+      video.play().catch(() => {
+        renderFrame()
+      })
+    }
+
+    const handleSeeked = () => {
+      renderFrame()
     }
 
     video.addEventListener('play', handlePlay)
     video.addEventListener('pause', handlePause)
     video.addEventListener('ended', handleEnded)
-
-    // Set initial muted state
-    video.muted = true
-    setIsMuted(true)
+    video.addEventListener('seeked', handleSeeked)
 
     return () => {
       video.removeEventListener('play', handlePlay)
       video.removeEventListener('pause', handlePause)
       video.removeEventListener('ended', handleEnded)
+      video.removeEventListener('seeked', handleSeeked)
     }
-  }, [video, renderFrame])
+  }, [video, startLoop, stopLoop, renderFrame])
 
   /**
-   * Render initial frame when filter changes or video loads
+   * Render frame when filter changes
    */
   useEffect(() => {
-    if (!video || !isInitialized) return
-
-    // Render one frame immediately
+    if (!isReady || !video) return
+    
+    // Render current frame with new filter
     renderFrame()
-  }, [processingOptions, isInitialized, renderFrame])
+    
+    // If playing, make sure loop is running
+    if (!video.paused) {
+      startLoop()
+    }
+  }, [processingOptions, isReady, video, renderFrame, startLoop])
 
   /**
    * Auto-play on mount
    */
   useEffect(() => {
-    if (!video || !isInitialized) return
+    if (!isReady || !video) return
 
-    // Start playback automatically (muted for autoplay policy)
+    // Set muted for autoplay policy
     video.muted = true
-    video.play().catch(() => {
-      // Autoplay blocked - render static frame
-      renderFrame()
-    })
+    setIsMuted(true)
 
-    return () => {
-      video.pause()
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
+    // Seek to start
+    video.currentTime = 0
+
+    // Try to autoplay
+    const tryAutoplay = async () => {
+      try {
+        await video.play()
+        setIsPlaying(true)
+        startLoop()
+      } catch {
+        // Autoplay blocked - just render first frame
+        renderFrame()
       }
     }
-  }, [video, isInitialized, renderFrame])
+
+    // Small delay to ensure everything is ready
+    const timeoutId = setTimeout(tryAutoplay, 100)
+
+    return () => {
+      clearTimeout(timeoutId)
+      stopLoop()
+      video.pause()
+    }
+  }, [isReady, video, startLoop, stopLoop, renderFrame])
+
+  // Show nothing until we have valid dimensions
+  if (!video || video.videoWidth === 0) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-zinc-500 text-sm">Loading video...</div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -257,9 +332,9 @@ export function VideoPreview({
       >
         <canvas
           ref={canvasRef}
-          width={video?.videoWidth || 1920}
-          height={video?.videoHeight || 1080}
-          className="block w-full h-full rounded-lg shadow-2xl"
+          width={video.videoWidth}
+          height={video.videoHeight}
+          className="block w-full h-full rounded-lg shadow-2xl bg-black"
           aria-label={alt}
         />
 
@@ -316,4 +391,3 @@ export function VideoPreview({
     </div>
   )
 }
-

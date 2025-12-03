@@ -4,7 +4,7 @@
  */
 
 import { ProcessingOptions } from './types'
-import { getWebGLProcessor, WebGLContextLostError } from './webgl/processor'
+import { WebGLProcessor, WebGLContextLostError } from './webgl/processor'
 import {
   VIDEO_MAX_DURATION,
   VIDEO_EXPORT_FPS,
@@ -386,8 +386,8 @@ export async function exportVideo(
   // Lazy import mp4-muxer
   const { Muxer, ArrayBufferTarget } = await import('mp4-muxer')
 
-  // Initialize WebGL processor
-  const processor = getWebGLProcessor()
+  // Create dedicated WebGL processor for export (separate from preview singleton)
+  const processor = new WebGLProcessor()
   processor.init(width, height)
 
   // Create muxer with video and optional audio
@@ -510,6 +510,7 @@ export async function exportVideo(
 
     throw err
   } finally {
+    // Dispose dedicated export processor to free GPU memory
     processor.dispose()
   }
 }
