@@ -97,6 +97,25 @@ export function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
           {activeTab === 'whats-new' && <WhatsNewContent />}
           {activeTab === 'shortcuts' && <ShortcutsContent />}
         </div>
+
+        {/* Disclaimer */}
+        <div className="pt-4 mt-4 border-t border-zinc-800">
+          <p className="text-[11px] text-zinc-600 leading-relaxed">
+            This app is not affiliated with, endorsed by, or connected to FUJIFILM Corporation. 
+            Film simulation names are used for reference purposes only.
+          </p>
+          <p className="text-[11px] text-zinc-600 mt-2">
+            Made by{' '}
+            <a 
+              href="https://netdesigner.ru" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-zinc-500 hover:text-zinc-400 transition-colors"
+            >
+              Alexander Awerin
+            </a>
+          </p>
+        </div>
       </SheetContent>
     </Sheet>
   )
