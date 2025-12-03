@@ -7,6 +7,11 @@ import {
   VideoMetadata,
   ExportCancelledError,
 } from '../engine/video'
+import {
+  exportVideoWithMediaRecorder,
+  canUseMediaRecorder,
+  isSafari,
+} from '../engine/safari-export'
 import { ProcessingOptions } from '../engine/types'
 import { THUMBNAIL_MAX_SIZE } from '../constants'
 
@@ -84,7 +89,8 @@ export function useVideoProcessor() {
 
   /**
    * Export video with applied effects.
-   * Uses WebGL for frame-by-frame rendering.
+   * Uses WebCodecs VideoEncoder for Chrome/Edge/Firefox.
+   * Falls back to FFmpeg.wasm for Safari.
    */
   const exportVideoWithEffects = useCallback(
     async (options: ProcessingOptions): Promise<Blob | null> => {
@@ -98,19 +104,32 @@ export function useVideoProcessor() {
       })
 
       try {
-        const blob = await exportVideo(
-          videoData.video,
-          options,
-          (progress, status) => {
-            setExportState({ isExporting: true, progress, status })
-          },
-          () => cancelledRef.current
-        )
+        // Safari: use MediaRecorder (WebCodecs VideoEncoder is broken in Safari)
+        const useSafariFallback = isSafari() && canUseMediaRecorder()
+        
+        const blob = useSafariFallback
+          ? await exportVideoWithMediaRecorder(
+              videoData.video,
+              options,
+              (progress, status) => {
+                setExportState({ isExporting: true, progress, status })
+              },
+              () => cancelledRef.current
+            )
+          : await exportVideo(
+              videoData.video,
+              options,
+              (progress, status) => {
+                setExportState({ isExporting: true, progress, status })
+              },
+              () => cancelledRef.current
+            )
 
         setExportState({ isExporting: false, progress: 100, status: 'Done!' })
         return blob
       } catch (err) {
-        if (err instanceof ExportCancelledError) {
+        if (err instanceof ExportCancelledError || 
+            (err instanceof Error && err.message === 'Export cancelled')) {
           setExportState({ isExporting: false, progress: 0, status: '' })
           return null
         }

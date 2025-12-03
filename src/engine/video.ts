@@ -462,6 +462,13 @@ export async function exportVideo(
   if (typeof VideoEncoder === 'undefined') {
     throw new Error('Video export is not supported in this browser. Please use Chrome or Edge.')
   }
+  
+  // Test if VideoEncoder actually works (Safari should use FFmpeg fallback instead)
+  onProgress(0, 'Testing encoder...')
+  const encoderTest = await testVideoEncoderWorks()
+  if (!encoderTest.works) {
+    throw new Error(`Video encoding failed: ${encoderTest.error || 'Unknown error'}. Please try Chrome or Edge.`)
+  }
 
   const width = video.videoWidth
   const height = video.videoHeight
@@ -526,27 +533,99 @@ export async function exportVideo(
 
   const muxer = new Muxer(muxerOptions)
 
+  // Track encoder errors
+  let encoderError: Error | null = null
+  
+  // Safari needs more conservative settings
+  const safariMode = isSafari()
+  
   // Create video encoder
   const videoEncoder = new VideoEncoder({
     output: (chunk, meta) => {
       muxer.addVideoChunk(chunk, meta ?? undefined)
     },
-    error: (e) => console.error('Video encoder error:', e),
+    error: (e) => {
+      console.error('Video encoder error:', e)
+      encoderError = e instanceof Error ? e : new Error(String(e))
+    },
   })
 
-  videoEncoder.configure({
+  // Configure encoder with Safari-compatible settings
+  const encoderConfig: VideoEncoderConfig = {
     codec: videoCodec,
     width,
     height,
-    bitrate: VIDEO_EXPORT_BITRATE,
+    bitrate: safariMode ? 2_500_000 : VIDEO_EXPORT_BITRATE, // Lower bitrate for Safari
     framerate: fps,
-  })
+  }
+  
+  // Safari-specific options
+  if (safariMode) {
+    // Use software encoding on Safari for stability
+    encoderConfig.hardwareAcceleration = 'prefer-software'
+  }
+  
+  videoEncoder.configure(encoderConfig)
+  
+  // Verify encoder is actually configured
+  if (videoEncoder.state !== 'configured') {
+    throw new Error('Failed to configure video encoder. Your browser may not support the required codec.')
+  }
 
   // Create offscreen canvas for video frames
   const frameCanvas = document.createElement('canvas')
   frameCanvas.width = width
   frameCanvas.height = height
   const frameCtx = frameCanvas.getContext('2d')!
+
+  /**
+   * Wait for encoder queue to drain (Safari fix)
+   * Safari's VideoEncoder can crash if queue gets too large
+   */
+  async function waitForEncoderQueue(maxQueueSize: number = 2): Promise<void> {
+    const maxWaitTime = 30000 // 30 second timeout
+    const startTime = Date.now()
+    
+    while (videoEncoder.encodeQueueSize > maxQueueSize) {
+      await new Promise(r => setTimeout(r, 20))
+      
+      // Check for errors while waiting
+      if (encoderError) throw encoderError
+      if (videoEncoder.state === 'closed') {
+        throw new Error('VideoEncoder was closed unexpectedly. Try using Chrome for better compatibility.')
+      }
+      
+      // Timeout protection
+      if (Date.now() - startTime > maxWaitTime) {
+        throw new Error('Video encoding timed out. The video may be too complex for this browser.')
+      }
+    }
+  }
+  
+  /**
+   * Encode a single frame and wait for Safari stability
+   */
+  async function encodeFrameSafely(
+    videoFrame: VideoFrame,
+    keyFrame: boolean
+  ): Promise<void> {
+    // Wait for queue before encoding
+    await waitForEncoderQueue(safariMode ? 0 : 3)
+    
+    // Check encoder state before encoding
+    if (videoEncoder.state !== 'configured') {
+      videoFrame.close()
+      throw new Error('VideoEncoder is not in configured state')
+    }
+    
+    videoEncoder.encode(videoFrame, { keyFrame })
+    videoFrame.close()
+    
+    // Safari needs time between frames
+    if (safariMode) {
+      await new Promise(r => setTimeout(r, 10))
+    }
+  }
 
   try {
     // Encode audio first (if available)
@@ -565,6 +644,13 @@ export async function exportVideo(
     for (let frame = 0; frame < totalFrames; frame++) {
       if (isCancelled?.()) {
         throw new ExportCancelledError()
+      }
+      
+      // Check encoder state
+      if (encoderError) throw encoderError
+      // Note: state can become 'closed' at runtime even though TS thinks it's 'configured'
+      if ((videoEncoder.state as string) === 'closed') {
+        throw new Error('VideoEncoder was closed unexpectedly. Try using Chrome for better compatibility.')
       }
 
       const time = frame / fps
@@ -586,13 +672,12 @@ export async function exportVideo(
         timestamp: (frame * 1_000_000) / fps,
       })
 
-      // Encode frame
-      const keyFrame = frame % 30 === 0 // Keyframe every 30 frames
-      videoEncoder.encode(videoFrame, { keyFrame })
-      videoFrame.close()
+      // Encode frame safely (handles Safari quirks)
+      const keyFrame = frame % (safariMode ? 15 : 30) === 0 // More keyframes for Safari
+      await encodeFrameSafely(videoFrame, keyFrame)
 
-      // Yield to prevent blocking
-      if (frame % 5 === 0) {
+      // Yield to prevent UI blocking
+      if (frame % 3 === 0) {
         await new Promise((r) => setTimeout(r, 0))
       }
     }
@@ -600,6 +685,9 @@ export async function exportVideo(
     if (isCancelled?.()) {
       throw new ExportCancelledError()
     }
+    
+    // Final encoder state check
+    if (encoderError) throw encoderError
 
     onProgress(95, 'Finalizing video...')
 
@@ -651,16 +739,74 @@ export async function isVideoCodecSupported(codec: string = 'avc1.42002a'): Prom
   }
 
   try {
-    const support = await VideoEncoder.isConfigSupported({
+    const config: VideoEncoderConfig = {
       codec,
       width: 1280,
       height: 720,
-      bitrate: VIDEO_EXPORT_BITRATE,
-      framerate: VIDEO_EXPORT_FPS,
-    })
+      bitrate: 2_500_000,
+      framerate: 30,
+    }
+    
+    // Safari may need software acceleration
+    if (isSafari()) {
+      config.hardwareAcceleration = 'prefer-software'
+    }
+    
+    const support = await VideoEncoder.isConfigSupported(config)
     return support.supported === true
   } catch {
     return false
+  }
+}
+
+/**
+ * Test if VideoEncoder actually works (not just reports support)
+ * Safari may report support but fail at runtime
+ */
+export async function testVideoEncoderWorks(): Promise<{ works: boolean; error?: string }> {
+  if (typeof VideoEncoder === 'undefined') {
+    return { works: false, error: 'VideoEncoder API not available' }
+  }
+
+  try {
+    // Try to create and configure a test encoder
+    let testError: string | null = null
+    const testEncoder = new VideoEncoder({
+      output: () => {},
+      error: (e) => { testError = e instanceof Error ? e.message : String(e) },
+    })
+
+    const testConfig: VideoEncoderConfig = {
+      codec: 'avc1.42001e', // Most compatible baseline profile
+      width: 640,
+      height: 480,
+      bitrate: 1_000_000,
+      framerate: 30,
+    }
+    
+    if (isSafari()) {
+      testConfig.hardwareAcceleration = 'prefer-software'
+    }
+
+    testEncoder.configure(testConfig)
+    
+    // Wait a bit for any async errors
+    await new Promise(r => setTimeout(r, 100))
+    
+    const state = testEncoder.state
+    testEncoder.close()
+    
+    if (testError) {
+      return { works: false, error: testError }
+    }
+    
+    if (state !== 'configured') {
+      return { works: false, error: `Encoder state: ${state}` }
+    }
+
+    return { works: true }
+  } catch (err) {
+    return { works: false, error: err instanceof Error ? err.message : String(err) }
   }
 }
 
@@ -680,13 +826,21 @@ export async function getExportCapabilities(): Promise<{
     }
   }
 
-  // Check H.264 variants (from best to most compatible)
-  const h264Codecs = [
-    'avc1.640028', // High Profile Level 4.0
-    'avc1.42002a', // Baseline Profile Level 4.2
-    'avc1.4d001f', // Main Profile Level 3.1
-    'avc1.42001e', // Baseline Profile Level 3.0
-  ]
+  // H.264 codec variants to try
+  // Safari needs simpler profiles, so we try from most compatible to best
+  const h264Codecs = isSafari() 
+    ? [
+        'avc1.42001e', // Baseline Profile Level 3.0 - most compatible
+        'avc1.42001f', // Baseline Profile Level 3.1
+        'avc1.420028', // Baseline Profile Level 4.0
+        'avc1.4d001e', // Main Profile Level 3.0
+      ]
+    : [
+        'avc1.640028', // High Profile Level 4.0
+        'avc1.42002a', // Baseline Profile Level 4.2
+        'avc1.4d001f', // Main Profile Level 3.1
+        'avc1.42001e', // Baseline Profile Level 3.0
+      ]
 
   let recommendedCodec: string | null = null
   for (const codec of h264Codecs) {
