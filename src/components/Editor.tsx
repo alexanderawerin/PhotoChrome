@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { ArrowLeft, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { APP_VERSION, APP_URL } from '../constants'
 import { Button } from './ui/button'
+import { Spinner } from './ui/spinner'
 import { Preview } from './Preview'
 import { RecipePanel } from './RecipePanel'
 import { TuningPanel } from './TuningPanel'
@@ -60,6 +61,7 @@ export function Editor({
   const [previewImage, setPreviewImage] = useState<ImageData>(currentImage.transformedThumbnail)
   const [isProcessing, setIsProcessing] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [isApplyingToAll, setIsApplyingToAll] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
   const [isPanelOpen, setIsPanelOpen] = useState(true)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
@@ -189,16 +191,28 @@ export function Editor({
   /**
    * Применить текущий рецепт и настройки ко всем изображениям
    */
-  const handleApplyToAll = useCallback(() => {
+  const handleApplyToAll = useCallback(async () => {
     if (!currentImage.recipe) return
 
-    const { recipe, customSettings } = currentImage
+    setIsApplyingToAll(true)
 
-    images.forEach(img => {
-      if (img.id !== currentImage.id) {
-        onImageUpdate(img.id, { recipe, customSettings })
-      }
-    })
+    try {
+      const { recipe, customSettings } = currentImage
+
+      // Используем setTimeout для показа индикатора загрузки
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      images.forEach(img => {
+        if (img.id !== currentImage.id) {
+          onImageUpdate(img.id, { recipe, customSettings })
+        }
+      })
+
+      // Даем время на обновление миниатюр
+      await new Promise(resolve => setTimeout(resolve, 300))
+    } finally {
+      setIsApplyingToAll(false)
+    }
   }, [currentImage, images, onImageUpdate])
 
   /**
@@ -496,6 +510,23 @@ export function Editor({
         onClose={() => setIsHelpOpen(false)}
         totalImages={totalImages}
       />
+
+      {/* Loading overlay for applying preset to all images */}
+      {isApplyingToAll && (
+        <div
+          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[200] p-4"
+          role="status"
+          aria-label="Applying preset to all images"
+          aria-live="polite"
+        >
+          <div className="flex items-center gap-3 pl-4 pr-4 py-3 rounded-xl bg-zinc-800/80">
+            <Spinner className="size-5 text-zinc-400 flex-shrink-0" />
+            <p className="text-sm text-zinc-300 whitespace-nowrap">
+              Applying preset to {totalImages} images...
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

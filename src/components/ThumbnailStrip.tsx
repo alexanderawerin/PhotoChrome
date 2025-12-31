@@ -40,7 +40,7 @@ export function ThumbnailStrip({ images, currentIndex, onSelectImage }: Thumbnai
     <div className="w-full bg-transparent p-2">
       <div
         ref={scrollContainerRef}
-        className="flex gap-2 overflow-x-auto scrollbar-hide"
+        className="flex gap-2 overflow-x-auto scrollbar-hide justify-center"
         role="tablist"
         aria-label="Image thumbnails"
       >
