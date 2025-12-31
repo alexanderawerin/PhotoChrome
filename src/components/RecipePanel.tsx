@@ -24,16 +24,22 @@ interface RecipePanelProps {
   onFavoriteToggle: (recipeId: string) => void
   /** Horizontal mode for mobile - shows presets in a horizontal scroll */
   horizontal?: boolean
+  /** Total number of images (for multi-image mode) */
+  totalImages?: number
+  /** Apply current recipe to all images */
+  onApplyToAll?: () => void
 }
 
-export function RecipePanel({ 
-  sourceImage, 
-  activeRecipeId, 
+export function RecipePanel({
+  sourceImage,
+  activeRecipeId,
   favoriteIds,
-  onRecipeSelect, 
+  onRecipeSelect,
   onRandomRecipe,
   onFavoriteToggle,
-  horizontal = false
+  horizontal = false,
+  totalImages = 1,
+  onApplyToAll
 }: RecipePanelProps) {
   const recipes = getAllRecipes()
   const [groupingMode, setGroupingMode] = useState<GroupingMode>('film')
@@ -138,7 +144,24 @@ export function RecipePanel({
               </div>
             </div>
           )}
-          
+
+          {/* Apply to all card */}
+          {totalImages > 1 && activeRecipeId && onApplyToAll && (
+            <button
+              onClick={onApplyToAll}
+              className="flex-shrink-0 w-24"
+              role="listitem"
+              aria-label={`Apply current preset to all ${totalImages} images`}
+            >
+              <div className="w-24 h-32 rounded-lg bg-zinc-900/30 border-2 border-dashed border-zinc-600 hover:border-zinc-400 active:border-white flex flex-col items-center justify-center p-2 transition-colors">
+                <Layers className="w-5 h-5 text-zinc-400 mb-1.5" />
+                <p className="text-[9px] text-zinc-400 text-center leading-tight font-medium">
+                  Apply to<br />all {totalImages}
+                </p>
+              </div>
+            </button>
+          )}
+
           {/* Section groups - by film or use case */}
           {groupingMode === 'film' ? (
             groupedByFilm.map((group) => (

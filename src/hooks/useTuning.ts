@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { RecipeSettings, Recipe } from '../engine/types'
 
 interface TuningState {
@@ -26,6 +26,8 @@ interface TuningActions {
 interface UseTuningOptions {
   /** Callback при изменении настроек */
   onSettingsChange?: (settings: RecipeSettings) => void
+  /** Начальные настройки (для multi-image режима) */
+  initialSettings?: RecipeSettings
 }
 
 /**
@@ -34,10 +36,19 @@ interface UseTuningOptions {
  */
 export function useTuning({
   onSettingsChange,
+  initialSettings = {},
 }: UseTuningOptions): TuningState & TuningActions {
   const [isTuning, setIsTuning] = useState(false)
-  const [customSettings, setCustomSettings] = useState<RecipeSettings>({})
-  const [settingsBeforeTuning, setSettingsBeforeTuning] = useState<RecipeSettings>({})
+  const [customSettings, setCustomSettings] = useState<RecipeSettings>(initialSettings)
+  const [settingsBeforeTuning, setSettingsBeforeTuning] = useState<RecipeSettings>(initialSettings)
+
+  // Синхронизация с внешними settings (для переключения между изображениями)
+  useEffect(() => {
+    if (!isTuning) {
+      setCustomSettings(initialSettings)
+      setSettingsBeforeTuning(initialSettings)
+    }
+  }, [initialSettings, isTuning])
 
   /**
    * Объединяет настройки рецепта с пользовательскими настройками

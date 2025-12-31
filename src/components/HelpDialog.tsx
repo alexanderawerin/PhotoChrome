@@ -12,11 +12,21 @@ import { Kbd, KbdGroup } from './ui/kbd'
 interface HelpDialogProps {
   isOpen: boolean
   onClose: () => void
+  totalImages?: number
 }
 
 type Tab = 'whats-new' | 'shortcuts'
 
 const WHATS_NEW = [
+  {
+    version: '1.2',
+    items: [
+      'Multiple image editing with individual settings',
+      'Swipe navigation on mobile',
+      'Thumbnail strip navigation on desktop',
+      'Apply preset to all images',
+    ],
+  },
   {
     version: '1.1',
     items: [
@@ -36,7 +46,7 @@ const WHATS_NEW = [
   },
 ]
 
-const KEYBOARD_SHORTCUTS = [
+const BASE_KEYBOARD_SHORTCUTS = [
   { keys: ['R'], description: 'Rotate clockwise' },
   { keys: ['Shift', 'R'], description: 'Rotate counter-clockwise' },
   { keys: ['C'], description: 'Open crop mode' },
@@ -48,8 +58,17 @@ const KEYBOARD_SHORTCUTS = [
   { keys: ['⌘/Ctrl', 'S'], description: 'Export image' },
 ]
 
-export function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
+const MULTI_IMAGE_SHORTCUTS = [
+  { keys: ['←'], description: 'Previous image' },
+  { keys: ['→'], description: 'Next image' },
+]
+
+export function HelpDialog({ isOpen, onClose, totalImages = 1 }: HelpDialogProps) {
   const [activeTab, setActiveTab] = useState<Tab>('whats-new')
+
+  const keyboardShortcuts = totalImages > 1
+    ? [...BASE_KEYBOARD_SHORTCUTS, ...MULTI_IMAGE_SHORTCUTS]
+    : BASE_KEYBOARD_SHORTCUTS
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -95,7 +114,7 @@ export function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
         {/* Content */}
         <div className="py-4">
           {activeTab === 'whats-new' && <WhatsNewContent />}
-          {activeTab === 'shortcuts' && <ShortcutsContent />}
+          {activeTab === 'shortcuts' && <ShortcutsContent shortcuts={keyboardShortcuts} />}
         </div>
 
         {/* Disclaimer */}
@@ -143,10 +162,14 @@ function WhatsNewContent() {
   )
 }
 
-function ShortcutsContent() {
+interface ShortcutsContentProps {
+  shortcuts: Array<{ keys: string[]; description: string }>
+}
+
+function ShortcutsContent({ shortcuts }: ShortcutsContentProps) {
   return (
     <div className="space-y-1">
-      {KEYBOARD_SHORTCUTS.map((shortcut, index) => (
+      {shortcuts.map((shortcut, index) => (
         <div
           key={index}
           className="flex items-center justify-between py-2 border-b border-zinc-800/50 last:border-0"

@@ -11,20 +11,33 @@ interface PreviewProps {
   onMouseDown?: () => void
   onMouseUp?: () => void
   onMouseLeave?: () => void
+  // Swipe navigation для multi-image режима
+  onSwipeLeft?: () => void
+  onSwipeRight?: () => void
+  enableSwipe?: boolean
 }
 
-export function Preview({ 
-  imageData, 
+export function Preview({
+  imageData,
   alt = 'Preview',
   cropMode = false,
   cropRatio = 'free',
   onMouseDown,
   onMouseUp,
-  onMouseLeave
+  onMouseLeave,
+  onSwipeLeft,
+  onSwipeRight,
+  enableSwipe = false
 }: PreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [canvasDisplaySize, setCanvasDisplaySize] = useState({ width: 0, height: 0 })
+
+  // Swipe detection
+  const touchStartX = useRef(0)
+  const touchEndX = useRef(0)
+  const touchStartY = useRef(0)
+  const touchEndY = useRef(0)
 
   // Рисуем изображение на canvas
   useEffect(() => {
@@ -102,15 +115,56 @@ export function Preview({
     )
   }
 
+  // Swipe handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!enableSwipe || cropMode) {
+      // Fallback к обычным onTouch handlers
+      onMouseDown?.()
+      return
+    }
+
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!enableSwipe || cropMode) return
+
+    touchEndX.current = e.touches[0].clientX
+    touchEndY.current = e.touches[0].clientY
+  }
+
+  const handleTouchEnd = () => {
+    if (!enableSwipe || cropMode) {
+      // Fallback к обычным onTouch handlers
+      onMouseUp?.()
+      return
+    }
+
+    const swipeDistanceX = touchStartX.current - touchEndX.current
+    const swipeDistanceY = touchStartY.current - touchEndY.current
+    const minSwipeDistance = 50
+
+    // Проверяем что это горизонтальный свайп (а не вертикальный скролл)
+    if (Math.abs(swipeDistanceX) > Math.abs(swipeDistanceY) && Math.abs(swipeDistanceX) > minSwipeDistance) {
+      if (swipeDistanceX > 0) {
+        onSwipeLeft?.() // Свайп влево = следующее фото
+      } else {
+        onSwipeRight?.() // Свайп вправо = предыдущее фото
+      }
+    }
+  }
+
   return (
-    <div 
+    <div
       ref={wrapperRef}
       className="w-full h-full flex items-center justify-center select-none overflow-hidden"
       onMouseDown={cropMode ? undefined : onMouseDown}
       onMouseUp={cropMode ? undefined : onMouseUp}
       onMouseLeave={cropMode ? undefined : onMouseLeave}
-      onTouchStart={cropMode ? undefined : onMouseDown}
-      onTouchEnd={cropMode ? undefined : onMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       <div 
         className="relative"

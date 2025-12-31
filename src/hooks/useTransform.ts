@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { rotateImage, cropImage, calculateCropArea, AspectRatio } from '../engine/transform'
 
 interface TransformState {
@@ -34,6 +34,9 @@ interface UseTransformOptions {
   originalImage: ImageData
   /** Исходный thumbnail */
   thumbnail: ImageData
+  /** Текущие трансформированные изображения (для multi-image sync) */
+  transformedOriginal?: ImageData
+  transformedThumbnail?: ImageData
   /** Callback при изменении трансформированных изображений */
   onTransformChange?: (original: ImageData, thumbnail: ImageData) => void
 }
@@ -41,16 +44,31 @@ interface UseTransformOptions {
 /**
  * Хук для управления трансформациями изображения (поворот, обрезка).
  * Отделяет логику трансформаций от основного компонента Editor.
+ * Поддерживает синхронизацию с внешним состоянием для multi-image режима.
  */
 export function useTransform({
   originalImage,
   thumbnail,
+  transformedOriginal: externalTransformedOriginal,
+  transformedThumbnail: externalTransformedThumbnail,
   onTransformChange,
 }: UseTransformOptions): TransformState & TransformActions {
-  const [transformedOriginal, setTransformedOriginal] = useState<ImageData>(originalImage)
-  const [transformedThumbnail, setTransformedThumbnail] = useState<ImageData>(thumbnail)
+  const [transformedOriginal, setTransformedOriginal] = useState<ImageData>(
+    externalTransformedOriginal || originalImage
+  )
+  const [transformedThumbnail, setTransformedThumbnail] = useState<ImageData>(
+    externalTransformedThumbnail || thumbnail
+  )
   const [isCropping, setIsCropping] = useState(false)
   const [cropRatio, setCropRatio] = useState<AspectRatio>('1:1')
+
+  // Синхронизация с внешним состоянием (для переключения между изображениями)
+  useEffect(() => {
+    if (externalTransformedOriginal && externalTransformedThumbnail) {
+      setTransformedOriginal(externalTransformedOriginal)
+      setTransformedThumbnail(externalTransformedThumbnail)
+    }
+  }, [externalTransformedOriginal, externalTransformedThumbnail])
 
   /**
    * Применяет поворот к обоим изображениям
@@ -58,7 +76,7 @@ export function useTransform({
   const rotate = useCallback((angle: 90 | 270) => {
     const rotatedOriginal = rotateImage(transformedOriginal, angle)
     const rotatedThumbnail = rotateImage(transformedThumbnail, angle)
-    
+
     setTransformedOriginal(rotatedOriginal)
     setTransformedThumbnail(rotatedThumbnail)
     onTransformChange?.(rotatedOriginal, rotatedThumbnail)

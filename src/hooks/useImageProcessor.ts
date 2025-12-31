@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { ImageProcessor } from '../engine/processor'
-import { Recipe } from '../engine/types'
+import { ImageItem, Recipe } from '../engine/types'
 import { getSimulation } from '../presets/simulations'
 import { THUMBNAIL_MAX_SIZE } from '../constants'
 
@@ -14,43 +14,57 @@ export interface ProcessedImage {
 }
 
 /**
+ * Генерирует уникальный ID для изображения
+ */
+function generateImageId(): string {
+  return `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+}
+
+/**
  * Хук для загрузки и обработки изображений.
- * Управляет состоянием загрузки, ошибками и предоставляет методы обработки.
+ * Поддерживает как одиночные изображения, так и множественные.
  */
 export function useImageProcessor() {
-  const [image, setImage] = useState<File | null>(null)
-  const [imageData, setImageData] = useState<ProcessedImage | null>(null)
+  const [images, setImages] = useState<ImageItem[]>([])
+  const [currentIndex, setCurrentIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   /**
-   * Загружает изображение из файла.
-   * Создаёт оригинал и thumbnail параллельно.
+   * Загружает массив изображений параллельно.
+   * Создаёт оригиналы и thumbnails для всех файлов.
    */
-  const loadImage = useCallback(async (file: File) => {
+  const loadImages = useCallback(async (files: File[]) => {
     setIsLoading(true)
     setError(null)
 
     try {
-      setImage(file)
-      
-      // Загружаем оригинал и создаём thumbnail параллельно
-      const [original, thumbnail] = await Promise.all([
-        ImageProcessor.loadImage(file),
-        ImageProcessor.createThumbnail(file, THUMBNAIL_MAX_SIZE)
-      ])
+      // Загружаем все изображения параллельно
+      const loadPromises = files.map(async (file) => {
+        const [original, thumbnail] = await Promise.all([
+          ImageProcessor.loadImage(file),
+          ImageProcessor.createThumbnail(file, THUMBNAIL_MAX_SIZE)
+        ])
 
-      setImageData({
-        original,
-        processed: new ImageData(
-          new Uint8ClampedArray(original.data),
-          original.width,
-          original.height
-        ),
-        thumbnail
+        return {
+          id: generateImageId(),
+          file,
+          fileName: file.name,
+          original,
+          thumbnail,
+          recipe: null,
+          customSettings: {},
+          transformedOriginal: original,
+          transformedThumbnail: thumbnail,
+          rotation: 0
+        } as ImageItem
       })
+
+      const loadedImages = await Promise.all(loadPromises)
+      setImages(loadedImages)
+      setCurrentIndex(0)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Не удалось загрузить изображение'
+      const message = err instanceof Error ? err.message : 'Не удалось загрузить изображения'
       setError(message)
       console.error('Image loading failed:', err)
     } finally {
@@ -59,12 +73,62 @@ export function useImageProcessor() {
   }, [])
 
   /**
+   * Получить текущее активное изображение
+   */
+  const currentImage = useMemo(() =>
+    images[currentIndex] ?? null,
+    [images, currentIndex]
+  )
+
+  /**
+   * Перейти к изображению по индексу
+   */
+  const goToImage = useCallback((index: number) => {
+    if (index >= 0 && index < images.length) {
+      setCurrentIndex(index)
+    }
+  }, [images.length])
+
+  /**
+   * Перейти к следующему изображению
+   */
+  const nextImage = useCallback(() => {
+    setCurrentIndex(prev => Math.min(prev + 1, images.length - 1))
+  }, [images.length])
+
+  /**
+   * Перейти к предыдущему изображению
+   */
+  const previousImage = useCallback(() => {
+    setCurrentIndex(prev => Math.max(prev - 1, 0))
+  }, [])
+
+  /**
+   * Обновить конкретное изображение по ID
+   */
+  const updateImage = useCallback((id: string, updates: Partial<ImageItem>) => {
+    setImages(prev => prev.map(img =>
+      img.id === id ? { ...img, ...updates } : img
+    ))
+  }, [])
+
+  /**
+   * Обновить текущее изображение
+   */
+  const updateCurrentImage = useCallback((updates: Partial<ImageItem>) => {
+    if (currentImage) {
+      updateImage(currentImage.id, updates)
+    }
+  }, [currentImage, updateImage])
+
+  /**
    * Обрабатывает thumbnail с применением рецепта.
    * Используется для быстрого предпросмотра.
+   * @deprecated Используйте прямой доступ к imageItem.recipe
    */
   const processImage = useCallback(
     (recipe: Recipe): ImageData | null => {
-      if (!imageData) return null
+      if (!currentImage) return null
 
       try {
         const simulation = getSimulation(recipe.filmSimulation)
@@ -72,7 +136,7 @@ export function useImageProcessor() {
           throw new Error(`Симуляция ${recipe.filmSimulation} не найдена`)
         }
 
-        return ImageProcessor.process(imageData.thumbnail, {
+        return ImageProcessor.process(currentImage.thumbnail, {
           simulation,
           settings: recipe.settings
         })
@@ -83,16 +147,17 @@ export function useImageProcessor() {
         return null
       }
     },
-    [imageData]
+    [currentImage]
   )
 
   /**
    * Обрабатывает полное изображение с применением рецепта.
    * Используется для финального экспорта.
+   * @deprecated Используйте прямой доступ к imageItem.recipe
    */
   const processFullImage = useCallback(
     (recipe: Recipe): ImageData | null => {
-      if (!imageData) return null
+      if (!currentImage) return null
 
       try {
         const simulation = getSimulation(recipe.filmSimulation)
@@ -100,7 +165,7 @@ export function useImageProcessor() {
           throw new Error(`Симуляция ${recipe.filmSimulation} не найдена`)
         }
 
-        return ImageProcessor.process(imageData.original, {
+        return ImageProcessor.process(currentImage.original, {
           simulation,
           settings: recipe.settings
         })
@@ -111,35 +176,70 @@ export function useImageProcessor() {
         return null
       }
     },
-    [imageData]
+    [currentImage]
   )
 
   /**
    * Сбрасывает состояние хука к начальному.
    */
   const reset = useCallback(() => {
-    setImage(null)
-    setImageData(null)
+    setImages([])
+    setCurrentIndex(0)
     setError(null)
   }, [])
 
+  // Backward compatibility: если загружено одно изображение, возвращаем старый формат
+  const legacyImageData = useMemo(() => {
+    if (images.length === 1 && currentImage) {
+      return {
+        original: currentImage.original,
+        processed: currentImage.transformedOriginal,
+        thumbnail: currentImage.thumbnail
+      }
+    }
+    return null
+  }, [images, currentImage])
+
   return {
-    /** Загруженный файл изображения */
-    image,
-    /** Данные изображения (оригинал, обработанное, thumbnail) */
-    imageData,
+    /** Массив загруженных изображений */
+    images,
+    /** Текущее активное изображение */
+    currentImage,
+    /** Индекс текущего изображения */
+    currentIndex,
+    /** Общее количество изображений */
+    totalImages: images.length,
     /** Флаг загрузки */
     isLoading,
     /** Сообщение об ошибке */
     error,
-    /** Загрузить изображение из файла */
-    loadImage,
-    /** Обработать thumbnail (быстрый превью) */
+
+    /** Загрузить массив изображений */
+    loadImages,
+    /** Перейти к изображению по индексу */
+    goToImage,
+    /** Следующее изображение */
+    nextImage,
+    /** Предыдущее изображение */
+    previousImage,
+    /** Обновить изображение по ID */
+    updateImage,
+    /** Обновить текущее изображение */
+    updateCurrentImage,
+
+    /** @deprecated Обработать thumbnail (используйте recipe в ImageItem) */
     processImage,
-    /** Обработать полное изображение (для экспорта) */
+    /** @deprecated Обработать полное изображение (используйте recipe в ImageItem) */
     processFullImage,
     /** Сбросить состояние */
-    reset
+    reset,
+
+    /** @deprecated Backward compatibility для single image mode */
+    image: currentImage?.file ?? null,
+    /** @deprecated Backward compatibility для single image mode */
+    imageData: legacyImageData,
+    /** @deprecated Backward compatibility для single image mode */
+    loadImage: async (file: File) => loadImages([file])
   }
 }
 

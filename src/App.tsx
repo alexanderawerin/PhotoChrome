@@ -84,10 +84,15 @@ function AppContent() {
   const [mediaType, setMediaType] = useState<MediaType>(null)
   const [fileName, setFileName] = useState<string>('')
   const {
-    imageData,
+    images,
+    currentIndex,
     isLoading: isImageLoading,
     error: imageError,
-    loadImage,
+    loadImages,
+    goToImage,
+    nextImage,
+    previousImage,
+    updateImage,
     reset: resetImage,
   } = useImageProcessor()
 
@@ -105,16 +110,19 @@ function AppContent() {
   const isLoading = isImageLoading || isVideoLoading
   const error = imageError || videoError
 
-  const handleFileSelect = useCallback(async (file: File, type: 'image' | 'video') => {
-    setFileName(file.name)
-    setMediaType(type)
-    
+  const handleFileSelect = useCallback(async (files: File | File[], type: 'image' | 'video') => {
     if (type === 'image') {
-      await loadImage(file)
+      const fileArray = Array.isArray(files) ? files : [files]
+      setFileName(fileArray.length === 1 ? fileArray[0].name : `${fileArray.length} images`)
+      setMediaType(type)
+      await loadImages(fileArray)
     } else {
+      const file = Array.isArray(files) ? files[0] : files
+      setFileName(file.name)
+      setMediaType(type)
       await loadVideoFile(file)
     }
-  }, [loadImage, loadVideoFile])
+  }, [loadImages, loadVideoFile])
 
   const handleReset = useCallback(() => {
     setMediaType(null)
@@ -163,7 +171,7 @@ function AppContent() {
   }
 
   // Show landing screen if no media loaded
-  if (mediaType === null || (mediaType === 'image' && !imageData) || (mediaType === 'video' && !videoData)) {
+  if (mediaType === null || (mediaType === 'image' && images.length === 0) || (mediaType === 'video' && !videoData)) {
     return (
       <>
         <LandingScreen onFileSelect={handleFileSelect} />
@@ -172,12 +180,16 @@ function AppContent() {
     )
   }
 
-  // Show image editor
-  if (mediaType === 'image' && imageData) {
+  // Show image editor (multi-image support)
+  if (mediaType === 'image' && images.length > 0) {
     return (
       <Editor
-        originalImage={imageData.original}
-        thumbnail={imageData.thumbnail}
+        images={images}
+        currentIndex={currentIndex}
+        onIndexChange={goToImage}
+        onImageUpdate={updateImage}
+        onNextImage={nextImage}
+        onPreviousImage={previousImage}
         fileName={fileName}
         onBack={handleReset}
       />

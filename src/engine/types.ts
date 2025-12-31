@@ -62,3 +62,42 @@ export interface ProcessingOptions {
   settings?: RecipeSettings
 }
 
+/**
+ * Представляет отдельное изображение в мульти-режиме
+ * со всеми его настройками и состоянием
+ */
+export interface ImageItem {
+  /** Уникальный идентификатор */
+  id: string
+  /** Оригинальный файл */
+  file: File
+  /** Имя файла для отображения */
+  fileName: string
+  /** Полноразмерное изображение */
+  original: ImageData
+  /** Превью для быстрой обработки */
+  thumbnail: ImageData
+
+  /** Выбранный рецепт для этого изображения */
+  recipe: Recipe | null
+  /** Пользовательские настройки тюнинга */
+  customSettings: RecipeSettings
+
+  /** Трансформированное полноразмерное изображение */
+  transformedOriginal: ImageData
+  /** Трансформированное превью */
+  transformedThumbnail: ImageData
+  /** Текущий угол поворота */
+  rotation: 0 | 90 | 180 | 270
+}
+
+/**
+ * Состояние для работы с множественными изображениями
+ */
+export interface MultiImageState {
+  /** Массив загруженных изображений */
+  images: ImageItem[]
+  /** Индекс текущего активного изображения */
+  currentIndex: number
+}
+

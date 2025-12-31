@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { ArrowLeft, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { APP_VERSION, APP_URL } from '../constants'
 import { Button } from './ui/button'
@@ -8,7 +8,9 @@ import { TuningPanel } from './TuningPanel'
 import { CropPanel } from './CropPanel'
 import { Toolbar } from './Toolbar'
 import { HelpDialog } from './HelpDialog'
-import { Recipe, RecipeSettings } from '../engine/types'
+import { ThumbnailStrip } from './ThumbnailStrip'
+import { ImageCounter } from './ImageCounter'
+import { Recipe, RecipeSettings, ImageItem } from '../engine/types'
 import { ImageProcessor } from '../engine/processor'
 import { getSimulation } from '../presets/simulations'
 import { getAllRecipes } from '../presets/recipes'
@@ -20,8 +22,12 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useViewportHeight, getViewportHeightStyle } from '../hooks/useViewportHeight'
 
 interface EditorProps {
-  originalImage: ImageData
-  thumbnail: ImageData
+  images: ImageItem[]
+  currentIndex: number
+  onIndexChange: (index: number) => void
+  onImageUpdate: (id: string, updates: Partial<ImageItem>) => void
+  onNextImage?: () => void
+  onPreviousImage?: () => void
   fileName: string
   onBack: () => void
 }
@@ -34,13 +40,24 @@ interface EditorProps {
  * - useKeyboardShortcuts: горячие клавиши
  * - useViewportHeight: корректная высота на мобильных
  */
-export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorProps) {
+export function Editor({
+  images,
+  currentIndex,
+  onIndexChange,
+  onImageUpdate,
+  onNextImage,
+  onPreviousImage,
+  fileName,
+  onBack
+}: EditorProps) {
   // ============================================================================
   // State
   // ============================================================================
-  
-  const [activeRecipe, setActiveRecipe] = useState<Recipe | null>(null)
-  const [previewImage, setPreviewImage] = useState<ImageData>(thumbnail)
+
+  const currentImage = images[currentIndex]
+  const totalImages = images.length
+
+  const [previewImage, setPreviewImage] = useState<ImageData>(currentImage.transformedThumbnail)
   const [isProcessing, setIsProcessing] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
@@ -55,8 +72,8 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
   const { getFavoriteIds, toggleFavorite } = useFavorites()
 
   // Refs для доступа к актуальным значениям из callbacks (избегаем stale closures)
-  const customSettingsRef = useRef<RecipeSettings>({})
-  const transformedThumbnailRef = useRef<ImageData>(thumbnail)
+  const customSettingsRef = useRef<RecipeSettings>(currentImage.customSettings)
+  const transformedThumbnailRef = useRef<ImageData>(currentImage.transformedThumbnail)
 
   /**
    * Обновляет превью с заданными параметрами
@@ -83,12 +100,18 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
 
   // Transform hook (rotation, crop)
   const transform = useTransform({
-    originalImage,
-    thumbnail,
-    onTransformChange: useCallback((_original: ImageData, newThumbnail: ImageData) => {
+    originalImage: currentImage.original,
+    thumbnail: currentImage.thumbnail,
+    transformedOriginal: currentImage.transformedOriginal,
+    transformedThumbnail: currentImage.transformedThumbnail,
+    onTransformChange: useCallback((newOriginal: ImageData, newThumbnail: ImageData) => {
       transformedThumbnailRef.current = newThumbnail
-      updatePreview(newThumbnail, activeRecipe, customSettingsRef.current)
-    }, [activeRecipe, updatePreview])
+      onImageUpdate(currentImage.id, {
+        transformedOriginal: newOriginal,
+        transformedThumbnail: newThumbnail
+      })
+      updatePreview(newThumbnail, currentImage.recipe, customSettingsRef.current)
+    }, [currentImage, onImageUpdate, updatePreview])
   })
 
   // Синхронизируем ref с актуальным состоянием transform
@@ -96,14 +119,29 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
 
   // Tuning hook (fine-tune settings)
   const tuning = useTuning({
+    initialSettings: currentImage.customSettings,
     onSettingsChange: useCallback((newSettings: RecipeSettings) => {
       customSettingsRef.current = newSettings
-      updatePreview(transformedThumbnailRef.current, activeRecipe, newSettings)
-    }, [activeRecipe, updatePreview])
+      onImageUpdate(currentImage.id, { customSettings: newSettings })
+      updatePreview(transformedThumbnailRef.current, currentImage.recipe, newSettings)
+    }, [currentImage, onImageUpdate, updatePreview])
   })
 
   // Синхронизируем ref с актуальным состоянием tuning
   customSettingsRef.current = tuning.customSettings
+
+  // ============================================================================
+  // Sync preview when switching images
+  // ============================================================================
+
+  useEffect(() => {
+    // При смене изображения обновляем превью
+    updatePreview(
+      currentImage.transformedThumbnail,
+      currentImage.recipe,
+      currentImage.customSettings
+    )
+  }, [currentIndex, currentImage.transformedThumbnail, currentImage.recipe, currentImage.customSettings, updatePreview])
 
   // ============================================================================
   // Recipe Processing
@@ -130,10 +168,13 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
   }, [])
 
   /**
-   * Выбор рецепта
+   * Выбор рецепта (обновляет только текущее изображение)
    */
   const handleRecipeSelect = useCallback((recipe: Recipe) => {
-    setActiveRecipe(recipe)
+    onImageUpdate(currentImage.id, {
+      recipe,
+      customSettings: {} // Сброс настроек при смене рецепта
+    })
     tuning.resetSettings()
     setIsProcessing(true)
 
@@ -143,22 +184,37 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
     } finally {
       setIsProcessing(false)
     }
-  }, [transform.transformedThumbnail, applyRecipeToImage, tuning])
+  }, [currentImage, onImageUpdate, transform.transformedThumbnail, applyRecipeToImage, tuning])
 
   /**
-   * Случайный рецепт
+   * Применить текущий рецепт и настройки ко всем изображениям
+   */
+  const handleApplyToAll = useCallback(() => {
+    if (!currentImage.recipe) return
+
+    const { recipe, customSettings } = currentImage
+
+    images.forEach(img => {
+      if (img.id !== currentImage.id) {
+        onImageUpdate(img.id, { recipe, customSettings })
+      }
+    })
+  }, [currentImage, images, onImageUpdate])
+
+  /**
+   * Случайный рецепт (применяется к текущему изображению)
    */
   const handleRandomRecipe = useCallback(() => {
     const recipes = getAllRecipes()
-    const availableRecipes = activeRecipe 
-      ? recipes.filter((r: Recipe) => r.id !== activeRecipe.id)
+    const availableRecipes = currentImage.recipe
+      ? recipes.filter((r: Recipe) => r.id !== currentImage.recipe?.id)
       : recipes
-    
+
     if (availableRecipes.length > 0) {
       const randomIndex = Math.floor(Math.random() * availableRecipes.length)
       handleRecipeSelect(availableRecipes[randomIndex])
     }
-  }, [activeRecipe, handleRecipeSelect])
+  }, [currentImage.recipe, handleRecipeSelect])
 
   // ============================================================================
   // Panel & UI
@@ -203,22 +259,22 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
   // ============================================================================
 
   const handleExport = useCallback(async () => {
-    if (!activeRecipe) return
+    if (!currentImage.recipe) return
 
     setIsExporting(true)
     try {
-      const mergedSettings = tuning.getMergedSettings(activeRecipe)
-      const processed = applyRecipeToImage(transform.transformedOriginal, activeRecipe, mergedSettings)
-      
+      const mergedSettings = tuning.getMergedSettings(currentImage.recipe)
+      const processed = applyRecipeToImage(transform.transformedOriginal, currentImage.recipe, mergedSettings)
+
       // Добавляем водяной знак
       const withWatermark = ImageProcessor.addWatermark(processed, APP_URL)
-      
+
       const blob = await ImageProcessor.imageDataToBlob(withWatermark)
       const url = URL.createObjectURL(blob)
 
       const a = document.createElement('a')
       a.href = url
-      a.download = `photochrome_${activeRecipe.id}_${fileName}`
+      a.download = `photochrome_${currentImage.recipe.id}_${currentImage.fileName}`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -228,7 +284,7 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
     } finally {
       setIsExporting(false)
     }
-  }, [activeRecipe, transform.transformedOriginal, fileName, tuning, applyRecipeToImage])
+  }, [currentImage, transform.transformedOriginal, tuning, applyRecipeToImage])
 
   // ============================================================================
   // Compare (before/after)
@@ -246,7 +302,8 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
       isCropping: transform.isCropping,
       isTuning: tuning.isTuning,
       cropRatio: transform.cropRatio,
-      activeRecipe,
+      activeRecipe: currentImage.recipe,
+      totalImages,
     },
     {
       onRotateClockwise: transform.rotateClockwise,
@@ -261,6 +318,8 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
       onExport: handleExport,
       onCompareStart: handleCompareStart,
       onCompareEnd: handleCompareEnd,
+      onNextImage,
+      onPreviousImage,
     }
   )
 
@@ -292,14 +351,29 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
               <p className="text-sm text-zinc-400 bg-zinc-900/80 px-3 py-1 rounded">Processing...</p>
             </div>
           )}
-          <Preview 
+          <ImageCounter currentIndex={currentIndex} totalImages={totalImages} />
+          <Preview
             imageData={displayImage}
             cropMode={transform.isCropping}
             cropRatio={transform.cropRatio}
             onMouseDown={handleCompareStart}
             onMouseUp={handleCompareEnd}
             onMouseLeave={handleCompareEnd}
+            enableSwipe={totalImages > 1 && !transform.isCropping}
+            onSwipeLeft={onNextImage}
+            onSwipeRight={onPreviousImage}
           />
+
+          {/* Desktop: Thumbnail Strip below preview */}
+          {totalImages > 1 && (
+            <div className="hidden md:block">
+              <ThumbnailStrip
+                images={images}
+                currentIndex={currentIndex}
+                onSelectImage={onIndexChange}
+              />
+            </div>
+          )}
         </div>
 
         {/* Desktop Toolbar */}
@@ -309,16 +383,18 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
             onRotateCounterClockwise={transform.rotateCounterClockwise}
             onCropClick={handleCropClick}
             onExport={handleExport}
-            canExport={!!activeRecipe}
+            canExport={!!currentImage.recipe}
             isExporting={isExporting}
             cropMode={transform.isCropping}
             cropRatio={transform.cropRatio}
             onCropRatioChange={transform.setCropRatio}
             onCropApply={transform.applyCrop}
             onCropCancel={transform.cancelCrop}
-            activeRecipe={activeRecipe}
+            activeRecipe={currentImage.recipe}
             tuningMode={tuning.isTuning}
             onTuningOpen={handleTuningOpen}
+            totalImages={totalImages}
+            onApplyToAll={handleApplyToAll}
             onHelpClick={() => setIsHelpOpen(true)}
           />
         </div>
@@ -330,9 +406,9 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
             onRotateCounterClockwise={transform.rotateCounterClockwise}
             onCropClick={handleCropClick}
             onExport={handleExport}
-            canExport={!!activeRecipe}
+            canExport={!!currentImage.recipe}
             isExporting={isExporting}
-            activeRecipe={activeRecipe}
+            activeRecipe={currentImage.recipe}
             tuningMode={tuning.isTuning}
             onTuningOpen={handleTuningOpen}
             onHelpClick={() => setIsHelpOpen(true)}
@@ -344,11 +420,13 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
         <div className={`flex-shrink-0 md:hidden ${transform.isCropping ? 'hidden' : ''}`}>
           <RecipePanel
             sourceImage={transform.transformedThumbnail}
-            activeRecipeId={activeRecipe?.id ?? null}
+            activeRecipeId={currentImage.recipe?.id ?? null}
             favoriteIds={getFavoriteIds()}
             onRecipeSelect={handleRecipeSelect}
             onRandomRecipe={handleRandomRecipe}
             onFavoriteToggle={toggleFavorite}
+            totalImages={totalImages}
+            onApplyToAll={handleApplyToAll}
             horizontal
           />
         </div>
@@ -360,14 +438,14 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
             onRotateCounterClockwise={transform.rotateCounterClockwise}
             onCropClick={handleCropClick}
             onExport={handleExport}
-            canExport={!!activeRecipe}
+            canExport={!!currentImage.recipe}
             isExporting={isExporting}
             cropMode={transform.isCropping}
             cropRatio={transform.cropRatio}
             onCropRatioChange={transform.setCropRatio}
             onCropApply={transform.applyCrop}
             onCropCancel={transform.cancelCrop}
-            activeRecipe={activeRecipe}
+            activeRecipe={currentImage.recipe}
             tuningMode={tuning.isTuning}
             onTuningOpen={handleTuningOpen}
             downloadOnly
@@ -379,13 +457,15 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
       <DesktopSidePanel
         isOpen={isPanelOpen}
         isTuning={tuning.isTuning}
-        activeRecipe={activeRecipe}
+        activeRecipe={currentImage.recipe}
         transformedThumbnail={transform.transformedThumbnail}
         customSettings={tuning.customSettings}
         favoriteIds={getFavoriteIds()}
+        totalImages={totalImages}
         onRecipeSelect={handleRecipeSelect}
         onRandomRecipe={handleRandomRecipe}
         onFavoriteToggle={toggleFavorite}
+        onApplyToAll={handleApplyToAll}
         onSettingsChange={tuning.updateSettings}
         onTuningApply={tuning.applyTuning}
         onTuningCancel={tuning.cancelTuning}
@@ -393,8 +473,8 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
 
       {/* Mobile: TuningPanel */}
       <MobileTuningPanel
-        isOpen={tuning.isTuning && !!activeRecipe}
-        activeRecipe={activeRecipe}
+        isOpen={tuning.isTuning && !!currentImage.recipe}
+        activeRecipe={currentImage.recipe}
         customSettings={tuning.customSettings}
         onSettingsChange={tuning.updateSettings}
         onApply={tuning.applyTuning}
@@ -414,6 +494,7 @@ export function Editor({ originalImage, thumbnail, fileName, onBack }: EditorPro
       <HelpDialog
         isOpen={isHelpOpen}
         onClose={() => setIsHelpOpen(false)}
+        totalImages={totalImages}
       />
     </div>
   )
@@ -470,9 +551,11 @@ interface DesktopSidePanelProps {
   transformedThumbnail: ImageData
   customSettings: RecipeSettings
   favoriteIds: string[]
+  totalImages: number
   onRecipeSelect: (recipe: Recipe) => void
   onRandomRecipe: () => void
   onFavoriteToggle: (id: string) => void
+  onApplyToAll: () => void
   onSettingsChange: (settings: RecipeSettings) => void
   onTuningApply: () => void
   onTuningCancel: () => void
@@ -485,15 +568,17 @@ function DesktopSidePanel({
   transformedThumbnail,
   customSettings,
   favoriteIds,
+  totalImages,
   onRecipeSelect,
   onRandomRecipe,
   onFavoriteToggle,
+  onApplyToAll,
   onSettingsChange,
   onTuningApply,
   onTuningCancel,
 }: DesktopSidePanelProps) {
   return (
-    <aside 
+    <aside
       className={`
         hidden md:block flex-shrink-0 h-full overflow-hidden
         bg-black border-l border-zinc-800
@@ -506,9 +591,11 @@ function DesktopSidePanel({
           sourceImage={transformedThumbnail}
           activeRecipeId={activeRecipe?.id ?? null}
           favoriteIds={favoriteIds}
+          totalImages={totalImages}
           onRecipeSelect={onRecipeSelect}
           onRandomRecipe={onRandomRecipe}
           onFavoriteToggle={onFavoriteToggle}
+          onApplyToAll={onApplyToAll}
         />
         
         <div className={`tuning-panel-overlay ${isTuning && activeRecipe ? 'tuning-panel-open' : 'tuning-panel-closed'}`}>

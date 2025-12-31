@@ -11,6 +11,8 @@ interface KeyboardShortcutsConfig {
   cropRatio: AspectRatio
   /** Активный рецепт */
   activeRecipe: Recipe | null
+  /** Общее количество изображений */
+  totalImages?: number
 }
 
 interface KeyboardShortcutsHandlers {
@@ -38,6 +40,10 @@ interface KeyboardShortcutsHandlers {
   onCompareStart: () => void
   /** Закончить сравнение (показать обработанное) */
   onCompareEnd: () => void
+  /** Следующее изображение */
+  onNextImage?: () => void
+  /** Предыдущее изображение */
+  onPreviousImage?: () => void
 }
 
 /**
@@ -64,6 +70,7 @@ export function useKeyboardShortcuts(
     isTuning,
     cropRatio,
     activeRecipe,
+    totalImages = 1,
   } = config
 
   const {
@@ -79,6 +86,8 @@ export function useKeyboardShortcuts(
     onExport,
     onCompareStart,
     onCompareEnd,
+    onNextImage,
+    onPreviousImage,
   } = handlers
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -115,6 +124,22 @@ export function useKeyboardShortcuts(
       case 'p':
         if (!e.metaKey && !e.ctrlKey) {
           onPanelToggle()
+        }
+        break
+
+      case 'arrowleft':
+        // Навигация к предыдущему изображению
+        if (!isCropping && !isTuning && totalImages > 1 && onPreviousImage) {
+          e.preventDefault()
+          onPreviousImage()
+        }
+        break
+
+      case 'arrowright':
+        // Навигация к следующему изображению
+        if (!isCropping && !isTuning && totalImages > 1 && onNextImage) {
+          e.preventDefault()
+          onNextImage()
         }
         break
 

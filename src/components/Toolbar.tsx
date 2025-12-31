@@ -1,4 +1,4 @@
-import { RotateCw, RotateCcw, Crop, Check, Share, Settings2, Film, HelpCircle } from 'lucide-react'
+import { RotateCw, RotateCcw, Crop, Check, Share, Settings2, Film, HelpCircle, Layers } from 'lucide-react'
 import { Spinner } from './ui/spinner'
 import { Button } from './ui/button'
 import { ButtonGroup } from './ui/button-group'
@@ -22,6 +22,9 @@ interface ToolbarProps {
   activeRecipe?: Recipe | null
   tuningMode?: boolean
   onTuningOpen?: () => void
+  // Multi-image mode
+  totalImages?: number
+  onApplyToAll?: () => void
   // Help
   onHelpClick?: () => void
   // Mobile modes
@@ -53,6 +56,8 @@ export function Toolbar({
   activeRecipe,
   tuningMode = false,
   onTuningOpen,
+  totalImages = 1,
+  onApplyToAll,
   onHelpClick,
   mobileMode = false,
   downloadOnly = false
@@ -288,6 +293,19 @@ export function Toolbar({
         >
           <Film className="w-4 h-4" aria-hidden="true" />
           Select preset
+        </Button>
+      )}
+
+      {/* Apply to all button (multi-image mode) */}
+      {totalImages > 1 && activeRecipe && onApplyToAll && (
+        <Button
+          variant="outline"
+          size="default"
+          onClick={onApplyToAll}
+          aria-label={`Apply current preset to all ${totalImages} images`}
+        >
+          <Layers className="w-4 h-4" aria-hidden="true" />
+          Apply to all {totalImages}
         </Button>
       )}
 

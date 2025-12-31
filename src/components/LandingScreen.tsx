@@ -4,7 +4,7 @@ import { Button } from './ui/button'
 import { PhotoArc } from './PhotoArc'
 
 interface LandingScreenProps {
-  onFileSelect: (file: File, type: 'image' | 'video') => void
+  onFileSelect: (files: File | File[], type: 'image' | 'video') => void
 }
 
 /** Accepted image MIME types */
@@ -27,26 +27,21 @@ function isValidVideoFile(file: File): boolean {
   return file.type.startsWith('video/') || ACCEPTED_VIDEO_TYPES.includes(file.type)
 }
 
-/**
- * Determines file type and validates it.
- */
-function getFileType(file: File): 'image' | 'video' | null {
-  if (isValidImageFile(file)) return 'image'
-  if (isValidVideoFile(file)) return 'video'
-  return null
-}
-
 export function LandingScreen({ onFileSelect }: LandingScreenProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      const type = getFileType(file)
-      if (type) {
-        onFileSelect(file, type)
-      }
+    const files = Array.from(event.target.files || [])
+    if (files.length === 0) return
+
+    const images = files.filter(isValidImageFile)
+    const videos = files.filter(isValidVideoFile)
+
+    if (images.length > 0) {
+      onFileSelect(images, 'image') // Массив изображений
+    } else if (videos.length > 0) {
+      onFileSelect(videos[0], 'video') // Одно видео
     }
   }, [onFileSelect])
 
@@ -57,12 +52,17 @@ export function LandingScreen({ onFileSelect }: LandingScreenProps) {
   const handleDrop = useCallback((event: React.DragEvent) => {
     event.preventDefault()
     setIsDragging(false)
-    const file = event.dataTransfer.files[0]
-    if (file) {
-      const type = getFileType(file)
-      if (type) {
-        onFileSelect(file, type)
-      }
+
+    const files = Array.from(event.dataTransfer.files)
+    if (files.length === 0) return
+
+    const images = files.filter(isValidImageFile)
+    const videos = files.filter(isValidVideoFile)
+
+    if (images.length > 0) {
+      onFileSelect(images, 'image')
+    } else if (videos.length > 0) {
+      onFileSelect(videos[0], 'video')
     }
   }, [onFileSelect])
 
@@ -114,6 +114,7 @@ export function LandingScreen({ onFileSelect }: LandingScreenProps) {
             ref={fileInputRef}
             type="file"
             accept="image/*,video/*"
+            multiple
             onChange={handleFileSelect}
             className="sr-only"
             id="media-upload"
@@ -127,7 +128,7 @@ export function LandingScreen({ onFileSelect }: LandingScreenProps) {
             aria-controls="media-upload"
           >
             <Upload className="w-4 h-4" aria-hidden="true" />
-            Upload Photo or Video
+            Upload Photos or Video
           </Button>
           
           <p 
