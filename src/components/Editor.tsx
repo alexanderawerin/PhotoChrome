@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { ArrowLeft, PanelRightClose, PanelRightOpen } from 'lucide-react'
+import { ArrowLeft, PanelRightClose, PanelRightOpen, Layers, Share } from 'lucide-react'
 import { APP_VERSION, APP_URL } from '../constants'
 import { Button } from './ui/button'
 import { Spinner } from './ui/spinner'
@@ -439,31 +439,45 @@ export function Editor({
             onRecipeSelect={handleRecipeSelect}
             onRandomRecipe={handleRandomRecipe}
             onFavoriteToggle={toggleFavorite}
-            totalImages={totalImages}
-            onApplyToAll={handleApplyToAll}
             horizontal
           />
         </div>
 
-        {/* Mobile: Download button */}
+        {/* Mobile: Action buttons (Apply to all + Export) */}
         <div className={`flex-shrink-0 p-3 md:hidden ${transform.isCropping ? 'hidden' : ''}`}>
-          <Toolbar
-            onRotateClockwise={transform.rotateClockwise}
-            onRotateCounterClockwise={transform.rotateCounterClockwise}
-            onCropClick={handleCropClick}
-            onExport={handleExport}
-            canExport={!!currentImage.recipe}
-            isExporting={isExporting}
-            cropMode={transform.isCropping}
-            cropRatio={transform.cropRatio}
-            onCropRatioChange={transform.setCropRatio}
-            onCropApply={transform.applyCrop}
-            onCropCancel={transform.cancelCrop}
-            activeRecipe={currentImage.recipe}
-            tuningMode={tuning.isTuning}
-            onTuningOpen={handleTuningOpen}
-            downloadOnly
-          />
+          <div className="flex gap-2">
+            {/* Apply to all button (multi-image mode) */}
+            {totalImages > 1 && currentImage.recipe && (
+              <Button
+                variant="outline"
+                size="default"
+                onClick={handleApplyToAll}
+                aria-label={`Apply current preset to all ${totalImages} images`}
+                className="flex-1"
+              >
+                <Layers className="w-4 h-4" aria-hidden="true" />
+                Apply to all {totalImages}
+              </Button>
+            )}
+
+            {/* Export button */}
+            <Button
+              variant="default"
+              size="default"
+              onClick={handleExport}
+              disabled={!currentImage.recipe || isExporting}
+              aria-label={isExporting ? 'Exporting...' : 'Export processed image'}
+              aria-busy={isExporting}
+              className={totalImages > 1 && currentImage.recipe ? 'flex-1' : 'w-full'}
+            >
+              {isExporting ? (
+                <Spinner className="size-4" randomColor />
+              ) : (
+                <Share className="w-4 h-4" aria-hidden="true" />
+              )}
+              {isExporting ? 'Exporting...' : 'Export'}
+            </Button>
+          </div>
         </div>
       </div>
 
