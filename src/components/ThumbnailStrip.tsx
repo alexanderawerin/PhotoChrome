@@ -125,6 +125,7 @@ function ThumbnailPreview({
       ref={canvasRef}
       className="w-full h-full object-cover"
       style={{ imageRendering: 'auto' }}
+      aria-hidden="true"
     />
   )
 }

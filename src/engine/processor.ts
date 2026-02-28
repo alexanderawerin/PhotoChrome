@@ -119,9 +119,10 @@ export class ImageProcessor {
   }
 
   /**
-   * Загружает изображение из File в ImageData
+   * Загружает изображение из File в ImageData.
+   * Если передан maxSize — масштабирует так чтобы длинная сторона не превышала maxSize.
    */
-  static async loadImage(file: File): Promise<ImageData> {
+  private static async fileToImageData(file: File, maxSize?: number): Promise<ImageData> {
     return new Promise((resolve, reject) => {
       const img = new Image()
       const url = URL.createObjectURL(file)
@@ -129,10 +130,22 @@ export class ImageProcessor {
       img.onload = () => {
         URL.revokeObjectURL(url)
 
-        // Создаём canvas для получения ImageData
+        let width = img.width
+        let height = img.height
+
+        if (maxSize !== undefined) {
+          if (width > height && width > maxSize) {
+            height = (height * maxSize) / width
+            width = maxSize
+          } else if (height > maxSize) {
+            width = (width * maxSize) / height
+            height = maxSize
+          }
+        }
+
         const canvas = document.createElement('canvas')
-        canvas.width = img.width
-        canvas.height = img.height
+        canvas.width = width
+        canvas.height = height
 
         const ctx = canvas.getContext('2d')
         if (!ctx) {
@@ -140,9 +153,8 @@ export class ImageProcessor {
           return
         }
 
-        ctx.drawImage(img, 0, 0)
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-        resolve(imageData)
+        ctx.drawImage(img, 0, 0, width, height)
+        resolve(ctx.getImageData(0, 0, width, height))
       }
 
       img.onerror = () => {
@@ -155,54 +167,17 @@ export class ImageProcessor {
   }
 
   /**
+   * Загружает изображение из File в ImageData
+   */
+  static loadImage(file: File): Promise<ImageData> {
+    return this.fileToImageData(file)
+  }
+
+  /**
    * Создаёт уменьшенную копию изображения для превью
    */
-  static async createThumbnail(
-    file: File,
-    maxSize: number
-  ): Promise<ImageData> {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
-      const url = URL.createObjectURL(file)
-
-      img.onload = () => {
-        URL.revokeObjectURL(url)
-
-        // Вычисляем новые размеры
-        let width = img.width
-        let height = img.height
-
-        if (width > height && width > maxSize) {
-          height = (height * maxSize) / width
-          width = maxSize
-        } else if (height > maxSize) {
-          width = (width * maxSize) / height
-          height = maxSize
-        }
-
-        // Создаём canvas с новыми размерами
-        const canvas = document.createElement('canvas')
-        canvas.width = width
-        canvas.height = height
-
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          reject(new Error('Failed to get canvas context'))
-          return
-        }
-
-        ctx.drawImage(img, 0, 0, width, height)
-        const imageData = ctx.getImageData(0, 0, width, height)
-        resolve(imageData)
-      }
-
-      img.onerror = () => {
-        URL.revokeObjectURL(url)
-        reject(new Error('Failed to load image'))
-      }
-
-      img.src = url
-    })
+  static createThumbnail(file: File, maxSize: number): Promise<ImageData> {
+    return this.fileToImageData(file, maxSize)
   }
 
   /**

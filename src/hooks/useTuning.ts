@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { RecipeSettings, Recipe } from '../engine/types'
 
 interface TuningState {
@@ -42,11 +42,18 @@ export function useTuning({
   const [customSettings, setCustomSettings] = useState<RecipeSettings>(initialSettings)
   const [settingsBeforeTuning, setSettingsBeforeTuning] = useState<RecipeSettings>(initialSettings)
 
+  // Ref для отслеживания предыдущего значения initialSettings (стабильное сравнение по ссылке)
+  const prevInitialRef = useRef(initialSettings)
+
   // Синхронизация с внешними settings (для переключения между изображениями)
+  // Используем ref чтобы не реагировать на новые объекты с тем же содержимым
   useEffect(() => {
-    if (!isTuning) {
-      setCustomSettings(initialSettings)
-      setSettingsBeforeTuning(initialSettings)
+    if (prevInitialRef.current !== initialSettings) {
+      prevInitialRef.current = initialSettings
+      if (!isTuning) {
+        setCustomSettings(initialSettings)
+        setSettingsBeforeTuning(initialSettings)
+      }
     }
   }, [initialSettings, isTuning])
 

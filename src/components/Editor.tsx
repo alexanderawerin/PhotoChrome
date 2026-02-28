@@ -677,13 +677,17 @@ function MobileTuningPanel({
   onCancel,
 }: MobileTuningPanelProps) {
   return (
-    <div 
+    <div
       className={`
         md:hidden fixed inset-0 z-50
         bg-black
         transition-transform duration-300 ease-out
         ${isOpen ? 'translate-y-0' : 'translate-y-full'}
       `}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Fine-tune settings"
+      aria-hidden={!isOpen}
     >
       {activeRecipe && (
         <TuningPanel
@@ -714,13 +718,17 @@ function MobileCropPanel({
   onCancel,
 }: MobileCropPanelProps) {
   return (
-    <div 
+    <div
       className={`
         md:hidden fixed inset-x-0 bottom-0 z-50
         bg-black border-t border-zinc-800
         transition-transform duration-300 ease-out
         ${isOpen ? 'translate-y-0' : 'translate-y-full'}
       `}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Crop image"
+      aria-hidden={!isOpen}
     >
       <CropPanel
         cropRatio={cropRatio}

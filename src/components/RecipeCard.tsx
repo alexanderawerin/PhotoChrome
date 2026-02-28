@@ -261,7 +261,7 @@ function RecipeCardComponent({
       tabIndex={0}
       role="button"
       aria-pressed={isActive}
-      aria-label={`Применить рецепт ${recipe.name}${isActive ? ', выбран' : ''}`}
+      aria-label={`Apply preset ${recipe.name}${isActive ? ', selected' : ''}`}
     >
       <div className="aspect-square bg-black relative">
         {previewData ? (
@@ -308,8 +308,9 @@ function RecipeCardComponent({
             aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
             aria-pressed={isFavorite}
           >
-            <Heart 
-              className={`${largeTouchTargets ? 'w-4 h-4' : 'w-3 h-3'} ${isFavorite ? 'fill-current' : ''}`} 
+            <Heart
+              className={`${largeTouchTargets ? 'w-4 h-4' : 'w-3 h-3'} ${isFavorite ? 'fill-current' : ''}`}
+              aria-hidden="true"
             />
           </button>
         )}

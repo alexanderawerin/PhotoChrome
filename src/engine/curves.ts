@@ -30,20 +30,15 @@ function interpolateCurve(x: number, points: [number, number][]): number {
     return Math.max(0, Math.min(255, Math.round(points[points.length - 1][1])))
   }
 
-  // Найдём две точки, между которыми находится x
-  for (let i = 0; i < points.length - 1; i++) {
-    const [x1, y1] = points[i]
-    const [x2, y2] = points[i + 1]
-
-    if (x >= x1 && x <= x2) {
-      // Линейная интерполяция
-      const t = (x - x1) / (x2 - x1)
-      const y = y1 + (y2 - y1) * t
-      return Math.max(0, Math.min(255, Math.round(y)))
-    }
+  // Найдём сегмент, содержащий x (граничные проверки выше гарантируют нахождение)
+  let i = 0
+  while (i < points.length - 2 && x > points[i + 1][0]) {
+    i++
   }
-
-  return x // Fallback
+  const [x1, y1] = points[i]
+  const [x2, y2] = points[i + 1]
+  const t = (x - x1) / (x2 - x1)
+  return Math.max(0, Math.min(255, Math.round(y1 + (y2 - y1) * t)))
 }
 
 /**

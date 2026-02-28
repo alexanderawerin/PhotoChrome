@@ -169,24 +169,26 @@ export function TuningPanel({
           {/* Slider params */}
           {SLIDER_PARAMS.map((param) => {
             const value = getSliderValue(param.key)
+            const sliderId = `slider-${param.key}`
             return (
               <div key={param.key} className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm text-zinc-300">
+                  <label htmlFor={sliderId} className="text-sm text-zinc-300">
                     {param.label}
                   </label>
-                  <span className="text-sm text-zinc-500 tabular-nums w-8 text-right">
+                  <span className="text-sm text-zinc-500 tabular-nums w-8 text-right" aria-hidden="true">
                     {value > 0 ? `+${value}` : value}
                   </span>
                 </div>
                 <Slider
+                  id={sliderId}
                   value={[value]}
                   min={param.min}
                   max={param.max}
                   step={param.step}
                   onValueChange={(values) => handleSliderChange(param.key, values[0])}
                   className="w-full"
-                  aria-label={`${param.label}: ${value}`}
+                  aria-valuetext={`${value > 0 ? '+' : ''}${value}`}
                 />
               </div>
             )
@@ -198,16 +200,18 @@ export function TuningPanel({
           {/* Toggle params with ToggleGroup */}
           {TOGGLE_PARAMS.map((param) => {
             const value = getToggleValue(param.key)
+            const labelId = `toggle-label-${param.key}`
             return (
               <div key={param.key} className="space-y-2">
-                <label className="text-sm text-zinc-300 block">
+                <label id={labelId} className="text-sm text-zinc-300 block">
                   {param.label}
                 </label>
-                <ToggleGroup 
-                  type="single" 
+                <ToggleGroup
+                  type="single"
                   value={value}
                   onValueChange={(v) => handleToggleChange(param.key, v)}
                   className="w-full justify-start"
+                  aria-labelledby={labelId}
                 >
                   {TOGGLE_OPTIONS.map((option) => (
                     <ToggleGroupItem
@@ -227,14 +231,15 @@ export function TuningPanel({
           {/* Grain Size - only shown when grain is not off */}
           {grainEffect !== 'off' && (
             <div className="space-y-2 animate-in fade-in duration-200">
-              <label className="text-sm text-zinc-300 block">
+              <label id="toggle-label-grainSize" className="text-sm text-zinc-300 block">
                 Grain Size
               </label>
-              <ToggleGroup 
-                type="single" 
+              <ToggleGroup
+                type="single"
                 value={getGrainSize()}
                 onValueChange={handleGrainSizeChange}
                 className="w-full justify-start"
+                aria-labelledby="toggle-label-grainSize"
               >
                 {GRAIN_SIZE_OPTIONS.map((option) => (
                   <ToggleGroupItem

@@ -189,6 +189,10 @@ export function useKeyboardShortcuts(
     onPanelToggle,
     onExport,
     onCompareStart,
+    onCompareEnd,
+    onNextImage,
+    onPreviousImage,
+    totalImages,
   ])
 
   const handleKeyUp = useCallback((e: KeyboardEvent) => {

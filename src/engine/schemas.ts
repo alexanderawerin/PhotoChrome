@@ -3,7 +3,7 @@
  * Ensures type safety when loading external JSON files.
  */
 
-import { FilmSimulation, Recipe, RecipeSettings, CurvePoints, ColorBalanceConfig } from './types'
+import { FilmSimulation, Recipe, RecipeSettings, CurvePoints, ColorBalanceConfig, EffectStrength, GrainSize } from './types'
 
 /**
  * Validates that a value is a valid CurvePoints object.
@@ -89,52 +89,40 @@ export function parseFilmSimulation(data: unknown): FilmSimulation {
   return simulation
 }
 
+const VALID_EFFECT_STRENGTHS: EffectStrength[] = ['off', 'weak', 'strong']
+const VALID_GRAIN_SIZES: GrainSize[] = ['small', 'large']
+const VALID_DYNAMIC_RANGE = ['DR100', 'DR200', 'DR400']
+const VALID_WHITE_BALANCE = ['auto', 'daylight', 'shade', 'cloudy', 'tungsten', 'fluorescent']
+
+function checkOptionalNumber(obj: Record<string, unknown>, field: string): boolean {
+  return obj[field] === undefined || typeof obj[field] === 'number'
+}
+
+function checkOptionalOneOf(obj: Record<string, unknown>, field: string, valid: string[]): boolean {
+  return obj[field] === undefined || valid.includes(obj[field] as string)
+}
+
 /**
  * Validates RecipeSettings
  */
 function isValidRecipeSettings(value: unknown): value is RecipeSettings {
   if (!value || typeof value !== 'object') return false
   const obj = value as Record<string, unknown>
-  
-  // All fields are optional, but if present, must be correct type
-  const validDynamicRange = ['DR100', 'DR200', 'DR400']
-  const validEffectStrength = ['off', 'weak', 'strong']
-  const validGrainSize = ['small', 'large']
-  const validWhiteBalance = ['auto', 'daylight', 'shade', 'cloudy', 'tungsten', 'fluorescent']
-  
-  if (obj.dynamicRange !== undefined && !validDynamicRange.includes(obj.dynamicRange as string)) {
-    return false
-  }
-  
-  if (obj.highlight !== undefined && typeof obj.highlight !== 'number') return false
-  if (obj.shadow !== undefined && typeof obj.shadow !== 'number') return false
-  if (obj.color !== undefined && typeof obj.color !== 'number') return false
-  if (obj.sharpness !== undefined && typeof obj.sharpness !== 'number') return false
-  if (obj.clarity !== undefined && typeof obj.clarity !== 'number') return false
-  
-  if (obj.grainEffect !== undefined && !validEffectStrength.includes(obj.grainEffect as string)) {
-    return false
-  }
-  
-  if (obj.grainSize !== undefined && !validGrainSize.includes(obj.grainSize as string)) {
-    return false
-  }
-  
-  if (obj.colorChromeEffect !== undefined && !validEffectStrength.includes(obj.colorChromeEffect as string)) {
-    return false
-  }
-  
-  if (obj.colorChromeFXBlue !== undefined && !validEffectStrength.includes(obj.colorChromeFXBlue as string)) {
-    return false
-  }
-  
-  if (obj.whiteBalance !== undefined && !validWhiteBalance.includes(obj.whiteBalance as string)) {
-    return false
-  }
-  
-  if (obj.wbShiftRed !== undefined && typeof obj.wbShiftRed !== 'number') return false
-  if (obj.wbShiftBlue !== undefined && typeof obj.wbShiftBlue !== 'number') return false
-  
+
+  if (!checkOptionalOneOf(obj, 'dynamicRange', VALID_DYNAMIC_RANGE)) return false
+  if (!checkOptionalNumber(obj, 'highlight')) return false
+  if (!checkOptionalNumber(obj, 'shadow')) return false
+  if (!checkOptionalNumber(obj, 'color')) return false
+  if (!checkOptionalNumber(obj, 'sharpness')) return false
+  if (!checkOptionalNumber(obj, 'clarity')) return false
+  if (!checkOptionalOneOf(obj, 'grainEffect', VALID_EFFECT_STRENGTHS)) return false
+  if (!checkOptionalOneOf(obj, 'grainSize', VALID_GRAIN_SIZES)) return false
+  if (!checkOptionalOneOf(obj, 'colorChromeEffect', VALID_EFFECT_STRENGTHS)) return false
+  if (!checkOptionalOneOf(obj, 'colorChromeFXBlue', VALID_EFFECT_STRENGTHS)) return false
+  if (!checkOptionalOneOf(obj, 'whiteBalance', VALID_WHITE_BALANCE)) return false
+  if (!checkOptionalNumber(obj, 'wbShiftRed')) return false
+  if (!checkOptionalNumber(obj, 'wbShiftBlue')) return false
+
   return true
 }
 

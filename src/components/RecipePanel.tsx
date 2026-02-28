@@ -299,11 +299,10 @@ export function RecipePanel({
       </div>
       
       {/* Scrollable content with sections */}
-      <div 
+      <div
         className="flex-1 overflow-y-auto px-3 pb-3"
         role="region"
         aria-labelledby="recipes-heading"
-        tabIndex={0}
       >
         <div className="space-y-4">
           {/* Favorites section - always first */}

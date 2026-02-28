@@ -1,9 +1,8 @@
 // Типы для движка обработки изображений
 
-export interface Point {
-  x: number
-  y: number
-}
+export type EffectStrength = 'off' | 'weak' | 'strong'
+export type GrainSize = 'small' | 'large'
+export type Rotation = 0 | 90 | 180 | 270
 
 export interface CurvePoints {
   points: [number, number][]
@@ -40,10 +39,10 @@ export interface RecipeSettings {
   color?: number      // -4 to +4
   sharpness?: number  // -4 to +4
   clarity?: number    // -5 to +5
-  grainEffect?: 'off' | 'weak' | 'strong'
-  grainSize?: 'small' | 'large'
-  colorChromeEffect?: 'off' | 'weak' | 'strong'
-  colorChromeFXBlue?: 'off' | 'weak' | 'strong'
+  grainEffect?: EffectStrength
+  grainSize?: GrainSize
+  colorChromeEffect?: EffectStrength
+  colorChromeFXBlue?: EffectStrength
   whiteBalance?: 'auto' | 'daylight' | 'shade' | 'cloudy' | 'tungsten' | 'fluorescent'
   wbShiftRed?: number   // -9 to +9
   wbShiftBlue?: number  // -9 to +9
@@ -88,7 +87,7 @@ export interface ImageItem {
   /** Трансформированное превью */
   transformedThumbnail: ImageData
   /** Текущий угол поворота */
-  rotation: 0 | 90 | 180 | 270
+  rotation: Rotation
 }
 
 /**

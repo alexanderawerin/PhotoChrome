@@ -17,7 +17,7 @@ export interface ProcessedImage {
  * Генерирует уникальный ID для изображения
  */
 function generateImageId(): string {
-  return `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  return `img_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
 }
 
 /**

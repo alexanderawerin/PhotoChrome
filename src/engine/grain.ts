@@ -3,6 +3,7 @@
  */
 
 import { clamp } from './utils'
+import type { EffectStrength, GrainSize } from './types'
 
 /**
  * Применяет эффект зерна к изображению
@@ -85,7 +86,7 @@ export function applyGrain(
 /**
  * Преобразует настройки Fuji в параметры зерна
  */
-export function grainEffectToStrength(effect: 'off' | 'weak' | 'strong'): number {
+export function grainEffectToStrength(effect: EffectStrength): number {
   switch (effect) {
     case 'off':
       return 0
@@ -98,6 +99,6 @@ export function grainEffectToStrength(effect: 'off' | 'weak' | 'strong'): number
   }
 }
 
-export function grainSizeToNumber(size: 'small' | 'large'): number {
+export function grainSizeToNumber(size: GrainSize): number {
   return size === 'small' ? 1.0 : 2.0
 }

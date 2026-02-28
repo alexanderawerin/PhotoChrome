@@ -3,6 +3,7 @@
  */
 
 import { clamp, luminance } from './utils'
+import type { EffectStrength } from './types'
 
 /**
  * Применяет эффект Clarity (микроконтраст / локальный контраст)
@@ -98,7 +99,7 @@ export function applySharpness(imageData: ImageData, amount: number): void {
  */
 export function applyColorChrome(
   imageData: ImageData,
-  strength: 'off' | 'weak' | 'strong'
+  strength: EffectStrength
 ): void {
   if (strength === 'off') return
 
@@ -137,7 +138,7 @@ export function applyColorChrome(
  */
 export function applyColorChromeFXBlue(
   imageData: ImageData,
-  strength: 'off' | 'weak' | 'strong'
+  strength: EffectStrength
 ): void {
   if (strength === 'off') return
 

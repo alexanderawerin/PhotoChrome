@@ -47,8 +47,9 @@ function ExportOverlay({
             size="icon"
             onClick={onCancel}
             className="text-zinc-500 hover:text-white -mr-2"
+            aria-label="Cancel export"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" aria-hidden="true" />
           </Button>
         </div>
 
@@ -100,13 +101,13 @@ export function VideoEditor({
     const updateHeight = () => {
       setViewportHeight(window.innerHeight)
     }
+    const handleOrientation = () => setTimeout(updateHeight, 100)
     updateHeight()
     window.addEventListener('resize', updateHeight)
-    window.addEventListener('orientationchange', () => {
-      setTimeout(updateHeight, 100)
-    })
+    window.addEventListener('orientationchange', handleOrientation)
     return () => {
       window.removeEventListener('resize', updateHeight)
+      window.removeEventListener('orientationchange', handleOrientation)
     }
   }, [])
 
@@ -289,7 +290,7 @@ export function VideoEditor({
   ])
 
   return (
-    <div
+    <main
       className="flex flex-col md:flex-row overflow-hidden"
       style={{ height: viewportHeight ? `${viewportHeight}px` : '100dvh' }}
     >
@@ -505,7 +506,7 @@ export function VideoEditor({
         isOpen={isHelpOpen}
         onClose={() => setIsHelpOpen(false)}
       />
-    </div>
+    </main>
   )
 }
 

@@ -145,13 +145,13 @@ export function LandingScreen({ onFileSelect }: LandingScreenProps) {
 
       {/* Copyright footer */}
       <footer className="absolute bottom-4 sm:bottom-6 left-0 right-0 text-center z-[100]">
-        <p className="text-xs text-zinc-600">
+        <p className="text-xs text-zinc-500">
           © 2025{' '}
-          <a 
-            href="https://netdesigner.ru" 
-            target="_blank" 
+          <a
+            href="https://netdesigner.ru"
+            target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-zinc-400 transition-colors"
+            className="hover:text-zinc-300 transition-colors"
           >
             Alexander Awerin
           </a>
