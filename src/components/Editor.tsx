@@ -12,7 +12,7 @@ import { HelpDialog } from './HelpDialog'
 import { ThumbnailStrip } from './ThumbnailStrip'
 import { ImageCounter } from './ImageCounter'
 import { Recipe, RecipeSettings, ImageItem } from '../engine/types'
-import { ImageProcessor } from '../engine/processor'
+import { ImageProcessor, ExifInfo } from '../engine/processor'
 import { getSimulation } from '../presets/simulations'
 import { getAllRecipes } from '../presets/recipes'
 import { AspectRatio } from '../engine/transform'
@@ -277,13 +277,26 @@ export function Editor({
 
     setIsExporting(true)
     try {
-      const mergedSettings = tuning.getMergedSettings(currentImage.recipe)
-      const processed = applyRecipeToImage(transform.transformedOriginal, currentImage.recipe, mergedSettings)
+      const simulation = getSimulation(currentImage.recipe.filmSimulation)
+      if (!simulation) return
 
-      // Добавляем водяной знак
+      const mergedSettings = tuning.getMergedSettings(currentImage.recipe)
+
+      // Используем async Worker для полноразмерного экспорта (не блокирует UI)
+      const processed = await ImageProcessor.processAsync(
+        transform.transformedOriginal,
+        { simulation, settings: mergedSettings }
+      )
+
       const withWatermark = ImageProcessor.addWatermark(processed, APP_URL)
 
-      const blob = await ImageProcessor.imageDataToBlob(withWatermark)
+      const exifInfo: ExifInfo = {
+        recipeName: currentImage.recipe.name,
+        recipeId: currentImage.recipe.id,
+        settings: mergedSettings,
+      }
+
+      const blob = await ImageProcessor.imageDataToBlob(withWatermark, 0.95, exifInfo)
       const url = URL.createObjectURL(blob)
 
       const a = document.createElement('a')
@@ -298,7 +311,7 @@ export function Editor({
     } finally {
       setIsExporting(false)
     }
-  }, [currentImage, transform.transformedOriginal, tuning, applyRecipeToImage])
+  }, [currentImage, transform.transformedOriginal, tuning])
 
   // ============================================================================
   // Compare (before/after)
@@ -370,6 +383,8 @@ export function Editor({
             imageData={displayImage}
             cropMode={transform.isCropping}
             cropRatio={transform.cropRatio}
+            cropOffset={transform.cropOffset}
+            onCropOffsetChange={transform.setCropOffset}
             onMouseDown={handleCompareStart}
             onMouseUp={handleCompareEnd}
             onMouseLeave={handleCompareEnd}

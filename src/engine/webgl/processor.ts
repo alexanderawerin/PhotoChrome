@@ -117,9 +117,12 @@ function createTexture(
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 
+  // UNPACK_FLIP_Y_WEBGL=1 нужен для обоих типов источников:
+  // WebGL ожидает данные с y=0 снизу, но ImageData/Canvas имеют y=0 сверху.
+  // Без флипа изображение рендерится перевёрнутым.
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1)
+
   if (source instanceof ImageData) {
-    // ImageData doesn't need flip
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
     gl.texImage2D(
       gl.TEXTURE_2D,
       0,
@@ -132,8 +135,6 @@ function createTexture(
       source.data
     )
   } else {
-    // Canvas/Video needs Y flip for correct orientation
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1)
     gl.texImage2D(
       gl.TEXTURE_2D,
       0,
@@ -662,16 +663,29 @@ export class WebGLProcessor {
   }
 }
 
-// Singleton instance for reuse
+// Singleton instance for video processing
 let processorInstance: WebGLProcessor | null = null
 
 /**
- * Get or create the WebGL processor instance
+ * Get or create the WebGL processor instance (for video)
  */
 export function getWebGLProcessor(): WebGLProcessor {
   if (!processorInstance) {
     processorInstance = new WebGLProcessor()
   }
   return processorInstance
+}
+
+// Separate singleton for photo processing (avoids conflicts with video pipeline)
+let photoProcessorInstance: WebGLProcessor | null = null
+
+/**
+ * Get or create the WebGL processor instance for photo processing
+ */
+export function getPhotoWebGLProcessor(): WebGLProcessor {
+  if (!photoProcessorInstance) {
+    photoProcessorInstance = new WebGLProcessor()
+  }
+  return photoProcessorInstance
 }
 

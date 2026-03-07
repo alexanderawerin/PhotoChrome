@@ -121,6 +121,31 @@ export function cropImage(
 }
 
 /**
+ * Вычисляет область crop с поддержкой смещения от центра.
+ * @param offsetX горизонтальное смещение 0..1 (0.5 = по центру)
+ * @param offsetY вертикальное смещение 0..1 (0.5 = по центру)
+ */
+export function calculateCropAreaWithOffset(
+  imageWidth: number,
+  imageHeight: number,
+  aspectRatio: AspectRatio,
+  offsetX: number = 0.5,
+  offsetY: number = 0.5
+): CropArea {
+  const base = calculateCropArea(imageWidth, imageHeight, aspectRatio)
+  const availX = imageWidth - base.width
+  const availY = imageHeight - base.height
+  const x = Math.round(availX * offsetX)
+  const y = Math.round(availY * offsetY)
+  return {
+    x: Math.max(0, Math.min(availX, x)),
+    y: Math.max(0, Math.min(availY, y)),
+    width: base.width,
+    height: base.height,
+  }
+}
+
+/**
  * Вычисляет область crop для заданного соотношения сторон
  */
 export function calculateCropArea(

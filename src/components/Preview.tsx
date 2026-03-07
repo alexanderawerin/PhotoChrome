@@ -8,6 +8,8 @@ interface PreviewProps {
   alt?: string
   cropMode?: boolean
   cropRatio?: AspectRatio
+  cropOffset?: { x: number; y: number }
+  onCropOffsetChange?: (offset: { x: number; y: number }) => void
   onMouseDown?: () => void
   onMouseUp?: () => void
   onMouseLeave?: () => void
@@ -22,6 +24,8 @@ export function Preview({
   alt = 'Preview',
   cropMode = false,
   cropRatio = 'free',
+  cropOffset,
+  onCropOffsetChange,
   onMouseDown,
   onMouseUp,
   onMouseLeave,
@@ -187,6 +191,9 @@ export function Preview({
               imageWidth={imageData.width}
               imageHeight={imageData.height}
               aspectRatio={cropRatio}
+              offsetX={cropOffset?.x ?? 0.5}
+              offsetY={cropOffset?.y ?? 0.5}
+              onOffsetChange={onCropOffsetChange}
             />
           </div>
         )}

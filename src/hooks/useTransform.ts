@@ -1,5 +1,10 @@
 import { useState, useCallback, useEffect } from 'react'
-import { rotateImage, cropImage, calculateCropArea, AspectRatio } from '../engine/transform'
+import { rotateImage, cropImage, calculateCropAreaWithOffset, AspectRatio } from '../engine/transform'
+
+interface CropOffset {
+  x: number  // 0..1, 0.5 = по центру
+  y: number
+}
 
 interface TransformState {
   /** Трансформированное оригинальное изображение */
@@ -10,6 +15,8 @@ interface TransformState {
   isCropping: boolean
   /** Текущее соотношение сторон для обрезки */
   cropRatio: AspectRatio
+  /** Смещение рамки кропа (0..1 по обеим осям, 0.5 = центр) */
+  cropOffset: CropOffset
 }
 
 interface TransformActions {
@@ -23,6 +30,8 @@ interface TransformActions {
   cancelCrop: () => void
   /** Изменить соотношение сторон обрезки */
   setCropRatio: (ratio: AspectRatio) => void
+  /** Изменить смещение рамки кропа */
+  setCropOffset: (offset: CropOffset) => void
   /** Применить обрезку */
   applyCrop: () => void
   /** Сбросить трансформации к исходным изображениям */
@@ -61,6 +70,7 @@ export function useTransform({
   )
   const [isCropping, setIsCropping] = useState(false)
   const [cropRatio, setCropRatio] = useState<AspectRatio>('1:1')
+  const [cropOffset, setCropOffset] = useState<CropOffset>({ x: 0.5, y: 0.5 })
 
   // Синхронизация с внешним состоянием (для переключения между изображениями)
   useEffect(() => {
@@ -87,6 +97,7 @@ export function useTransform({
 
   const openCrop = useCallback(() => {
     setCropRatio('1:1')
+    setCropOffset({ x: 0.5, y: 0.5 })
     setIsCropping(true)
   }, [])
 
@@ -100,16 +111,19 @@ export function useTransform({
       return
     }
 
-    // Вычисляем crop area отдельно для оригинала и thumbnail
-    const cropAreaOriginal = calculateCropArea(
+    const cropAreaOriginal = calculateCropAreaWithOffset(
       transformedOriginal.width,
       transformedOriginal.height,
-      cropRatio
+      cropRatio,
+      cropOffset.x,
+      cropOffset.y
     )
-    const cropAreaThumbnail = calculateCropArea(
+    const cropAreaThumbnail = calculateCropAreaWithOffset(
       transformedThumbnail.width,
       transformedThumbnail.height,
-      cropRatio
+      cropRatio,
+      cropOffset.x,
+      cropOffset.y
     )
 
     const croppedOriginal = cropImage(transformedOriginal, cropAreaOriginal)
@@ -118,14 +132,16 @@ export function useTransform({
     setTransformedOriginal(croppedOriginal)
     setTransformedThumbnail(croppedThumbnail)
     onTransformChange?.(croppedOriginal, croppedThumbnail)
+    setCropOffset({ x: 0.5, y: 0.5 })
     setIsCropping(false)
-  }, [cropRatio, transformedOriginal, transformedThumbnail, onTransformChange])
+  }, [cropRatio, cropOffset, transformedOriginal, transformedThumbnail, onTransformChange])
 
   const resetTransform = useCallback((original: ImageData, thumb: ImageData) => {
     setTransformedOriginal(original)
     setTransformedThumbnail(thumb)
     setIsCropping(false)
     setCropRatio('1:1')
+    setCropOffset({ x: 0.5, y: 0.5 })
   }, [])
 
   return {
@@ -134,12 +150,14 @@ export function useTransform({
     transformedThumbnail,
     isCropping,
     cropRatio,
+    cropOffset,
     // Actions
     rotateClockwise,
     rotateCounterClockwise,
     openCrop,
     cancelCrop,
     setCropRatio,
+    setCropOffset,
     applyCrop,
     resetTransform,
   }

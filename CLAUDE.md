@@ -24,20 +24,23 @@ npm run preview    # Просмотр продакшен сборки
 
 ```
 src/
-├── engine/         # Движок обработки (портируемый)
-│   ├── processor.ts    # ImageProcessor — главный класс
-│   ├── curves.ts       # Тональные кривые
-│   ├── color.ts        # Цветокоррекция, баланс белого
-│   ├── grain.ts        # Плёночное зерно
-│   ├── effects.ts      # Clarity, Sharpness, Color Chrome
-│   ├── transform.ts    # Поворот, crop
-│   ├── video.ts        # Обработка видео (frame extraction)
-│   └── webgl/          # GPU-ускорение для видео
+├── engine/                  # Движок обработки (портируемый)
+│   ├── processor.ts         # ImageProcessor — главный класс
+│   ├── processor.worker.ts  # Web Worker для async экспорта
+│   ├── curves.ts            # Тональные кривые
+│   ├── color.ts             # Цветокоррекция, баланс белого, DR
+│   ├── grain.ts             # Плёночное зерно
+│   ├── effects.ts           # Clarity, Sharpness, Color Chrome
+│   ├── transform.ts         # Поворот, crop (с offset)
+│   ├── video.ts             # Обработка видео (frame extraction)
+│   └── webgl/               # GPU-ускорение (фото + видео)
+│       ├── processor.ts     # WebGLProcessor + getPhotoWebGLProcessor()
+│       └── shaders/         # base.vert, film.frag, blur.frag, sharpen.frag
 ├── presets/
-│   ├── simulations/    # Базовые симуляции Fujifilm (JSON)
-│   └── recipes/        # Готовые рецепты (JSON)
-├── components/     # React UI
-└── hooks/          # React хуки с бизнес-логикой
+│   ├── simulations/         # Базовые симуляции Fujifilm (JSON)
+│   └── recipes/             # Готовые рецепты (JSON)
+├── components/              # React UI
+└── hooks/                   # React хуки с бизнес-логикой
 ```
 
 ### Поток данных
@@ -46,10 +49,10 @@ src/
 File Upload → useImageProcessor (загрузка, thumbnail)
     → Editor (оркестрация)
         → RecipePanel/RecipeCard (выбор рецепта с live preview)
-        → useTransform (rotation, crop)
+        → useTransform (rotation, crop с draggable offset)
         → useTuning (тонкая настройка)
     → Preview (отображение обработанного ImageData)
-    → Export (canvas → JPEG/PNG)
+    → Export (processAsync → Worker → JPEG + EXIF)
 ```
 
 ### Система рецептов
@@ -60,13 +63,30 @@ File Upload → useImageProcessor (загрузка, thumbnail)
 
 **Рецепт** (`/src/presets/recipes/`) — симуляция + настройки:
 - highlight/shadow, color, sharpness, clarity, grain, color chrome, WB shift
+- dynamicRange (DR100/DR200/DR400), whiteBalance (пресеты), wbShiftRed/Blue
 
 ### Порядок обработки в ImageProcessor.process()
 
-1. Тональная кривая (из симуляции)
-2. Цветовой баланс (из симуляции)
-3. Базовая насыщенность (из симуляции)
-4. Настройки рецепта: highlight/shadow → saturation → WB shift → color chrome → grain → clarity → sharpness
+1. **Pre-step (CPU):** Dynamic Range (`applyDynamicRange`) — поднятие теней
+2. **Pre-step (CPU):** White Balance preset (`applyWhiteBalancePreset`) — температурный сдвиг
+3. **WebGL path** (если изображение ≤ 4096px): всё остальное через GPU-шейдер
+4. **CPU fallback**: тональная кривая → цветовой баланс → насыщенность → highlight/shadow → saturation → WB shift → color chrome → grain → clarity → sharpness
+
+### Асинхронный экспорт (Web Worker)
+
+`ImageProcessor.processAsync(imageData, options)` — передаёт `ImageData` в `processor.worker.ts` через `Transferable` (zero-copy). Используется при экспорте, чтобы не блокировать UI. Worker выполняет полный CPU-pipeline.
+
+### WebGL для фото
+
+Отдельный singleton `getPhotoWebGLProcessor()` (не пересекается с видео). Используется для изображений ≤ 4096px. При инициализации важно: `UNPACK_FLIP_Y_WEBGL = 1` обязательно для всех типов источников (ImageData, Canvas, Video) — иначе изображение рендерится перевёрнутым.
+
+### Draggable crop
+
+`cropOffset: { x, y }` в `useTransform` (0..1, 0.5 = центр). `CropOverlay` обрабатывает Pointer Events и вызывает `onOffsetChange`. При применении кропа используется `calculateCropAreaWithOffset` из `transform.ts`.
+
+### EXIF при экспорте
+
+`ImageProcessor.imageDataToBlob(imageData, quality, exifInfo?)` — записывает название рецепта и настройки в EXIF через `piexifjs`. При ошибке (например, браузер не поддерживает `readAsBinaryString`) молча возвращает blob без EXIF.
 
 ### Видео обработка
 
@@ -96,8 +116,9 @@ File Upload → useImageProcessor (загрузка, thumbnail)
 {
   "id": "unique-id",
   "name": "Display Name",
-  "filmSimulation": "provia", // ID симуляции
+  "filmSimulation": "provia",
   "settings": {
+    "dynamicRange": "DR400",
     "highlight": 0, "shadow": 0,
     "color": 0, "sharpness": 0, "clarity": 0,
     "grainEffect": "off",

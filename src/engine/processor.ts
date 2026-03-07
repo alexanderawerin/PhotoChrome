@@ -4,7 +4,9 @@ import {
   applyColorBalance,
   applySaturation,
   applyWhiteBalanceShift,
-  applyToneAdjustment
+  applyToneAdjustment,
+  applyDynamicRange,
+  applyWhiteBalancePreset,
 } from './color'
 import { applyGrain, grainEffectToStrength, grainSizeToNumber } from './grain'
 import {
@@ -13,20 +15,109 @@ import {
   applyColorChrome,
   applyColorChromeFXBlue
 } from './effects'
+import { getPhotoWebGLProcessor } from './webgl/processor'
+
+// Maximum image dimension for WebGL processing (texture size limit)
+const WEBGL_MAX_DIMENSION = 4096
 
 /**
- * Главный процессор изображений
- * Применяет симуляцию и все настройки рецепта к изображению
+ * Информация о рецепте для EXIF-метаданных при экспорте
+ */
+export interface ExifInfo {
+  recipeName?: string
+  recipeId?: string
+  settings?: RecipeSettings
+}
+
+/**
+ * Главный процессор изображений.
+ * Применяет симуляцию и все настройки рецепта к изображению.
+ *
+ * Pipeline:
+ * 1. Pre-process: Dynamic Range, White Balance Preset (CPU, не в GL shader)
+ * 2. Main processing: curve → color balance → saturation → recipe settings
+ *    - WebGL path: всё остальное через GPU (быстрее)
+ *    - CPU fallback: если WebGL недоступен или изображение слишком большое
  */
 export class ImageProcessor {
+  // Worker singleton for async CPU processing
+  private static processingWorker: Worker | null = null
+  private static workerCallbacks: Map<string, (data: ImageData) => void> = new Map()
+  private static workerRejects: Map<string, (err: Error) => void> = new Map()
+
   /**
-   * Применяет обработку к ImageData
+   * Применяет обработку к ImageData.
+   * Сначала пробует WebGL (GPU), при недоступности — CPU.
    */
   static process(
     imageData: ImageData,
     options: ProcessingOptions
   ): ImageData {
-    // Создаём копию ImageData для обработки
+    const { settings } = options
+
+    // 1. Pre-process: Dynamic Range и White Balance Preset
+    //    Эти эффекты не реализованы в GL shader, применяем на CPU перед основным pipeline.
+    let inputData = imageData
+    const needsPreprocess =
+      (settings?.dynamicRange && settings.dynamicRange !== 'DR100') ||
+      (settings?.whiteBalance && settings.whiteBalance !== 'auto')
+
+    if (needsPreprocess) {
+      inputData = new ImageData(
+        new Uint8ClampedArray(imageData.data),
+        imageData.width,
+        imageData.height
+      )
+      if (settings?.dynamicRange && settings.dynamicRange !== 'DR100') {
+        applyDynamicRange(inputData, settings.dynamicRange)
+      }
+      if (settings?.whiteBalance && settings.whiteBalance !== 'auto') {
+        applyWhiteBalancePreset(inputData, settings.whiteBalance)
+      }
+    }
+
+    // 2. Пробуем WebGL для основного pipeline
+    const webglResult = this.processWithWebGL(inputData, options)
+    if (webglResult) return webglResult
+
+    // 3. CPU fallback
+    return this.processCPU(inputData, options)
+  }
+
+  /**
+   * Обрабатывает изображение через WebGL (GPU).
+   * Возвращает null если WebGL недоступен, ошибка или изображение слишком большое.
+   */
+  private static processWithWebGL(
+    imageData: ImageData,
+    options: ProcessingOptions
+  ): ImageData | null {
+    if (
+      imageData.width > WEBGL_MAX_DIMENSION ||
+      imageData.height > WEBGL_MAX_DIMENSION
+    ) {
+      return null
+    }
+
+    try {
+      const processor = getPhotoWebGLProcessor()
+      processor.init(imageData.width, imageData.height)
+      const resultCanvas = processor.processFrame(imageData, options, 0)
+      const ctx = resultCanvas.getContext('2d')
+      if (!ctx) return null
+      return ctx.getImageData(0, 0, resultCanvas.width, resultCanvas.height)
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Полный CPU pipeline (fallback когда WebGL недоступен)
+   */
+  private static processCPU(
+    imageData: ImageData,
+    options: ProcessingOptions
+  ): ImageData {
     const processed = new ImageData(
       new Uint8ClampedArray(imageData.data),
       imageData.width,
@@ -35,23 +126,16 @@ export class ImageProcessor {
 
     const { simulation, settings } = options
 
-    // 1. Применяем тональную кривую базовой симуляции
     if (simulation.curve) {
       const curveLUT = createCurveLUT(simulation.curve)
       applyCurve(processed, curveLUT, 'rgb')
     }
-
-    // 2. Применяем цветовой баланс симуляции
     if (simulation.colorBalance) {
       applyColorBalance(processed, simulation.colorBalance)
     }
-
-    // 3. Применяем базовую насыщенность симуляции
     if (simulation.saturation !== undefined) {
       applySaturation(processed, simulation.saturation)
     }
-
-    // 4. Применяем настройки рецепта (если есть)
     if (settings) {
       this.applyRecipeSettings(processed, settings)
     }
@@ -60,13 +144,68 @@ export class ImageProcessor {
   }
 
   /**
-   * Применяет настройки рецепта
+   * Асинхронная обработка через Web Worker.
+   * Не блокирует UI — идеально для полноразмерного экспорта.
+   */
+  static processAsync(
+    imageData: ImageData,
+    options: ProcessingOptions
+  ): Promise<ImageData> {
+    return new Promise((resolve, reject) => {
+      try {
+        const worker = this.getProcessingWorker()
+        const requestId = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+
+        this.workerCallbacks.set(requestId, resolve)
+        this.workerRejects.set(requestId, reject)
+
+        const buffer = imageData.data.buffer.slice(0)
+        worker.postMessage(
+          { requestId, buffer, width: imageData.width, height: imageData.height, options },
+          [buffer]
+        )
+      } catch (err) {
+        reject(err)
+      }
+    })
+  }
+
+  private static getProcessingWorker(): Worker {
+    if (!this.processingWorker) {
+      this.processingWorker = new Worker(
+        new URL('./processor.worker.ts', import.meta.url),
+        { type: 'module' }
+      )
+
+      this.processingWorker.addEventListener('message', (e: MessageEvent) => {
+        const { requestId, buffer, width, height } = e.data
+        const resolve = this.workerCallbacks.get(requestId)
+        if (resolve) {
+          this.workerCallbacks.delete(requestId)
+          this.workerRejects.delete(requestId)
+          resolve(new ImageData(new Uint8ClampedArray(buffer), width, height))
+        }
+      })
+
+      this.processingWorker.addEventListener('error', (e: ErrorEvent) => {
+        console.error('Processing worker error:', e.message)
+        this.workerRejects.forEach(reject => reject(new Error(e.message)))
+        this.workerCallbacks.clear()
+        this.workerRejects.clear()
+        this.processingWorker = null
+      })
+    }
+    return this.processingWorker
+  }
+
+  /**
+   * Применяет настройки рецепта.
+   * Примечание: dynamicRange и whiteBalance уже обработаны в process() как pre-step.
    */
   private static applyRecipeSettings(
     imageData: ImageData,
     settings: RecipeSettings
   ): void {
-    // Highlight/Shadow tone
     if (settings.highlight !== undefined || settings.shadow !== undefined) {
       applyToneAdjustment(
         imageData,
@@ -75,13 +214,10 @@ export class ImageProcessor {
       )
     }
 
-    // Color (дополнительная насыщенность)
     if (settings.color !== undefined) {
-      const saturationFactor = settings.color / 10 // Нормализуем -4..+4 к -0.4..+0.4
-      applySaturation(imageData, saturationFactor)
+      applySaturation(imageData, settings.color / 10)
     }
 
-    // White Balance Shift
     if (settings.wbShiftRed !== undefined || settings.wbShiftBlue !== undefined) {
       applyWhiteBalanceShift(
         imageData,
@@ -90,27 +226,20 @@ export class ImageProcessor {
       )
     }
 
-    // Color Chrome Effect
     if (settings.colorChromeEffect) {
       applyColorChrome(imageData, settings.colorChromeEffect)
     }
-
-    // Color Chrome FX Blue
     if (settings.colorChromeFXBlue) {
       applyColorChromeFXBlue(imageData, settings.colorChromeFXBlue)
     }
 
-    // Clarity
     if (settings.clarity !== undefined && settings.clarity !== 0) {
       applyClarity(imageData, settings.clarity)
     }
-
-    // Sharpness
     if (settings.sharpness !== undefined && settings.sharpness !== 0) {
       applySharpness(imageData, settings.sharpness)
     }
 
-    // Grain
     if (settings.grainEffect && settings.grainEffect !== 'off') {
       const strength = grainEffectToStrength(settings.grainEffect)
       const size = settings.grainSize ? grainSizeToNumber(settings.grainSize) : 1.0
@@ -194,18 +323,14 @@ export class ImageProcessor {
     const ctx = canvas.getContext('2d')
     if (!ctx) return imageData
 
-    // Рисуем изображение
     ctx.putImageData(imageData, 0, 0)
 
-    // Настройки текста - 1.5% от меньшей стороны изображения
     const shortSide = Math.min(imageData.width, imageData.height)
     const fontSize = Math.max(12, Math.round(shortSide * 0.015))
     const bottomOffset = Math.round(shortSide * 0.015)
 
     ctx.font = `500 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`
     ctx.textBaseline = 'bottom'
-
-    // Белый текст с прозрачностью по центру
     ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
     ctx.textAlign = 'center'
     ctx.fillText(text, imageData.width / 2, imageData.height - bottomOffset)
@@ -214,37 +339,77 @@ export class ImageProcessor {
   }
 
   /**
-   * Конвертирует ImageData в Blob для скачивания
+   * Конвертирует ImageData в Blob для скачивания.
+   * Если передан exifInfo — записывает метаданные рецепта в EXIF.
    */
-  static imageDataToBlob(
+  static async imageDataToBlob(
     imageData: ImageData,
-    quality: number = 0.95
+    quality: number = 0.95,
+    exifInfo?: ExifInfo
   ): Promise<Blob> {
-    return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas')
-      canvas.width = imageData.width
-      canvas.height = imageData.height
+    const canvas = document.createElement('canvas')
+    canvas.width = imageData.width
+    canvas.height = imageData.height
 
-      const ctx = canvas.getContext('2d')
-      if (!ctx) {
-        reject(new Error('Failed to get canvas context'))
-        return
-      }
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Failed to get canvas context')
 
-      ctx.putImageData(imageData, 0, 0)
+    ctx.putImageData(imageData, 0, 0)
 
+    const blob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(blob)
-          } else {
-            reject(new Error('Failed to create blob'))
-          }
-        },
+        (b) => b ? resolve(b) : reject(new Error('Failed to create blob')),
         'image/jpeg',
         quality
       )
     })
+
+    if (!exifInfo) return blob
+
+    try {
+      const piexif = await import('piexifjs')
+      const binaryStr = await this.blobToBinaryString(blob)
+
+      const comment = JSON.stringify({
+        app: 'Photochrome',
+        recipe: exifInfo.recipeName,
+        id: exifInfo.recipeId,
+        settings: exifInfo.settings,
+      })
+
+      const exifObj = {
+        '0th': {
+          [piexif.ImageIFD.Software]: 'Photochrome',
+          [piexif.ImageIFD.ImageDescription]: exifInfo.recipeName ?? '',
+        },
+        Exif: {
+          [piexif.ExifIFD.UserComment]: comment,
+        },
+      }
+
+      const exifBytes = piexif.dump(exifObj)
+      const inserted = piexif.insert(exifBytes, binaryStr)
+      return this.binaryStringToBlob(inserted, 'image/jpeg')
+    } catch (err) {
+      console.warn('Failed to write EXIF metadata:', err)
+      return blob
+    }
+  }
+
+  private static blobToBinaryString(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => resolve(e.target!.result as string)
+      reader.onerror = reject
+      reader.readAsBinaryString(blob)
+    })
+  }
+
+  private static binaryStringToBlob(binaryStr: string, mimeType: string): Blob {
+    const bytes = new Uint8Array(binaryStr.length)
+    for (let i = 0; i < binaryStr.length; i++) {
+      bytes[i] = binaryStr.charCodeAt(i)
+    }
+    return new Blob([bytes], { type: mimeType })
   }
 }
-

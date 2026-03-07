@@ -32,6 +32,25 @@ const SLIDER_PARAMS: SliderParam[] = [
   { key: 'wbShiftBlue', label: 'WB Shift Blue', min: -9, max: 9, step: 1, defaultValue: 0 },
 ]
 
+/** Dynamic Range options */
+type DynamicRangeValue = 'DR100' | 'DR200' | 'DR400'
+const DR_OPTIONS: { value: DynamicRangeValue; label: string }[] = [
+  { value: 'DR100', label: 'DR100' },
+  { value: 'DR200', label: 'DR200' },
+  { value: 'DR400', label: 'DR400' },
+]
+
+/** White Balance preset options */
+type WhiteBalanceValue = 'auto' | 'daylight' | 'shade' | 'cloudy' | 'tungsten' | 'fluorescent'
+const WB_OPTIONS: { value: WhiteBalanceValue; label: string }[] = [
+  { value: 'auto', label: 'Auto' },
+  { value: 'daylight', label: 'Daylight' },
+  { value: 'shade', label: 'Shade' },
+  { value: 'cloudy', label: 'Cloudy' },
+  { value: 'tungsten', label: 'Tungsten' },
+  { value: 'fluorescent', label: 'Fluoresce.' },
+]
+
 /** Toggle options */
 type ToggleValue = 'off' | 'weak' | 'strong'
 const TOGGLE_OPTIONS: { value: ToggleValue; label: string }[] = [
@@ -66,6 +85,36 @@ export function TuningPanel({
   onCancel
 }: TuningPanelProps) {
   
+  // Получаем Dynamic Range
+  const getDynamicRange = (): DynamicRangeValue => {
+    const customValue = customSettings?.dynamicRange as DynamicRangeValue | undefined
+    if (customValue !== undefined) return customValue
+    const recipeValue = recipe?.settings?.dynamicRange as DynamicRangeValue | undefined
+    if (recipeValue !== undefined) return recipeValue
+    return 'DR100'
+  }
+
+  const handleDRChange = (value: string) => {
+    if (value) {
+      onSettingsChange({ ...customSettings, dynamicRange: value as DynamicRangeValue })
+    }
+  }
+
+  // Получаем пресет баланса белого
+  const getWBPreset = (): WhiteBalanceValue => {
+    const customValue = customSettings?.whiteBalance as WhiteBalanceValue | undefined
+    if (customValue !== undefined) return customValue
+    const recipeValue = recipe?.settings?.whiteBalance as WhiteBalanceValue | undefined
+    if (recipeValue !== undefined) return recipeValue
+    return 'auto'
+  }
+
+  const handleWBChange = (value: string) => {
+    if (value) {
+      onSettingsChange({ ...customSettings, whiteBalance: value as WhiteBalanceValue })
+    }
+  }
+
   // Получаем значение слайдера
   const getSliderValue = (key: keyof RecipeSettings): number => {
     const customValue = customSettings?.[key]
@@ -114,24 +163,25 @@ export function TuningPanel({
   const handleRandomize = () => {
     const toggleValues: ToggleValue[] = ['off', 'weak', 'strong']
     const grainSizeValues: GrainSizeValue[] = ['small', 'large']
-    
+    const drValues: DynamicRangeValue[] = ['DR100', 'DR200', 'DR400']
+    const wbValues: WhiteBalanceValue[] = ['auto', 'daylight', 'shade', 'cloudy', 'tungsten', 'fluorescent']
+
     const randomSettings: RecipeSettings = {
-      // Случайные значения для слайдеров
-      highlight: Math.floor(Math.random() * 7) - 2, // -2 to 4
-      shadow: Math.floor(Math.random() * 7) - 2, // -2 to 4
-      color: Math.floor(Math.random() * 9) - 4, // -4 to 4
-      sharpness: Math.floor(Math.random() * 9) - 4, // -4 to 4
-      clarity: Math.floor(Math.random() * 11) - 5, // -5 to 5
-      wbShiftRed: Math.floor(Math.random() * 19) - 9, // -9 to 9
-      wbShiftBlue: Math.floor(Math.random() * 19) - 9, // -9 to 9
-      // Случайные toggle значения
+      highlight: Math.floor(Math.random() * 7) - 2,
+      shadow: Math.floor(Math.random() * 7) - 2,
+      color: Math.floor(Math.random() * 9) - 4,
+      sharpness: Math.floor(Math.random() * 9) - 4,
+      clarity: Math.floor(Math.random() * 11) - 5,
+      wbShiftRed: Math.floor(Math.random() * 19) - 9,
+      wbShiftBlue: Math.floor(Math.random() * 19) - 9,
       grainEffect: toggleValues[Math.floor(Math.random() * toggleValues.length)],
       colorChromeEffect: toggleValues[Math.floor(Math.random() * toggleValues.length)],
       colorChromeFXBlue: toggleValues[Math.floor(Math.random() * toggleValues.length)],
-      // Случайный grain size
       grainSize: grainSizeValues[Math.floor(Math.random() * grainSizeValues.length)],
+      dynamicRange: drValues[Math.floor(Math.random() * drValues.length)],
+      whiteBalance: wbValues[Math.floor(Math.random() * wbValues.length)],
     }
-    
+
     onSettingsChange(randomSettings)
   }
 
@@ -165,7 +215,7 @@ export function TuningPanel({
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="space-y-5">
-          
+
           {/* Slider params */}
           {SLIDER_PARAMS.map((param) => {
             const value = getSliderValue(param.key)
@@ -254,6 +304,59 @@ export function TuningPanel({
               </ToggleGroup>
             </div>
           )}
+
+          {/* Divider */}
+          <div className="h-px bg-zinc-800" />
+
+          {/* Dynamic Range */}
+          <div className="space-y-2">
+            <label id="toggle-label-dynamicRange" className="text-sm text-zinc-300 block">
+              Dynamic Range
+            </label>
+            <ToggleGroup
+              type="single"
+              value={getDynamicRange()}
+              onValueChange={handleDRChange}
+              className="w-full justify-start"
+              aria-labelledby="toggle-label-dynamicRange"
+            >
+              {DR_OPTIONS.map((option) => (
+                <ToggleGroupItem
+                  key={option.value}
+                  value={option.value}
+                  aria-label={option.label}
+                  className="flex-1 text-xs"
+                >
+                  {option.label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
+
+          {/* White Balance preset */}
+          <div className="space-y-2">
+            <label id="toggle-label-whiteBalance" className="text-sm text-zinc-300 block">
+              White Balance
+            </label>
+            <ToggleGroup
+              type="single"
+              value={getWBPreset()}
+              onValueChange={handleWBChange}
+              className="grid grid-cols-2 gap-1"
+              aria-labelledby="toggle-label-whiteBalance"
+            >
+              {WB_OPTIONS.map((option) => (
+                <ToggleGroupItem
+                  key={option.value}
+                  value={option.value}
+                  aria-label={option.label}
+                  className="text-xs w-full"
+                >
+                  {option.label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
         </div>
       </div>
 

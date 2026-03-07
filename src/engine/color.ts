@@ -2,6 +2,65 @@ import { ColorBalanceConfig } from './types'
 import { clamp, luminance } from './utils'
 
 /**
+ * Эмулирует расширение динамического диапазона Fujifilm (DR100/200/400).
+ * DR200 и DR400 поднимают тени и слегка компрессируют света.
+ */
+export function applyDynamicRange(
+  imageData: ImageData,
+  dr: 'DR100' | 'DR200' | 'DR400'
+): void {
+  if (dr === 'DR100') return
+
+  const data = imageData.data
+  const shadowLift = dr === 'DR200' ? 15 : 30
+  const highlightCompress = dr === 'DR200' ? 0.06 : 0.12
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i]
+    const g = data[i + 1]
+    const b = data[i + 2]
+    const lum = luminance(r, g, b)
+    const normalized = lum / 255
+
+    const shadowWeight = Math.pow(1 - normalized, 2)
+    const lift = shadowLift * shadowWeight
+
+    const highlightWeight = Math.pow(normalized, 2)
+    const compress = -highlightCompress * 255 * highlightWeight
+
+    data[i]     = clamp(r + lift + compress)
+    data[i + 1] = clamp(g + lift + compress)
+    data[i + 2] = clamp(b + lift + compress)
+  }
+}
+
+/**
+ * Сдвиги R/B в единицах wbShift (-9..+9) для пресетов баланса белого.
+ * Относительно автоматического (нейтрального) баланса.
+ */
+const WB_PRESET_SHIFTS: Record<string, { r: number; b: number }> = {
+  auto:         { r:  0, b:  0 },
+  daylight:     { r:  0, b:  0 },  // Reference point (~5500K)
+  shade:        { r:  3, b: -3 },  // Warmer (~7000K)
+  cloudy:       { r:  1, b: -1 },  // Slightly warmer (~6500K)
+  tungsten:     { r: -6, b:  5 },  // Much cooler/blue (~3200K)
+  fluorescent:  { r: -3, b:  2 },  // Cool-ish (~4000K)
+}
+
+/**
+ * Применяет пресет баланса белого (daylight, shade, cloudy, tungsten, fluorescent).
+ * Конвертирует температурный пресет в R/B сдвиг.
+ */
+export function applyWhiteBalancePreset(
+  imageData: ImageData,
+  preset: string
+): void {
+  const shift = WB_PRESET_SHIFTS[preset]
+  if (!shift || (shift.r === 0 && shift.b === 0)) return
+  applyWhiteBalanceShift(imageData, shift.r, shift.b)
+}
+
+/**
  * Применяет цветовой баланс (split-toning) к изображению
  * Shadows применяются к тёмным областям, highlights к светлым
  */
