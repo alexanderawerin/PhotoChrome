@@ -18,6 +18,8 @@ import { getAllRecipes } from '../presets/recipes'
 import { AspectRatio } from '../engine/transform'
 import { useFavorites } from '../hooks/useFavorites'
 import { useTransform } from '../hooks/useTransform'
+import { useIsMdUp } from '../hooks/useIsMdUp'
+import { DEFAULT_CROP_RATIO_DESKTOP, DEFAULT_CROP_RATIO_MOBILE } from '../constants/cropRatios'
 import { useTuning } from '../hooks/useTuning'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useViewportHeight, getViewportHeightStyle } from '../hooks/useViewportHeight'
@@ -71,6 +73,8 @@ export function Editor({
   // ============================================================================
 
   const viewportHeight = useViewportHeight()
+  const isMdUp = useIsMdUp()
+  const defaultCropRatio = isMdUp ? DEFAULT_CROP_RATIO_DESKTOP : DEFAULT_CROP_RATIO_MOBILE
   const { getFavoriteIds, toggleFavorite } = useFavorites()
 
   // Refs для доступа к актуальным значениям из callbacks (избегаем stale closures)
@@ -106,6 +110,7 @@ export function Editor({
     thumbnail: currentImage.thumbnail,
     transformedOriginal: currentImage.transformedOriginal,
     transformedThumbnail: currentImage.transformedThumbnail,
+    defaultCropRatio,
     onTransformChange: useCallback((newOriginal: ImageData, newThumbnail: ImageData) => {
       transformedThumbnailRef.current = newThumbnail
       onImageUpdate(currentImage.id, {

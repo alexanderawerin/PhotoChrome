@@ -2,6 +2,7 @@ import { Check } from 'lucide-react'
 import { Button } from './ui/button'
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group'
 import { AspectRatio } from '../engine/transform'
+import { CROP_RATIO_ORDER_MOBILE, cropRatioPanelItems } from '../constants/cropRatios'
 
 interface CropPanelProps {
   cropRatio: AspectRatio
@@ -10,14 +11,7 @@ interface CropPanelProps {
   onCancel: () => void
 }
 
-/** Available crop aspect ratios */
-const CROP_RATIOS: { value: AspectRatio; label: string }[] = [
-  { value: '1:1', label: '1:1' },
-  { value: '4:3', label: '4:3' },
-  { value: '3:4', label: '3:4' },
-  { value: '16:9', label: '16:9' },
-  { value: '9:16', label: '9:16' },
-]
+const MOBILE_CROP_RATIOS = cropRatioPanelItems(CROP_RATIO_ORDER_MOBILE)
 
 export function CropPanel({ 
   cropRatio, 
@@ -38,7 +32,7 @@ export function CropPanel({
           onValueChange={(v) => v && onCropRatioChange(v as AspectRatio)}
           className="w-full justify-start"
         >
-          {CROP_RATIOS.map((ratio) => (
+          {MOBILE_CROP_RATIOS.map((ratio) => (
             <ToggleGroupItem
               key={ratio.value}
               value={ratio.value}
