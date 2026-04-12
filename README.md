@@ -42,6 +42,15 @@ npm run dev
 npm run build
 \`\`\`
 
+### E2E тесты (Playwright)
+
+\`\`\`bash
+npx playwright install chromium firefox  # Установка браузеров (один раз)
+npm run test:e2e                         # Все тесты (Chromium + Firefox + Mobile)
+npm run test:e2e:chromium                # Только Chromium (быстрый фидбек)
+npm run test:e2e:ui                      # Интерактивный UI-режим
+\`\`\`
+
 ## Структура проекта
 
 \`\`\`
