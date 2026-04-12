@@ -21,34 +21,34 @@ const WHATS_NEW = [
   {
     version: '1.3',
     items: [
-      'HaldCLUT film simulations from real Fujifilm cameras',
-      'WebGL2 with GPU-accelerated 3D LUT lookup',
+      'More accurate colors based on real Fujifilm camera profiles',
+      'Faster processing with GPU acceleration',
     ],
   },
   {
     version: '1.2',
     items: [
-      'Multiple image editing with individual settings',
-      'Swipe navigation on mobile',
-      'Thumbnail strip navigation on desktop',
-      'Apply preset to all images',
+      'Edit multiple photos at once, each with its own preset',
+      'Swipe between photos on mobile',
+      'Quick photo navigation with thumbnails',
+      'Apply one preset to all photos at once',
     ],
   },
   {
     version: '1.1',
     items: [
-      'Video processing with live preview (max 30 sec)',
-      'Performance optimizations and improvements',
+      'Apply film simulations to videos (up to 30 sec)',
+      'Faster and smoother editing',
     ],
   },
   {
     version: '1.0',
     items: [
-      'Photo processing with live preview',
-      '52 film simulation presets',
-      'Fine-tune preset settings',
-      'Crop and rotate tools',
-      'Favorite presets',
+      'Apply Fujifilm film simulations to your photos',
+      '52 ready-made presets to choose from',
+      'Fine-tune any preset to your taste',
+      'Crop and rotate your photos',
+      'Save your favorite presets',
     ],
   },
 ]
