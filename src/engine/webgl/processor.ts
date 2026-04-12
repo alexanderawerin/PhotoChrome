@@ -25,6 +25,7 @@ interface WebGLResources {
   sharpenProgram: WebGLProgram
   quadBuffer: WebGLBuffer
   frameBuffer: WebGLFramebuffer
+  dummy3DTexture: WebGLTexture
 }
 
 /**
@@ -380,6 +381,16 @@ export class WebGLProcessor {
     const frameBuffer = gl.createFramebuffer()
     if (!frameBuffer) throw new Error('Failed to create framebuffer')
 
+    // Create a reusable 1x1x1 dummy 3D texture for when HaldCLUT is not used.
+    // Prevents "two textures of different types on same sampler" error.
+    const dummy3DTexture = gl.createTexture()
+    if (!dummy3DTexture) throw new Error('Failed to create dummy 3D texture')
+    gl.bindTexture(gl.TEXTURE_3D, dummy3DTexture)
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
+    gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGB8, 1, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0]))
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+
     this.resources = {
       gl,
       canvas,
@@ -390,6 +401,7 @@ export class WebGLProcessor {
       sharpenProgram,
       quadBuffer,
       frameBuffer,
+      dummy3DTexture,
     }
     this.width = width
     this.height = height
@@ -411,7 +423,7 @@ export class WebGLProcessor {
       throw new Error('WebGL processor not initialized')
     }
 
-    const { gl, canvas, outputCanvas, outputCtx, filmProgram, blurProgram, sharpenProgram, quadBuffer } = this.resources
+    const { gl, canvas, outputCanvas, outputCtx, filmProgram, blurProgram, sharpenProgram, quadBuffer, dummy3DTexture } = this.resources
     const { simulation, settings } = options
 
     // Create source texture
@@ -471,12 +483,9 @@ export class WebGLProcessor {
       gl.uniform1i(gl.getUniformLocation(filmProgram, 'uHaldCLUTSize'), lut!.gridSize)
       gl.uniform1i(gl.getUniformLocation(filmProgram, 'uUseCurve'), 0)
     } else {
-      // Bind a dummy 1x1x1 3D texture to unit 2 so sampler3D is valid
-      const dummy3D = gl.createTexture()
+      // Bind reusable dummy 3D texture to unit 2 so sampler3D is valid
       gl.activeTexture(gl.TEXTURE2)
-      gl.bindTexture(gl.TEXTURE_3D, dummy3D)
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
-      gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGB8, 1, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0]))
+      gl.bindTexture(gl.TEXTURE_3D, dummy3DTexture)
       gl.uniform1i(gl.getUniformLocation(filmProgram, 'uUseHaldCLUT'), 0)
 
       if (curveLUT) {
@@ -487,9 +496,6 @@ export class WebGLProcessor {
       } else {
         gl.uniform1i(gl.getUniformLocation(filmProgram, 'uUseCurve'), 0)
       }
-
-      // Clean up dummy texture after draw (moved to cleanup section below)
-      // Note: we'll delete it with the other textures
     }
 
     // Set uniforms

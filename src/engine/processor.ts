@@ -274,30 +274,10 @@ export class ImageProcessor {
    * Загружает изображение из File в ImageData.
    * Если передан maxSize — масштабирует так чтобы длинная сторона не превышала maxSize.
    */
-  private static isHeic(file: File): boolean {
-    const type = file.type.toLowerCase()
-    if (type === 'image/heic' || type === 'image/heif') return true
-    // Some browsers don't set MIME type for HEIC — check extension
-    const ext = file.name.toLowerCase().split('.').pop()
-    return ext === 'heic' || ext === 'heif'
-  }
-
   private static async fileToImageData(file: File, maxSize?: number): Promise<ImageData> {
-    // Convert HEIC/HEIF to JPEG (Chrome/Firefox don't support HEIC natively)
-    let imageFile = file
-    if (this.isHeic(file)) {
-      const heic2any = (await import('heic2any')).default
-      const blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.95 })
-      imageFile = new File(
-        [Array.isArray(blob) ? blob[0] : blob],
-        file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg'),
-        { type: 'image/jpeg' }
-      )
-    }
-
     return new Promise((resolve, reject) => {
       const img = new Image()
-      const url = URL.createObjectURL(imageFile)
+      const url = URL.createObjectURL(file)
 
       img.onload = () => {
         URL.revokeObjectURL(url)

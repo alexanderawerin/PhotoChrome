@@ -19,6 +19,13 @@ type Tab = 'whats-new' | 'shortcuts'
 
 const WHATS_NEW = [
   {
+    version: '1.3',
+    items: [
+      'HaldCLUT film simulations from real Fujifilm cameras',
+      'WebGL2 with GPU-accelerated 3D LUT lookup',
+    ],
+  },
+  {
     version: '1.2',
     items: [
       'Multiple image editing with individual settings',

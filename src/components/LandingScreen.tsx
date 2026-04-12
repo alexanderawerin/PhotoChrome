@@ -8,7 +8,7 @@ interface LandingScreenProps {
 }
 
 /** Accepted image MIME types */
-const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 /** Accepted video MIME types */
 const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/mov']
@@ -17,10 +17,7 @@ const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'vid
  * Validates that a file is an accepted image type.
  */
 function isValidImageFile(file: File): boolean {
-  if (file.type.startsWith('image/') || ACCEPTED_IMAGE_TYPES.includes(file.type)) return true
-  // Some browsers don't set MIME type for HEIC — check extension
-  const ext = file.name.toLowerCase().split('.').pop()
-  return ext === 'heic' || ext === 'heif'
+  return file.type.startsWith('image/') || ACCEPTED_IMAGE_TYPES.includes(file.type)
 }
 
 /**
@@ -116,7 +113,7 @@ export function LandingScreen({ onFileSelect }: LandingScreenProps) {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*,video/*,.heic,.heif"
+            accept="image/*,video/*"
             multiple
             onChange={handleFileSelect}
             className="sr-only"
@@ -149,7 +146,7 @@ export function LandingScreen({ onFileSelect }: LandingScreenProps) {
       {/* Copyright footer */}
       <footer className="absolute bottom-4 sm:bottom-6 left-0 right-0 text-center z-[100]">
         <p className="text-xs text-zinc-500">
-          © 2025{' '}
+          © 2026{' '}
           <a
             href="https://netdesigner.ru"
             target="_blank"
