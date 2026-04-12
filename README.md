@@ -94,5 +94,7 @@ src/
 
 ## Лицензия
 
-MIT
+GPL-3.0 — см. [LICENSE](LICENSE)
+
+HaldCLUT ассеты из [cedeber/hald-clut](https://github.com/cedeber/hald-clut) (GPL-3.0).
 
