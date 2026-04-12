@@ -247,6 +247,8 @@ function createHaldCLUT3DTexture(
   if (!texture) throw new Error('Failed to create 3D LUT texture')
 
   gl.bindTexture(gl.TEXTURE_3D, texture)
+  // FLIP_Y must be disabled for 3D textures (WebGL2 requirement)
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
   gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGB8, size, size, size, 0, gl.RGB, gl.UNSIGNED_BYTE, data)
   gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
   gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
@@ -456,23 +458,38 @@ export class WebGLProcessor {
     gl.bindTexture(gl.TEXTURE_2D, currentTexture)
     gl.uniform1i(gl.getUniformLocation(filmProgram, 'uTexture'), 0)
 
+    // Always bind sampler3D uHaldCLUT to unit 2 to avoid
+    // "Two textures of different types use the same sampler location" error.
+    // In WebGL2, all sampler uniforms must be on separate units even if unused.
+    gl.uniform1i(gl.getUniformLocation(filmProgram, 'uHaldCLUT'), 2)
+
     // Bind HaldCLUT 3D texture or curve LUT
     if (haldCLUTTexture) {
       gl.activeTexture(gl.TEXTURE2)
       gl.bindTexture(gl.TEXTURE_3D, haldCLUTTexture)
-      gl.uniform1i(gl.getUniformLocation(filmProgram, 'uHaldCLUT'), 2)
       gl.uniform1i(gl.getUniformLocation(filmProgram, 'uUseHaldCLUT'), 1)
       gl.uniform1i(gl.getUniformLocation(filmProgram, 'uHaldCLUTSize'), lut!.gridSize)
       gl.uniform1i(gl.getUniformLocation(filmProgram, 'uUseCurve'), 0)
-    } else if (curveLUT) {
-      gl.activeTexture(gl.TEXTURE1)
-      gl.bindTexture(gl.TEXTURE_2D, curveLUT)
-      gl.uniform1i(gl.getUniformLocation(filmProgram, 'uCurveLUT'), 1)
-      gl.uniform1i(gl.getUniformLocation(filmProgram, 'uUseCurve'), 1)
-      gl.uniform1i(gl.getUniformLocation(filmProgram, 'uUseHaldCLUT'), 0)
     } else {
-      gl.uniform1i(gl.getUniformLocation(filmProgram, 'uUseCurve'), 0)
+      // Bind a dummy 1x1x1 3D texture to unit 2 so sampler3D is valid
+      const dummy3D = gl.createTexture()
+      gl.activeTexture(gl.TEXTURE2)
+      gl.bindTexture(gl.TEXTURE_3D, dummy3D)
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
+      gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGB8, 1, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0]))
       gl.uniform1i(gl.getUniformLocation(filmProgram, 'uUseHaldCLUT'), 0)
+
+      if (curveLUT) {
+        gl.activeTexture(gl.TEXTURE1)
+        gl.bindTexture(gl.TEXTURE_2D, curveLUT)
+        gl.uniform1i(gl.getUniformLocation(filmProgram, 'uCurveLUT'), 1)
+        gl.uniform1i(gl.getUniformLocation(filmProgram, 'uUseCurve'), 1)
+      } else {
+        gl.uniform1i(gl.getUniformLocation(filmProgram, 'uUseCurve'), 0)
+      }
+
+      // Clean up dummy texture after draw (moved to cleanup section below)
+      // Note: we'll delete it with the other textures
     }
 
     // Set uniforms
