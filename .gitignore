@@ -12,14 +12,26 @@ dist
 dist-ssr
 *.local
 
+# Build output
+out/
+
+# TypeScript cache
+tsconfig.tsbuildinfo
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
+.cursor/
 .DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
 

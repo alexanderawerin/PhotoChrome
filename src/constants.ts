@@ -8,7 +8,7 @@
 // ============================================================================
 
 /** Application version */
-export const APP_VERSION = '1.2'
+export const APP_VERSION = '1.3'
 
 /** Application URL for watermark */
 export const APP_URL = 'photochrome.netdesigner.ru'

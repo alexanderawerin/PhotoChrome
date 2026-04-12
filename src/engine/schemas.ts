@@ -62,14 +62,25 @@ export function parseFilmSimulation(data: unknown): FilmSimulation {
     throw new Error('Invalid simulation: missing or invalid name')
   }
   
-  if (!isValidCurvePoints(obj.curve)) {
-    throw new Error('Invalid simulation: missing or invalid curve')
+  // Either curve or lutImage must be present
+  const hasCurve = isValidCurvePoints(obj.curve)
+  const hasLut = typeof obj.lutImage === 'string' && obj.lutImage.length > 0
+
+  if (!hasCurve && !hasLut) {
+    throw new Error('Invalid simulation: must have either curve or lutImage')
   }
-  
+
   const simulation: FilmSimulation = {
     id: obj.id,
     name: obj.name,
-    curve: obj.curve
+  }
+
+  if (hasCurve) {
+    simulation.curve = obj.curve as FilmSimulation['curve']
+  }
+
+  if (hasLut) {
+    simulation.lutImage = obj.lutImage as string
   }
   
   if (obj.colorBalance !== undefined) {

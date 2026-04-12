@@ -1,7 +1,7 @@
 {
   "name": "photochrome",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,7 +9,10 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "process-cards": "node scripts/process-card-images.mjs",
-    "generate-seo": "node scripts/generate-seo-assets.mjs"
+    "generate-seo": "node scripts/generate-seo-assets.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:chromium": "playwright test --project=chromium"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -32,11 +35,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@playwright/test": "^1.59.1",
     "@types/node": "^24.10.1",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "baseline-browser-mapping": "^2.10.18",
     "eslint": "^9.17.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.16",

@@ -5,10 +5,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Команды разработки
 
 ```bash
-npm run dev        # Dev сервер (Vite с hot reload)
-npm run build      # Сборка: tsc -b && vite build
-npm run lint       # ESLint проверка
-npm run preview    # Просмотр продакшен сборки
+npm run dev            # Dev сервер (Vite с hot reload)
+npm run build          # Сборка: tsc -b && vite build
+npm run lint           # ESLint проверка
+npm run preview        # Просмотр продакшен сборки
+npm run test:e2e       # E2E тесты (Playwright, все браузеры)
+npm run test:e2e:chromium  # E2E тесты только Chromium (быстрый фидбек)
+npm run test:e2e:ui    # Playwright UI-режим (интерактивная отладка)
 ```
 
 ## Архитектура
@@ -100,6 +103,30 @@ File Upload → useImageProcessor (загрузка, thumbnail)
 - `THUMBNAIL_MAX_SIZE = 1600` — размер превью для редактора
 - `RECIPE_CARD_PREVIEW_SIZE = 250` — превью в карточках рецептов
 - `KEYBOARD_SHORTCUTS` — горячие клавиши (R, C, Space, Ctrl+S)
+
+## E2E тестирование (Playwright)
+
+Тесты в `/e2e/`, конфигурация в `playwright.config.ts`. Три проекта: Chromium, Firefox, Mobile Chrome.
+
+```
+e2e/
+├── fixtures/               # Тестовые изображения (генерируются через generate.mjs)
+├── helpers/
+│   ├── fixtures.ts         # Кастомные fixtures (landingPage, editorPage, multiImageEditorPage)
+│   └── upload.ts           # uploadImage(), waitForEditor(), selectFirstRecipe()
+├── landing.spec.ts         # Стартовый экран, загрузка, навигация
+├── editor-basic.spec.ts    # UI элементы, рецепты, панели
+├── editor-export.spec.ts   # Экспорт (download, Ctrl+S)
+├── editor-transform.spec.ts # Поворот, crop mode
+├── editor-tuning.spec.ts   # Tuning panel (open/close, слайдеры)
+├── editor-multi-image.spec.ts # Thumbnails, навигация стрелками
+└── keyboard-shortcuts.spec.ts # R, C, Escape, T, Enter
+```
+
+**Важно при написании тестов:**
+- Desktop и mobile layout рендерятся одновременно (CSS `hidden md:block` / `md:hidden`). Для desktop-элементов использовать точные aria-labels (например, `[aria-label="Rotate clockwise (R)"]` вместо `[aria-label*="Rotate"]`) или скоупить в `aside` / `.tuning-panel-overlay`
+- Tuning panel скрывается через `translateX(100%)`, а не `display: none` — проверять CSS-класс `tuning-panel-closed` вместо visibility
+- Recipe карточки: скоупить в `aside` для desktop (мобильный `RecipePanel` рендерится раньше в DOM)
 
 ## Стилизация
 

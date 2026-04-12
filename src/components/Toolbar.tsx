@@ -4,6 +4,7 @@ import { Button } from './ui/button'
 import { ButtonGroup } from './ui/button-group'
 import { AspectRatio } from '../engine/transform'
 import { Recipe } from '../engine/types'
+import { CROP_RATIO_ORDER_DESKTOP, cropRatioToolbarItems, DEFAULT_CROP_RATIO_DESKTOP } from '../constants/cropRatios'
 
 interface ToolbarProps {
   onRotateClockwise: () => void
@@ -32,14 +33,7 @@ interface ToolbarProps {
   downloadOnly?: boolean // Show only download button
 }
 
-/** Available crop aspect ratios with labels */
-const CROP_RATIOS: { value: AspectRatio; label: string; ariaLabel: string }[] = [
-  { value: '1:1', label: '1:1', ariaLabel: 'Square 1:1' },
-  { value: '4:3', label: '4:3', ariaLabel: '4:3 landscape' },
-  { value: '3:4', label: '3:4', ariaLabel: '3:4 portrait' },
-  { value: '16:9', label: '16:9', ariaLabel: '16:9 wide' },
-  { value: '9:16', label: '9:16', ariaLabel: '9:16 tall' },
-]
+const DESKTOP_CROP_RATIOS = cropRatioToolbarItems(CROP_RATIO_ORDER_DESKTOP)
 
 export function Toolbar({
   onRotateClockwise,
@@ -49,7 +43,7 @@ export function Toolbar({
   canExport,
   isExporting = false,
   cropMode = false,
-  cropRatio = '1:1',
+  cropRatio = DEFAULT_CROP_RATIO_DESKTOP,
   onCropRatioChange,
   onCropApply,
   onCropCancel,
@@ -75,7 +69,7 @@ export function Toolbar({
       >
         {/* Grouped crop ratios */}
         <ButtonGroup role="group" aria-label="Aspect ratios">
-          {CROP_RATIOS.map((ratio) => (
+          {DESKTOP_CROP_RATIOS.map((ratio) => (
             <Button
               key={ratio.value}
               variant={cropRatio === ratio.value ? 'default' : 'outline'}

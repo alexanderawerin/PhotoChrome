@@ -5,6 +5,8 @@
  */
 
 import { ProcessingOptions, RecipeSettings, CurvePoints } from '../types'
+import type { HaldCLUT } from '../haldclut'
+import { getCachedLUT } from '../../presets/simulations'
 import { grainEffectToStrength, grainSizeToNumber } from '../grain'
 
 // Import shaders as raw strings
@@ -14,7 +16,7 @@ import blurFrag from './shaders/blur.frag?raw'
 import sharpenFrag from './shaders/sharpen.frag?raw'
 
 interface WebGLResources {
-  gl: WebGLRenderingContext
+  gl: WebGL2RenderingContext
   canvas: HTMLCanvasElement
   outputCanvas: HTMLCanvasElement  // 2D canvas for correct orientation
   outputCtx: CanvasRenderingContext2D
@@ -23,13 +25,14 @@ interface WebGLResources {
   sharpenProgram: WebGLProgram
   quadBuffer: WebGLBuffer
   frameBuffer: WebGLFramebuffer
+  dummy3DTexture: WebGLTexture
 }
 
 /**
  * Creates and compiles a shader
  */
 function createShader(
-  gl: WebGLRenderingContext,
+  gl: WebGL2RenderingContext,
   type: number,
   source: string
 ): WebGLShader {
@@ -52,7 +55,7 @@ function createShader(
  * Creates a shader program from vertex and fragment shaders
  */
 function createProgram(
-  gl: WebGLRenderingContext,
+  gl: WebGL2RenderingContext,
   vertSource: string,
   fragSource: string
 ): WebGLProgram {
@@ -82,7 +85,7 @@ function createProgram(
 /**
  * Creates a fullscreen quad buffer
  */
-function createQuadBuffer(gl: WebGLRenderingContext): WebGLBuffer {
+function createQuadBuffer(gl: WebGL2RenderingContext): WebGLBuffer {
   const buffer = gl.createBuffer()
   if (!buffer) throw new Error('Failed to create buffer')
 
@@ -105,7 +108,7 @@ function createQuadBuffer(gl: WebGLRenderingContext): WebGLBuffer {
  * Creates a texture from ImageData or HTMLVideoElement
  */
 function createTexture(
-  gl: WebGLRenderingContext,
+  gl: WebGL2RenderingContext,
   source: ImageData | HTMLVideoElement | HTMLCanvasElement
 ): WebGLTexture {
   const texture = gl.createTexture()
@@ -152,7 +155,7 @@ function createTexture(
  * Creates a 1D LUT texture from curve points
  */
 function createCurveLUT(
-  gl: WebGLRenderingContext,
+  gl: WebGL2RenderingContext,
   curve: CurvePoints
 ): WebGLTexture {
   const lut = new Uint8Array(256 * 4) // RGBA for compatibility
@@ -216,10 +219,52 @@ function interpolateCurve(x: number, points: [number, number][]): number {
 }
 
 /**
+ * Creates a 3D texture from a HaldCLUT for GPU LUT lookup.
+ * Repacks sequential HaldCLUT pixel layout into a proper 3D texture.
+ */
+function createHaldCLUT3DTexture(
+  gl: WebGL2RenderingContext,
+  lut: HaldCLUT
+): WebGLTexture {
+  const size = lut.gridSize // e.g. 64 for Level 8
+  const data = new Uint8Array(size * size * size * 3)
+
+  for (let b = 0; b < size; b++) {
+    for (let g = 0; g < size; g++) {
+      for (let r = 0; r < size; r++) {
+        const srcIdx = b * size * size + g * size + r
+        const srcX = srcIdx % lut.width
+        const srcY = (srcIdx / lut.width) | 0
+        const srcOffset = (srcY * lut.width + srcX) * 4
+        const dstOffset = (b * size * size + g * size + r) * 3
+        data[dstOffset] = lut.data[srcOffset]
+        data[dstOffset + 1] = lut.data[srcOffset + 1]
+        data[dstOffset + 2] = lut.data[srcOffset + 2]
+      }
+    }
+  }
+
+  const texture = gl.createTexture()
+  if (!texture) throw new Error('Failed to create 3D LUT texture')
+
+  gl.bindTexture(gl.TEXTURE_3D, texture)
+  // FLIP_Y must be disabled for 3D textures (WebGL2 requirement)
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
+  gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGB8, size, size, size, 0, gl.RGB, gl.UNSIGNED_BYTE, data)
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE)
+
+  return texture
+}
+
+/**
  * Creates a render target (framebuffer + texture)
  */
 function createRenderTarget(
-  gl: WebGLRenderingContext,
+  gl: WebGL2RenderingContext,
   width: number,
   height: number
 ): { framebuffer: WebGLFramebuffer; texture: WebGLTexture } {
@@ -308,7 +353,7 @@ export class WebGLProcessor {
       this.resources = null
     })
 
-    const gl = canvas.getContext('webgl', {
+    const gl = canvas.getContext('webgl2', {
       antialias: false,
       preserveDrawingBuffer: true,
       alpha: true,
@@ -316,7 +361,7 @@ export class WebGLProcessor {
     })
 
     if (!gl) {
-      throw new Error('WebGL not supported')
+      throw new Error('WebGL2 not supported')
     }
 
     // Create output canvas for correct orientation (WebGL renders bottom-up)
@@ -336,6 +381,16 @@ export class WebGLProcessor {
     const frameBuffer = gl.createFramebuffer()
     if (!frameBuffer) throw new Error('Failed to create framebuffer')
 
+    // Create a reusable 1x1x1 dummy 3D texture for when HaldCLUT is not used.
+    // Prevents "two textures of different types on same sampler" error.
+    const dummy3DTexture = gl.createTexture()
+    if (!dummy3DTexture) throw new Error('Failed to create dummy 3D texture')
+    gl.bindTexture(gl.TEXTURE_3D, dummy3DTexture)
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
+    gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGB8, 1, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0]))
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+
     this.resources = {
       gl,
       canvas,
@@ -346,6 +401,7 @@ export class WebGLProcessor {
       sharpenProgram,
       quadBuffer,
       frameBuffer,
+      dummy3DTexture,
     }
     this.width = width
     this.height = height
@@ -367,15 +423,20 @@ export class WebGLProcessor {
       throw new Error('WebGL processor not initialized')
     }
 
-    const { gl, canvas, outputCanvas, outputCtx, filmProgram, blurProgram, sharpenProgram, quadBuffer } = this.resources
+    const { gl, canvas, outputCanvas, outputCtx, filmProgram, blurProgram, sharpenProgram, quadBuffer, dummy3DTexture } = this.resources
     const { simulation, settings } = options
 
     // Create source texture
     const sourceTexture = createTexture(gl, source)
 
-    // Create curve LUT if needed
+    // Create HaldCLUT 3D texture or curve LUT
+    let haldCLUTTexture: WebGLTexture | null = null
     let curveLUT: WebGLTexture | null = null
-    if (simulation.curve) {
+    const lut = getCachedLUT(simulation.id)
+
+    if (lut) {
+      haldCLUTTexture = createHaldCLUT3DTexture(gl, lut)
+    } else if (simulation.curve) {
       curveLUT = createCurveLUT(gl, simulation.curve)
     }
 
@@ -409,13 +470,32 @@ export class WebGLProcessor {
     gl.bindTexture(gl.TEXTURE_2D, currentTexture)
     gl.uniform1i(gl.getUniformLocation(filmProgram, 'uTexture'), 0)
 
-    if (curveLUT) {
-      gl.activeTexture(gl.TEXTURE1)
-      gl.bindTexture(gl.TEXTURE_2D, curveLUT)
-      gl.uniform1i(gl.getUniformLocation(filmProgram, 'uCurveLUT'), 1)
-      gl.uniform1i(gl.getUniformLocation(filmProgram, 'uUseCurve'), 1)
-    } else {
+    // Always bind sampler3D uHaldCLUT to unit 2 to avoid
+    // "Two textures of different types use the same sampler location" error.
+    // In WebGL2, all sampler uniforms must be on separate units even if unused.
+    gl.uniform1i(gl.getUniformLocation(filmProgram, 'uHaldCLUT'), 2)
+
+    // Bind HaldCLUT 3D texture or curve LUT
+    if (haldCLUTTexture) {
+      gl.activeTexture(gl.TEXTURE2)
+      gl.bindTexture(gl.TEXTURE_3D, haldCLUTTexture)
+      gl.uniform1i(gl.getUniformLocation(filmProgram, 'uUseHaldCLUT'), 1)
+      gl.uniform1i(gl.getUniformLocation(filmProgram, 'uHaldCLUTSize'), lut!.gridSize)
       gl.uniform1i(gl.getUniformLocation(filmProgram, 'uUseCurve'), 0)
+    } else {
+      // Bind reusable dummy 3D texture to unit 2 so sampler3D is valid
+      gl.activeTexture(gl.TEXTURE2)
+      gl.bindTexture(gl.TEXTURE_3D, dummy3DTexture)
+      gl.uniform1i(gl.getUniformLocation(filmProgram, 'uUseHaldCLUT'), 0)
+
+      if (curveLUT) {
+        gl.activeTexture(gl.TEXTURE1)
+        gl.bindTexture(gl.TEXTURE_2D, curveLUT)
+        gl.uniform1i(gl.getUniformLocation(filmProgram, 'uCurveLUT'), 1)
+        gl.uniform1i(gl.getUniformLocation(filmProgram, 'uUseCurve'), 1)
+      } else {
+        gl.uniform1i(gl.getUniformLocation(filmProgram, 'uUseCurve'), 0)
+      }
     }
 
     // Set uniforms
@@ -439,6 +519,7 @@ export class WebGLProcessor {
     // Clean up
     gl.deleteTexture(sourceTexture)
     if (curveLUT) gl.deleteTexture(curveLUT)
+    if (haldCLUTTexture) gl.deleteTexture(haldCLUTTexture)
     if (renderTarget) {
       gl.deleteFramebuffer(renderTarget.framebuffer)
       gl.deleteTexture(renderTarget.texture)
@@ -456,7 +537,7 @@ export class WebGLProcessor {
    * Set all film shader uniforms
    */
   private setFilmUniforms(
-    gl: WebGLRenderingContext,
+    gl: WebGL2RenderingContext,
     program: WebGLProgram,
     simulation: ProcessingOptions['simulation'],
     settings: RecipeSettings | undefined,
@@ -553,7 +634,7 @@ export class WebGLProcessor {
    * Apply sharpness using unsharp mask (multi-pass)
    */
   private applySharpness(
-    gl: WebGLRenderingContext,
+    gl: WebGL2RenderingContext,
     blurProgram: WebGLProgram,
     sharpenProgram: WebGLProgram,
     quadBuffer: WebGLBuffer,

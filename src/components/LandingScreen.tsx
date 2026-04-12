@@ -146,7 +146,7 @@ export function LandingScreen({ onFileSelect }: LandingScreenProps) {
       {/* Copyright footer */}
       <footer className="absolute bottom-4 sm:bottom-6 left-0 right-0 text-center z-[100]">
         <p className="text-xs text-zinc-500">
-          © 2025{' '}
+          © 2026{' '}
           <a
             href="https://netdesigner.ru"
             target="_blank"

@@ -1,89 +1,74 @@
 # Photochrome
 
-Веб-приложение для эмуляции плёночных симуляций Fujifilm. Применяйте легендарные плёночные фильтры Fujifilm к любым фотографиям прямо в браузере.
+Apply legendary Fujifilm film simulations to your photos and videos right in the browser. No uploads, no servers — everything runs locally on your device.
 
-## Возможности
+## Features
 
-- 🎨 **10 плёночных симуляций**: Provia, Velvia, Classic Chrome, Classic Neg, Astia, Eterna, Acros, Superia, Pro 400H, Neopan
-- 📱 **54 готовых рецепта**: Коллекция проверенных рецептов от сообщества с группировкой по стилю
-- 🖼️ **Live Preview**: Мгновенный предпросмотр всех рецептов на вашем фото
-- 🔄 **Редактирование**: Поворот, обрезка с перетаскиванием рамки, тонкая настройка параметров
-- 🎞️ **Видео**: Применение симуляций к видео до 30 секунд (WebGL + Safari fallback)
-- ⚡ **GPU-ускорение**: WebGL для быстрой обработки фото, Web Worker для экспорта в фоне
-- 🏷️ **EXIF метаданные**: Параметры рецепта сохраняются в EXIF при экспорте
-- 💾 **Экспорт**: JPEG в высоком качестве с водяным знаком
-- 🎯 **Клиентская обработка**: Все операции выполняются в браузере, фото не покидает ваше устройство
-- 🌡️ **Dynamic Range & White Balance**: Поддержка DR100/200/400 и пресетов баланса белого
+- **10 film simulations**: Provia, Velvia, Classic Chrome, Classic Neg, Astia, Eterna, Acros, Superia, Pro 400H, Neopan
+- **52 ready-made presets**: Community-curated recipes grouped by style
+- **Live preview**: Instant preview of all presets on your photo
+- **Editing tools**: Rotate, crop with draggable frame, fine-tune any parameter
+- **Video support**: Apply simulations to videos up to 30 seconds
+- **GPU-accelerated**: WebGL2 with 3D LUT lookup for fast processing
+- **EXIF metadata**: Recipe settings saved in exported JPEG
+- **Privacy-first**: All processing happens in the browser, your photos never leave your device
 
-## Технологии
+## Getting Started
 
-- **React** + **TypeScript** + **Vite**
-- **Tailwind CSS** + **shadcn/ui** (дефолтная тёмная монохромная тема)
-- **Canvas API** для обработки изображений
-- Полностью клиентская обработка (без сервера)
-
-## Начало работы
-
-### Установка зависимостей
-
-\`\`\`bash
+```bash
 npm install
-\`\`\`
-
-### Запуск dev-сервера
-
-\`\`\`bash
 npm run dev
-\`\`\`
+```
 
-### Сборка для продакшена
+## Build
 
-\`\`\`bash
+```bash
 npm run build
-\`\`\`
+```
 
-## Структура проекта
+## Testing
 
-\`\`\`
+```bash
+npx playwright install chromium firefox  # Install browsers (once)
+npm run test:e2e                         # All tests (Chromium + Firefox + Mobile)
+npm run test:e2e:chromium                # Chromium only (fast feedback)
+npm run test:e2e:ui                      # Interactive UI mode
+```
+
+## Project Structure
+
+```
 src/
-├── engine/              # Движок обработки изображений
-│   ├── processor.ts     # Ядро обработки
-│   ├── curves.ts        # Тональные кривые
-│   ├── color.ts         # Цветокоррекция
-│   ├── grain.ts         # Плёночное зерно
-│   ├── effects.ts       # Clarity, Sharpness, Color Chrome
-│   └── transform.ts     # Поворот и crop
+├── engine/              # Image processing engine (framework-agnostic)
+│   ├── processor.ts     # Main processing pipeline
+│   ├── haldclut.ts      # 3D LUT parser and lookup
+│   ├── curves.ts        # Tone curves
+│   ├── color.ts         # Color correction
+│   ├── grain.ts         # Film grain
+│   ├── effects.ts       # Clarity, sharpness, color chrome
+│   ├── transform.ts     # Rotate and crop
+│   └── webgl/           # GPU-accelerated processing (WebGL2)
 ├── presets/
-│   ├── simulations/     # Базовые симуляции Fujifilm
-│   └── recipes/         # Готовые рецепты
-├── components/          # React компоненты
-└── hooks/               # React hooks
-\`\`\`
+│   ├── simulations/     # Fujifilm film simulations (JSON + HaldCLUT PNG)
+│   └── recipes/         # Ready-made presets
+├── components/          # React UI components
+└── hooks/               # React hooks with business logic
+```
 
-## Рецепты
+## Tech Stack
 
-Рецепт — это комбинация базовой симуляции и настроек:
+- **React 18** + **TypeScript** + **Vite**
+- **Tailwind CSS** + **shadcn/ui**
+- **WebGL2** with `sampler3D` for GPU LUT lookup
+- **Canvas API** + **Web Workers** for image processing
+- **Playwright** for E2E testing
 
-- **Film Simulation**: Базовая плёнка (Provia, Velvia, Classic Chrome...)
-- **Highlight/Shadow**: Коррекция теней и светов
-- **Color**: Насыщенность
-- **Grain Effect**: Плёночное зерно
-- **Color Chrome**: Глубина цвета
-- **WB Shift**: Сдвиг баланса белого
-- И многое другое...
+## License
 
-## Roadmap
+GPL-3.0 — see [LICENSE](LICENSE)
 
-Подробный roadmap с планами и реализованными фичами — в [ROADMAP.md](ROADMAP.md).
+HaldCLUT assets from [cedeber/hald-clut](https://github.com/cedeber/hald-clut) (GPL-3.0).
 
-## Перспектива: Android
+## Disclaimer
 
-Движок обработки отделён от UI и может быть легко портирован на Android:
-- Те же JSON-рецепты
-- Kotlin + Bitmap/OpenGL ES
-- Общая база рецептов между платформами
-
-## Лицензия
-
-MIT
-
+This app is not affiliated with, endorsed by, or connected to FUJIFILM Corporation. Film simulation names are used for reference purposes only.

@@ -48,6 +48,8 @@ interface UseTransformOptions {
   transformedThumbnail?: ImageData
   /** Callback при изменении трансформированных изображений */
   onTransformChange?: (original: ImageData, thumbnail: ImageData) => void
+  /** Соотношение при входе в crop и после сброса трансформаций */
+  defaultCropRatio: AspectRatio
 }
 
 /**
@@ -61,6 +63,7 @@ export function useTransform({
   transformedOriginal: externalTransformedOriginal,
   transformedThumbnail: externalTransformedThumbnail,
   onTransformChange,
+  defaultCropRatio,
 }: UseTransformOptions): TransformState & TransformActions {
   const [transformedOriginal, setTransformedOriginal] = useState<ImageData>(
     externalTransformedOriginal || originalImage
@@ -69,7 +72,7 @@ export function useTransform({
     externalTransformedThumbnail || thumbnail
   )
   const [isCropping, setIsCropping] = useState(false)
-  const [cropRatio, setCropRatio] = useState<AspectRatio>('1:1')
+  const [cropRatio, setCropRatio] = useState<AspectRatio>(defaultCropRatio)
   const [cropOffset, setCropOffset] = useState<CropOffset>({ x: 0.5, y: 0.5 })
 
   // Синхронизация с внешним состоянием (для переключения между изображениями)
@@ -96,10 +99,10 @@ export function useTransform({
   const rotateCounterClockwise = useCallback(() => rotate(270), [rotate])
 
   const openCrop = useCallback(() => {
-    setCropRatio('1:1')
+    setCropRatio(defaultCropRatio)
     setCropOffset({ x: 0.5, y: 0.5 })
     setIsCropping(true)
-  }, [])
+  }, [defaultCropRatio])
 
   const cancelCrop = useCallback(() => {
     setIsCropping(false)
@@ -140,9 +143,9 @@ export function useTransform({
     setTransformedOriginal(original)
     setTransformedThumbnail(thumb)
     setIsCropping(false)
-    setCropRatio('1:1')
+    setCropRatio(defaultCropRatio)
     setCropOffset({ x: 0.5, y: 0.5 })
-  }, [])
+  }, [defaultCropRatio])
 
   return {
     // State

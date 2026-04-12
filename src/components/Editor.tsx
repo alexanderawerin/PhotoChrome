@@ -13,11 +13,13 @@ import { ThumbnailStrip } from './ThumbnailStrip'
 import { ImageCounter } from './ImageCounter'
 import { Recipe, RecipeSettings, ImageItem } from '../engine/types'
 import { ImageProcessor, ExifInfo } from '../engine/processor'
-import { getSimulation } from '../presets/simulations'
+import { getSimulation, loadSimulationLUT } from '../presets/simulations'
 import { getAllRecipes } from '../presets/recipes'
 import { AspectRatio } from '../engine/transform'
 import { useFavorites } from '../hooks/useFavorites'
 import { useTransform } from '../hooks/useTransform'
+import { useIsMdUp } from '../hooks/useIsMdUp'
+import { DEFAULT_CROP_RATIO_DESKTOP, DEFAULT_CROP_RATIO_MOBILE } from '../constants/cropRatios'
 import { useTuning } from '../hooks/useTuning'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useViewportHeight, getViewportHeightStyle } from '../hooks/useViewportHeight'
@@ -71,6 +73,8 @@ export function Editor({
   // ============================================================================
 
   const viewportHeight = useViewportHeight()
+  const isMdUp = useIsMdUp()
+  const defaultCropRatio = isMdUp ? DEFAULT_CROP_RATIO_DESKTOP : DEFAULT_CROP_RATIO_MOBILE
   const { getFavoriteIds, toggleFavorite } = useFavorites()
 
   // Refs для доступа к актуальным значениям из callbacks (избегаем stale closures)
@@ -106,6 +110,7 @@ export function Editor({
     thumbnail: currentImage.thumbnail,
     transformedOriginal: currentImage.transformedOriginal,
     transformedThumbnail: currentImage.transformedThumbnail,
+    defaultCropRatio,
     onTransformChange: useCallback((newOriginal: ImageData, newThumbnail: ImageData) => {
       transformedThumbnailRef.current = newThumbnail
       onImageUpdate(currentImage.id, {
@@ -137,12 +142,18 @@ export function Editor({
   // ============================================================================
 
   useEffect(() => {
-    // При смене изображения обновляем превью
-    updatePreview(
-      currentImage.transformedThumbnail,
-      currentImage.recipe,
-      currentImage.customSettings
-    )
+    // При смене изображения загружаем LUT (если нужен) и обновляем превью
+    const loadAndPreview = async () => {
+      if (currentImage.recipe) {
+        await loadSimulationLUT(currentImage.recipe.filmSimulation)
+      }
+      updatePreview(
+        currentImage.transformedThumbnail,
+        currentImage.recipe,
+        currentImage.customSettings
+      )
+    }
+    loadAndPreview()
   }, [currentIndex, currentImage.transformedThumbnail, currentImage.recipe, currentImage.customSettings, updatePreview])
 
   // ============================================================================
@@ -172,7 +183,7 @@ export function Editor({
   /**
    * Выбор рецепта (обновляет только текущее изображение)
    */
-  const handleRecipeSelect = useCallback((recipe: Recipe) => {
+  const handleRecipeSelect = useCallback(async (recipe: Recipe) => {
     onImageUpdate(currentImage.id, {
       recipe,
       customSettings: {} // Сброс настроек при смене рецепта
@@ -181,6 +192,8 @@ export function Editor({
     setIsProcessing(true)
 
     try {
+      // Загрузить HaldCLUT если доступен (lazy, кэшируется)
+      await loadSimulationLUT(recipe.filmSimulation)
       const processed = applyRecipeToImage(transform.transformedThumbnail, recipe, recipe.settings)
       setPreviewImage(processed)
     } finally {
