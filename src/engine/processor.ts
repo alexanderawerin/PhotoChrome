@@ -21,6 +21,9 @@ import { getPhotoWebGLProcessor } from './webgl/processor'
 
 // Maximum image dimension for WebGL processing (texture size limit)
 const WEBGL_MAX_DIMENSION = 4096
+// Minimum dimension to use WebGL — smaller images are faster on CPU
+// and avoid GPU contention when rendering many recipe card previews
+const WEBGL_MIN_DIMENSION = 512
 
 /**
  * Информация о рецепте для EXIF-метаданных при экспорте
@@ -96,7 +99,8 @@ export class ImageProcessor {
   ): ImageData | null {
     if (
       imageData.width > WEBGL_MAX_DIMENSION ||
-      imageData.height > WEBGL_MAX_DIMENSION
+      imageData.height > WEBGL_MAX_DIMENSION ||
+      (imageData.width < WEBGL_MIN_DIMENSION && imageData.height < WEBGL_MIN_DIMENSION)
     ) {
       return null
     }
