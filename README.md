@@ -55,6 +55,22 @@ src/
 └── hooks/               # React hooks with business logic
 ```
 
+## How Film Simulations Work
+
+Photochrome uses a **hybrid processing pipeline** that combines 3D color lookup tables with parametric effects:
+
+1. **Color transform (HaldCLUT)** — A [HaldCLUT](https://rawpedia.rawtherapee.com/Film_Simulation) is a PNG image that encodes a complete 3D color lookup table. Each input RGB color maps to an output RGB color through trilinear interpolation. Our HaldCLUTs are Level 8 (512x512 PNG, 64 colors per channel) converted from Level 12 originals sourced from real Fujifilm XTrans III camera profiles. On the GPU, the HaldCLUT is repacked into a WebGL2 3D texture (`sampler3D`) with hardware trilinear interpolation.
+
+2. **Parametric effects** — Applied on top of the LUT: highlight/shadow recovery, white balance shift, color chrome, grain, clarity, sharpness. These remain adjustable per-recipe.
+
+Simulations without a HaldCLUT (Classic Neg, Eterna) fall back to a curve-based approach using 1D tone curves + split-toning color balance.
+
+| Simulation | Source | Method |
+|---|---|---|
+| Provia, Velvia, Astia, Classic Chrome, Acros | Fuji XTrans III camera profiles | HaldCLUT |
+| Neopan, Superia, Pro 400H | Film stock emulations | HaldCLUT |
+| Classic Neg, Eterna | Manual curve approximation | Curve-based |
+
 ## Tech Stack
 
 - **React 18** + **TypeScript** + **Vite**
