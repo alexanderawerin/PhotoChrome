@@ -81,11 +81,16 @@ export class ImageProcessor {
       }
     }
 
-    // 2. Пробуем WebGL (GPU) — поддерживает и curve, и HaldCLUT через sampler3D
-    const webglResult = this.processWithWebGL(inputData, options)
-    if (webglResult) return webglResult
+    // 2. HaldCLUT simulations use CPU (reliable trilinear interpolation).
+    //    WebGL sampler3D is unstable across browsers — CPU LUT is ~50ms for 1600px thumbnails.
+    const lut = getCachedLUT(options.simulation.id)
+    if (!lut) {
+      // Curve-based simulations can use WebGL (no 3D texture needed)
+      const webglResult = this.processWithWebGL(inputData, options)
+      if (webglResult) return webglResult
+    }
 
-    // 3. CPU fallback (with LUT or curve-based)
+    // 3. CPU path (HaldCLUT lookup or curve-based fallback)
     return this.processCPU(inputData, options)
   }
 
