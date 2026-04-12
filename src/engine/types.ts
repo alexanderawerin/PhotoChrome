@@ -27,9 +27,12 @@ export interface GrainConfig {
 export interface FilmSimulation {
   id: string
   name: string
-  curve: CurvePoints
+  // Curve-based approach (used when no HaldCLUT is loaded)
+  curve?: CurvePoints
   colorBalance?: ColorBalanceConfig
   saturation?: number
+  // HaldCLUT approach (path to PNG asset, resolved at runtime)
+  lutImage?: string
 }
 
 export interface RecipeSettings {

@@ -6,6 +6,8 @@
  */
 
 import type { ProcessingOptions, RecipeSettings } from './types'
+import type { HaldCLUT } from './haldclut'
+import { applyHaldCLUT } from './haldclut'
 import { createCurveLUT, applyCurve } from './curves'
 import {
   applyColorBalance,
@@ -24,6 +26,10 @@ interface WorkerRequest {
   width: number
   height: number
   options: ProcessingOptions
+  // HaldCLUT data (transferred from main thread)
+  lutData?: ArrayBuffer
+  lutWidth?: number
+  lutLevel?: number
 }
 
 function applyRecipeSettings(imageData: ImageData, settings: RecipeSettings): void {
@@ -47,7 +53,7 @@ function applyRecipeSettings(imageData: ImageData, settings: RecipeSettings): vo
   }
 }
 
-function processData(imageData: ImageData, options: ProcessingOptions): ImageData {
+function processData(imageData: ImageData, options: ProcessingOptions, lut: HaldCLUT | null): ImageData {
   const { simulation, settings } = options
 
   const processed = new ImageData(
@@ -64,16 +70,20 @@ function processData(imageData: ImageData, options: ProcessingOptions): ImageDat
     applyWhiteBalancePreset(processed, settings.whiteBalance)
   }
 
-  // Simulation
-  if (simulation.curve) {
-    const curveLUT = createCurveLUT(simulation.curve)
-    applyCurve(processed, curveLUT, 'rgb')
-  }
-  if (simulation.colorBalance) {
-    applyColorBalance(processed, simulation.colorBalance)
-  }
-  if (simulation.saturation !== undefined) {
-    applySaturation(processed, simulation.saturation)
+  // Simulation: HaldCLUT or curve-based
+  if (lut) {
+    applyHaldCLUT(processed, lut)
+  } else {
+    if (simulation.curve) {
+      const curveLUT = createCurveLUT(simulation.curve)
+      applyCurve(processed, curveLUT, 'rgb')
+    }
+    if (simulation.colorBalance) {
+      applyColorBalance(processed, simulation.colorBalance)
+    }
+    if (simulation.saturation !== undefined) {
+      applySaturation(processed, simulation.saturation)
+    }
   }
 
   // Recipe settings
@@ -85,9 +95,21 @@ function processData(imageData: ImageData, options: ProcessingOptions): ImageDat
 }
 
 self.addEventListener('message', (e: MessageEvent<WorkerRequest>) => {
-  const { requestId, buffer, width, height, options } = e.data
+  const { requestId, buffer, width, height, options, lutData, lutWidth, lutLevel } = e.data
   const imageData = new ImageData(new Uint8ClampedArray(buffer), width, height)
-  const result = processData(imageData, options)
+
+  // Reconstruct HaldCLUT from transferred data
+  let lut: HaldCLUT | null = null
+  if (lutData && lutWidth && lutLevel) {
+    lut = {
+      level: lutLevel,
+      gridSize: lutLevel * lutLevel,
+      width: lutWidth,
+      data: new Uint8ClampedArray(lutData),
+    }
+  }
+
+  const result = processData(imageData, options, lut)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(self as any).postMessage(

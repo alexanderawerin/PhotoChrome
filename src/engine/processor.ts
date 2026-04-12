@@ -1,4 +1,6 @@
 import { ProcessingOptions, RecipeSettings } from './types'
+import { applyHaldCLUT } from './haldclut'
+import { getCachedLUT } from '../presets/simulations'
 import { createCurveLUT, applyCurve } from './curves'
 import {
   applyColorBalance,
@@ -77,10 +79,15 @@ export class ImageProcessor {
     }
 
     // 2. Пробуем WebGL для основного pipeline
-    const webglResult = this.processWithWebGL(inputData, options)
-    if (webglResult) return webglResult
+    //    Пропускаем WebGL если есть HaldCLUT — CPU path делает LUT lookup.
+    //    WebGL LUT support (sampler3D) — будущая оптимизация.
+    const lut = getCachedLUT(options.simulation.id)
+    if (!lut) {
+      const webglResult = this.processWithWebGL(inputData, options)
+      if (webglResult) return webglResult
+    }
 
-    // 3. CPU fallback
+    // 3. CPU path (with LUT or curve-based fallback)
     return this.processCPU(inputData, options)
   }
 
@@ -126,15 +133,22 @@ export class ImageProcessor {
 
     const { simulation, settings } = options
 
-    if (simulation.curve) {
-      const curveLUT = createCurveLUT(simulation.curve)
-      applyCurve(processed, curveLUT, 'rgb')
-    }
-    if (simulation.colorBalance) {
-      applyColorBalance(processed, simulation.colorBalance)
-    }
-    if (simulation.saturation !== undefined) {
-      applySaturation(processed, simulation.saturation)
+    // HaldCLUT path: single 3D LUT lookup replaces curve + colorBalance + saturation
+    const lut = getCachedLUT(simulation.id)
+    if (lut) {
+      applyHaldCLUT(processed, lut)
+    } else {
+      // Fallback: curve-based approach
+      if (simulation.curve) {
+        const curveLUT = createCurveLUT(simulation.curve)
+        applyCurve(processed, curveLUT, 'rgb')
+      }
+      if (simulation.colorBalance) {
+        applyColorBalance(processed, simulation.colorBalance)
+      }
+      if (simulation.saturation !== undefined) {
+        applySaturation(processed, simulation.saturation)
+      }
     }
     if (settings) {
       this.applyRecipeSettings(processed, settings)
@@ -160,9 +174,23 @@ export class ImageProcessor {
         this.workerRejects.set(requestId, reject)
 
         const buffer = imageData.data.buffer.slice(0)
+        const transferables: ArrayBuffer[] = [buffer]
+
+        // Include cached HaldCLUT data for the worker
+        const lut = getCachedLUT(options.simulation.id)
+        let lutData: ArrayBuffer | undefined
+        let lutWidth: number | undefined
+        let lutLevel: number | undefined
+        if (lut) {
+          lutData = lut.data.buffer.slice(0)
+          lutWidth = lut.width
+          lutLevel = lut.level
+          transferables.push(lutData)
+        }
+
         worker.postMessage(
-          { requestId, buffer, width: imageData.width, height: imageData.height, options },
-          [buffer]
+          { requestId, buffer, width: imageData.width, height: imageData.height, options, lutData, lutWidth, lutLevel },
+          transferables
         )
       } catch (err) {
         reject(err)

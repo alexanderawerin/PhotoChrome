@@ -1,14 +1,33 @@
 {
   "id": "classic-chrome",
   "name": "Classic Chrome",
+  "lutImage": "lut/classic-chrome.png",
   "curve": {
     "points": [
-      [0, 0],
-      [32, 28],
-      [96, 90],
-      [128, 135],
-      [192, 200],
-      [255, 250]
+      [
+        0,
+        0
+      ],
+      [
+        32,
+        28
+      ],
+      [
+        96,
+        90
+      ],
+      [
+        128,
+        135
+      ],
+      [
+        192,
+        200
+      ],
+      [
+        255,
+        250
+      ]
     ]
   },
   "colorBalance": {
@@ -25,4 +44,3 @@
   },
   "saturation": -0.15
 }
-

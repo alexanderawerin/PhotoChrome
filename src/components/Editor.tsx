@@ -13,7 +13,7 @@ import { ThumbnailStrip } from './ThumbnailStrip'
 import { ImageCounter } from './ImageCounter'
 import { Recipe, RecipeSettings, ImageItem } from '../engine/types'
 import { ImageProcessor, ExifInfo } from '../engine/processor'
-import { getSimulation } from '../presets/simulations'
+import { getSimulation, loadSimulationLUT } from '../presets/simulations'
 import { getAllRecipes } from '../presets/recipes'
 import { AspectRatio } from '../engine/transform'
 import { useFavorites } from '../hooks/useFavorites'
@@ -142,12 +142,18 @@ export function Editor({
   // ============================================================================
 
   useEffect(() => {
-    // При смене изображения обновляем превью
-    updatePreview(
-      currentImage.transformedThumbnail,
-      currentImage.recipe,
-      currentImage.customSettings
-    )
+    // При смене изображения загружаем LUT (если нужен) и обновляем превью
+    const loadAndPreview = async () => {
+      if (currentImage.recipe) {
+        await loadSimulationLUT(currentImage.recipe.filmSimulation)
+      }
+      updatePreview(
+        currentImage.transformedThumbnail,
+        currentImage.recipe,
+        currentImage.customSettings
+      )
+    }
+    loadAndPreview()
   }, [currentIndex, currentImage.transformedThumbnail, currentImage.recipe, currentImage.customSettings, updatePreview])
 
   // ============================================================================
@@ -177,7 +183,7 @@ export function Editor({
   /**
    * Выбор рецепта (обновляет только текущее изображение)
    */
-  const handleRecipeSelect = useCallback((recipe: Recipe) => {
+  const handleRecipeSelect = useCallback(async (recipe: Recipe) => {
     onImageUpdate(currentImage.id, {
       recipe,
       customSettings: {} // Сброс настроек при смене рецепта
@@ -186,6 +192,8 @@ export function Editor({
     setIsProcessing(true)
 
     try {
+      // Загрузить HaldCLUT если доступен (lazy, кэшируется)
+      await loadSimulationLUT(recipe.filmSimulation)
       const processed = applyRecipeToImage(transform.transformedThumbnail, recipe, recipe.settings)
       setPreviewImage(processed)
     } finally {
