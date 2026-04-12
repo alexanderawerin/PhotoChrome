@@ -323,6 +323,7 @@ export class WebGLProcessor {
   private width = 0
   private height = 0
   private contextLost = false
+  private lutTextureCache = new Map<string, WebGLTexture>()
 
   /**
    * Initialize WebGL context and resources
@@ -429,13 +430,18 @@ export class WebGLProcessor {
     // Create source texture
     const sourceTexture = createTexture(gl, source)
 
-    // Create HaldCLUT 3D texture or curve LUT
+    // Get or create HaldCLUT 3D texture (cached) or curve LUT (per-frame)
     let haldCLUTTexture: WebGLTexture | null = null
     let curveLUT: WebGLTexture | null = null
     const lut = getCachedLUT(simulation.id)
 
     if (lut) {
-      haldCLUTTexture = createHaldCLUT3DTexture(gl, lut)
+      // Reuse cached GPU texture for this simulation
+      haldCLUTTexture = this.lutTextureCache.get(simulation.id) ?? null
+      if (!haldCLUTTexture) {
+        haldCLUTTexture = createHaldCLUT3DTexture(gl, lut)
+        this.lutTextureCache.set(simulation.id, haldCLUTTexture)
+      }
     } else if (simulation.curve) {
       curveLUT = createCurveLUT(gl, simulation.curve)
     }
@@ -516,10 +522,9 @@ export class WebGLProcessor {
       )
     }
 
-    // Clean up
+    // Clean up (haldCLUTTexture is cached, not deleted per-frame)
     gl.deleteTexture(sourceTexture)
     if (curveLUT) gl.deleteTexture(curveLUT)
-    if (haldCLUTTexture) gl.deleteTexture(haldCLUTTexture)
     if (renderTarget) {
       gl.deleteFramebuffer(renderTarget.framebuffer)
       gl.deleteTexture(renderTarget.texture)
@@ -733,6 +738,12 @@ export class WebGLProcessor {
     gl.deleteProgram(sharpenProgram)
     gl.deleteBuffer(quadBuffer)
     gl.deleteFramebuffer(frameBuffer)
+
+    // Clean up cached LUT textures
+    for (const tex of this.lutTextureCache.values()) {
+      gl.deleteTexture(tex)
+    }
+    this.lutTextureCache.clear()
 
     // Lose context to free GPU memory
     const ext = gl.getExtension('WEBGL_lose_context')
