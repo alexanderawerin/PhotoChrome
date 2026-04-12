@@ -78,16 +78,11 @@ export class ImageProcessor {
       }
     }
 
-    // 2. Пробуем WebGL для основного pipeline
-    //    Пропускаем WebGL если есть HaldCLUT — CPU path делает LUT lookup.
-    //    WebGL LUT support (sampler3D) — будущая оптимизация.
-    const lut = getCachedLUT(options.simulation.id)
-    if (!lut) {
-      const webglResult = this.processWithWebGL(inputData, options)
-      if (webglResult) return webglResult
-    }
+    // 2. Пробуем WebGL (GPU) — поддерживает и curve, и HaldCLUT через sampler3D
+    const webglResult = this.processWithWebGL(inputData, options)
+    if (webglResult) return webglResult
 
-    // 3. CPU path (with LUT or curve-based fallback)
+    // 3. CPU fallback (with LUT or curve-based)
     return this.processCPU(inputData, options)
   }
 
