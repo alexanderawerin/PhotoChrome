@@ -58,7 +58,7 @@ export function RecipePanel({
       .filter((recipe): recipe is Recipe => recipe !== undefined)
   }, [favoriteIds])
 
-  const editorsChoiceRecipes = getEditorsChoiceRecipes()
+  const editorsChoiceRecipes = useMemo(() => getEditorsChoiceRecipes(), [])
 
   // Compensate scroll position when favorites are added (horizontal mode only)
   useEffect(() => {
