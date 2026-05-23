@@ -1,0 +1,18 @@
+{
+  "id": "neopan-fine-art",
+  "name": "Neopan Fine Art",
+  "author": "Community",
+  "filmSimulation": "neopan",
+  "description": "Smooth tonal fine art black and white with gentle gradations",
+  "settings": {
+    "dynamicRange": "DR100",
+    "highlight": -1,
+    "shadow": -1,
+    "sharpness": -1,
+    "clarity": -2,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 0
+  }
+}

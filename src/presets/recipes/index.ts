@@ -5,6 +5,10 @@ import { parseRecipe } from '../../engine/schemas'
 import proviaPortraitData from './provia-portrait.json'
 import portraVibesData from './portra-vibes.json'
 import proviaVividData from './provia-vivid.json'
+import proviaSlideData from './provia-slide.json'
+import proviaLightData from './provia-daylight.json'
+import proviaVibrantData from './provia-vibrant.json'
+import proviaFilmData from './provia-film.json'
 
 // Velvia
 import vividSunsetData from './vivid-sunset.json'
@@ -26,6 +30,10 @@ import astiaStudioData from './astia-studio.json'
 import pro400hPortraitData from './pro400h-portrait.json'
 import pro400hOverexposedData from './pro400h-overexposed.json'
 import pro400hWeddingData from './pro400h-wedding.json'
+import pro400hSummerData from './pro400h-summer.json'
+import pro400hCinematicData from './pro400h-cinematic.json'
+import pro400hPastelData from './pro400h-pastel.json'
+import pro400hSkinData from './pro400h-skin.json'
 
 // Superia
 import superia400Data from './superia-400.json'
@@ -45,6 +53,8 @@ import acrosRedData from './acros-red.json'
 import neopan400Data from './neopan-400.json'
 import neopan1600Data from './neopan-1600.json'
 import neopanContrastData from './neopan-contrast.json'
+import neopanDocumentaryData from './neopan-documentary.json'
+import neopanFineArtData from './neopan-fine-art.json'
 
 // Eterna (Cinema)
 import eternaCinemaData from './eterna-cinema.json'
@@ -82,6 +92,10 @@ const RAW_RECIPES: Record<string, unknown> = {
   'provia-portrait': proviaPortraitData,
   'portra-vibes': portraVibesData,
   'provia-vivid': proviaVividData,
+  'provia-slide': proviaSlideData,
+  'provia-daylight': proviaLightData,
+  'provia-vibrant': proviaVibrantData,
+  'provia-film': proviaFilmData,
 
   // Velvia
   'vivid-sunset': vividSunsetData,
@@ -103,6 +117,10 @@ const RAW_RECIPES: Record<string, unknown> = {
   'pro400h-portrait': pro400hPortraitData,
   'pro400h-overexposed': pro400hOverexposedData,
   'pro400h-wedding': pro400hWeddingData,
+  'pro400h-summer': pro400hSummerData,
+  'pro400h-cinematic': pro400hCinematicData,
+  'pro400h-pastel': pro400hPastelData,
+  'pro400h-skin': pro400hSkinData,
 
   // Superia
   'superia-400': superia400Data,
@@ -122,6 +140,8 @@ const RAW_RECIPES: Record<string, unknown> = {
   'neopan-400': neopan400Data,
   'neopan-1600': neopan1600Data,
   'neopan-contrast': neopanContrastData,
+  'neopan-documentary': neopanDocumentaryData,
+  'neopan-fine-art': neopanFineArtData,
 
   // Eterna (Cinema)
   'eterna-cinema': eternaCinemaData,
@@ -251,6 +271,10 @@ export const RECIPE_USE_CASES: Record<string, UseCase> = {
   'pro400h-overexposed': 'portrait',
   'pro400h-wedding': 'portrait',
   'portra-vibes': 'portrait',
+  'provia-slide': 'portrait',
+  'pro400h-summer': 'portrait',
+  'pro400h-pastel': 'portrait',
+  'pro400h-skin': 'portrait',
   
   // Landscape
   'velvia-landscape': 'landscape',
@@ -261,6 +285,8 @@ export const RECIPE_USE_CASES: Record<string, UseCase> = {
   'golden-hour': 'landscape',
   'warm-summer': 'landscape',
   'provia-vivid': 'landscape',
+  'provia-daylight': 'landscape',
+  'provia-vibrant': 'landscape',
   
   // Street
   'classic-chrome-street': 'street',
@@ -286,6 +312,7 @@ export const RECIPE_USE_CASES: Record<string, UseCase> = {
   'eterna-night': 'cinema',
   'moody-chrome': 'cinema',
   'cinematic-teal': 'cinema',
+  'pro400h-cinematic': 'cinema',
   
   // B&W
   'acros-standard': 'bw',
@@ -296,6 +323,8 @@ export const RECIPE_USE_CASES: Record<string, UseCase> = {
   'neopan-400': 'bw',
   'neopan-1600': 'bw',
   'neopan-contrast': 'bw',
+  'neopan-documentary': 'bw',
+  'neopan-fine-art': 'bw',
   
   // Everyday
   'superia-400': 'everyday',
@@ -303,6 +332,7 @@ export const RECIPE_USE_CASES: Record<string, UseCase> = {
   'superia-nostalgic': 'everyday',
   'superia-vintage': 'everyday',
   'superia-daylight': 'everyday',
+  'provia-film': 'everyday',
 }
 
 export interface UseCaseGroup {

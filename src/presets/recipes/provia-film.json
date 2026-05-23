@@ -1,0 +1,22 @@
+{
+  "id": "provia-film",
+  "name": "Provia Film",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "provia",
+  "description": "Warm film-like Provia with precise 5600K color temperature",
+  "settings": {
+    "dynamicRange": "DR100",
+    "highlight": -1,
+    "shadow": -1,
+    "color": 1,
+    "sharpness": -1,
+    "clarity": 0,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "whiteBalanceKelvin": 5600,
+    "wbShiftRed": -3,
+    "wbShiftBlue": -1
+  }
+}
