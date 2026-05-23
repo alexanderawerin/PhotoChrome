@@ -38,6 +38,6 @@ test.describe('Editor — Kelvin White Balance', () => {
 
     await panel.getByRole('button', { name: 'White Balance Preset mode' }).click()
     await expect(panel.locator('#slider-kelvin')).not.toBeVisible()
-    await expect(panel.getByRole('button', { name: 'Auto' })).toBeVisible()
+    await expect(panel.getByText('Auto')).toBeVisible()
   })
 })
