@@ -5,8 +5,8 @@
   "filmSimulation": "classic-neg",
   "settings": {
     "dynamicRange": "DR400",
-    "highlight": -1.5,
-    "shadow": -1.5,
+    "highlight": -1,
+    "shadow": -1,
     "color": 3,
     "sharpness": 1,
     "clarity": 0,
