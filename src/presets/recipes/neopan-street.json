@@ -1,0 +1,18 @@
+{
+  "id": "neopan-street",
+  "name": "Neopan Street",
+  "author": "Community",
+  "filmSimulation": "neopan",
+  "description": "Gritty, high-contrast B&W for street photography",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": 1,
+    "shadow": 2,
+    "sharpness": 0,
+    "clarity": 1,
+    "grainEffect": "strong",
+    "grainSize": "small",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 0
+  }
+}

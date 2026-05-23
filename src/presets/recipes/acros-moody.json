@@ -1,0 +1,18 @@
+{
+  "id": "acros-moody",
+  "name": "Acros Moody",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "acros",
+  "description": "High-contrast moody B&W with strong grain for dramatic shots",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -1,
+    "shadow": 3,
+    "sharpness": -2,
+    "clarity": -2,
+    "grainEffect": "strong",
+    "grainSize": "large",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 0
+  }
+}

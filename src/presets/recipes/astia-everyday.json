@@ -1,0 +1,22 @@
+{
+  "id": "astia-everyday",
+  "name": "Astia Everyday",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "astia",
+  "description": "Soft, everyday Astia look for casual and family photography",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": 1,
+    "shadow": 1,
+    "color": -1,
+    "sharpness": -1,
+    "clarity": 0,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "whiteBalance": "auto",
+    "wbShiftRed": -1,
+    "wbShiftBlue": -2
+  }
+}

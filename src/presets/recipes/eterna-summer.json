@@ -1,0 +1,24 @@
+{
+  "id": "eterna-summer",
+  "name": "Eterna Summer",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "eterna",
+  "sourceUrl": "https://fujixweekly.com/2024/04/08/eterna-summer-fujifilm-x-trans-iv-x-trans-v-film-simulation-recipe/",
+  "description": "Warm summertime Kodak-inspired cinematic look",
+  "cameraModel": "X-T5",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": 2,
+    "shadow": 0,
+    "color": 4,
+    "sharpness": -1,
+    "clarity": -3,
+    "grainEffect": "strong",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "weak",
+    "whiteBalance": "daylight",
+    "wbShiftRed": 3,
+    "wbShiftBlue": -7
+  }
+}

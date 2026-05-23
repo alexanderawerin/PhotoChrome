@@ -1,0 +1,21 @@
+{
+  "id": "superia-portrait",
+  "name": "Superia Portrait",
+  "author": "Community",
+  "filmSimulation": "superia",
+  "description": "Soft, warm portrait look on Superia 400 base",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": -1,
+    "shadow": 1,
+    "color": 1,
+    "sharpness": -1,
+    "clarity": -1,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "weak",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 1,
+    "wbShiftBlue": 0
+  }
+}
