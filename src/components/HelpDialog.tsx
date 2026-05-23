@@ -92,7 +92,7 @@ export function HelpDialog({ isOpen, onClose, totalImages = 1 }: HelpDialogProps
         </SheetHeader>
 
         {/* Tab buttons */}
-        <div className="flex border-b border-zinc-800 mt-4">
+        <div className="flex border-b border-zinc-800 mt-4" role="tablist">
           <button
             onClick={() => setActiveTab('whats-new')}
             className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
