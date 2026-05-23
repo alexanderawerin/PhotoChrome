@@ -1,0 +1,22 @@
+{
+  "id": "eterna-timeless",
+  "name": "Eterna Timeless",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "eterna",
+  "description": "Timeless cinematic look with warm highlights and cool shadows",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": 1,
+    "shadow": -1,
+    "color": 3,
+    "sharpness": 0,
+    "clarity": -2,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "weak",
+    "whiteBalance": "auto",
+    "wbShiftRed": 4,
+    "wbShiftBlue": -5
+  }
+}

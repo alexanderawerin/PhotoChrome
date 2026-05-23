@@ -1,0 +1,24 @@
+{
+  "id": "classic-color",
+  "name": "Classic Color",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "classic-chrome",
+  "sourceUrl": "https://fujixweekly.com/2024/04/22/classic-color-fujifilm-x-t5-x-trans-v-and-x-e4-x-trans-iv-film-simulation-recipe/",
+  "description": "Cool, saturated Classic Chrome for travel and everyday shooting",
+  "cameraModel": "X-T5",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": 0,
+    "shadow": -2,
+    "color": 3,
+    "sharpness": -2,
+    "clarity": -2,
+    "grainEffect": "strong",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "weak",
+    "whiteBalanceKelvin": 5300,
+    "wbShiftRed": 0,
+    "wbShiftBlue": -6
+  }
+}

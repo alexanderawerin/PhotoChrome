@@ -1,0 +1,23 @@
+{
+  "id": "velvia-vivid-chrome",
+  "name": "Vivid Chrome",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "velvia",
+  "description": "Bold Velvia landscape look with enhanced clarity and color depth",
+  "cameraModel": "X-T5",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -1,
+    "shadow": 0,
+    "color": 2,
+    "sharpness": -2,
+    "clarity": 3,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "off",
+    "whiteBalance": "daylight",
+    "wbShiftRed": 2,
+    "wbShiftBlue": -2
+  }
+}

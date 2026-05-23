@@ -1,0 +1,22 @@
+{
+  "id": "provia-daylight",
+  "name": "Provia Daylight",
+  "author": "Community",
+  "filmSimulation": "provia",
+  "description": "Standard daylight-balanced Provia for outdoor and travel photography",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": 0,
+    "shadow": 0,
+    "color": 2,
+    "sharpness": 0,
+    "clarity": -1,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "weak",
+    "colorChromeFXBlue": "off",
+    "whiteBalance": "daylight",
+    "wbShiftRed": -3,
+    "wbShiftBlue": 0
+  }
+}

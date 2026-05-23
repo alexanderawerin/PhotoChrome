@@ -1,0 +1,22 @@
+{
+  "id": "velvia-cool",
+  "name": "Velvia Cool",
+  "author": "Community",
+  "filmSimulation": "velvia",
+  "description": "Cool, blue-shifted Velvia for seascapes and overcast scenes",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": 0,
+    "shadow": 0,
+    "color": 2,
+    "sharpness": -1,
+    "clarity": 2,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "strong",
+    "whiteBalance": "cloudy",
+    "wbShiftRed": -2,
+    "wbShiftBlue": -2
+  }
+}

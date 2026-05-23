@@ -1,0 +1,18 @@
+{
+  "id": "neopan-portrait",
+  "name": "Neopan Portrait",
+  "author": "Community",
+  "filmSimulation": "neopan",
+  "description": "Soft, delicate B&W for portrait photography",
+  "settings": {
+    "dynamicRange": "DR100",
+    "highlight": -1,
+    "shadow": 0,
+    "sharpness": -2,
+    "clarity": -3,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 0
+  }
+}

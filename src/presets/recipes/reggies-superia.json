@@ -1,0 +1,22 @@
+{
+  "id": "reggies-superia",
+  "name": "Reggie's Superia",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "classic-neg",
+  "description": "Film-forward portrait recipe with depth for diverse skin tones",
+  "cameraModel": "X-T5",
+  "settings": {
+    "dynamicRange": "DR100",
+    "highlight": -2,
+    "shadow": -1,
+    "color": 1,
+    "sharpness": -2,
+    "clarity": 0,
+    "grainEffect": "strong",
+    "grainSize": "large",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "strong",
+    "wbShiftRed": 1,
+    "wbShiftBlue": -3
+  }
+}

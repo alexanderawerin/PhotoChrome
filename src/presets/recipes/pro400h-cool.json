@@ -1,10 +1,11 @@
 {
-  "id": "pro400h-clean",
-  "name": "Pro 400H Clean",
+  "id": "pro400h-cool",
+  "name": "Pro 400H Cool",
   "author": "Community",
   "filmSimulation": "pro-400h",
+  "description": "Cool, clean Pro 400H look for everyday and indoor photography",
   "settings": {
-    "dynamicRange": "DR100",
+    "dynamicRange": "DR200",
     "highlight": 0,
     "shadow": 0,
     "color": 0,
@@ -14,8 +15,8 @@
     "grainSize": "small",
     "colorChromeEffect": "off",
     "colorChromeFXBlue": "off",
-    "wbShiftRed": 0,
-    "wbShiftBlue": 0
+    "whiteBalanceKelvin": 5000,
+    "wbShiftRed": -1,
+    "wbShiftBlue": -2
   }
 }
-

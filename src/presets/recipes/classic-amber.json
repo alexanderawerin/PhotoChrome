@@ -1,0 +1,22 @@
+{
+  "id": "classic-amber",
+  "name": "Classic Amber",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "classic-neg",
+  "description": "Cinematic amber-toned Classic Negative for streets and lifestyle",
+  "cameraModel": "X-T5",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -2,
+    "shadow": 2,
+    "color": 4,
+    "sharpness": -2,
+    "clarity": -3,
+    "grainEffect": "weak",
+    "grainSize": "large",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "strong",
+    "wbShiftRed": 1,
+    "wbShiftBlue": -6
+  }
+}

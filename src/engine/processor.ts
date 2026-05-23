@@ -9,6 +9,7 @@ import {
   applyToneAdjustment,
   applyDynamicRange,
   applyWhiteBalancePreset,
+  applyWhiteBalanceKelvin,
 } from './color'
 import { applyGrain, grainEffectToStrength, grainSizeToNumber } from './grain'
 import {
@@ -65,7 +66,8 @@ export class ImageProcessor {
     let inputData = imageData
     const needsPreprocess =
       (settings?.dynamicRange && settings.dynamicRange !== 'DR100') ||
-      (settings?.whiteBalance && settings.whiteBalance !== 'auto')
+      (settings?.whiteBalance && settings.whiteBalance !== 'auto') ||
+      (settings?.whiteBalanceKelvin !== undefined)
 
     if (needsPreprocess) {
       inputData = new ImageData(
@@ -78,6 +80,10 @@ export class ImageProcessor {
       }
       if (settings?.whiteBalance && settings.whiteBalance !== 'auto') {
         applyWhiteBalancePreset(inputData, settings.whiteBalance)
+      }
+      // Apply kelvin WB (overrides preset if both are set)
+      if (settings?.whiteBalanceKelvin !== undefined) {
+        applyWhiteBalanceKelvin(inputData, settings.whiteBalanceKelvin)
       }
     }
 

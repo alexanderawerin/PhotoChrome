@@ -1,0 +1,18 @@
+{
+  "id": "neopan-classic",
+  "name": "Neopan Classic",
+  "author": "Community",
+  "filmSimulation": "neopan",
+  "description": "Classic Neopan B&W tonality with crisp detail",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": 1,
+    "shadow": 0,
+    "sharpness": 0,
+    "clarity": 2,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 0
+  }
+}

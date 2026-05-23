@@ -1,0 +1,22 @@
+{
+  "id": "pro400h-cinematic",
+  "name": "Pro 400H Cinematic",
+  "author": "Community",
+  "filmSimulation": "pro-400h",
+  "description": "Cool cinematic look leveraging Pro 400H blue-toned shadows",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -2,
+    "shadow": 2,
+    "color": 0,
+    "sharpness": -2,
+    "clarity": -3,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "whiteBalanceKelvin": 5200,
+    "wbShiftRed": 0,
+    "wbShiftBlue": -2
+  }
+}

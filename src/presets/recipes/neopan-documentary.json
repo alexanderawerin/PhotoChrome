@@ -1,0 +1,18 @@
+{
+  "id": "neopan-documentary",
+  "name": "Neopan Documentary",
+  "author": "Community",
+  "filmSimulation": "neopan",
+  "description": "Classic documentary black and white for street and photojournalism",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": 1,
+    "shadow": 1,
+    "sharpness": 0,
+    "clarity": 1,
+    "grainEffect": "strong",
+    "grainSize": "large",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 0
+  }
+}

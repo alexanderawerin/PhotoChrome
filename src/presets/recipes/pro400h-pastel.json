@@ -1,0 +1,21 @@
+{
+  "id": "pro400h-pastel",
+  "name": "Pro 400H Pastel",
+  "author": "Community",
+  "filmSimulation": "pro-400h",
+  "description": "Dreamy, faded pastel aesthetic for portraits and fashion",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": -2,
+    "shadow": 0,
+    "color": -1,
+    "sharpness": -2,
+    "clarity": -3,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 1,
+    "wbShiftBlue": -2
+  }
+}

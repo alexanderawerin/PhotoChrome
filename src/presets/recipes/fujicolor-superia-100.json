@@ -1,0 +1,21 @@
+{
+  "id": "fujicolor-superia-100",
+  "name": "Fujicolor Superia 100",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "classic-neg",
+  "description": "Nostalgic family snapshot quality from Fujicolor Superia 100 film",
+  "settings": {
+    "dynamicRange": "DR100",
+    "highlight": -1,
+    "shadow": -2,
+    "color": 1,
+    "sharpness": -2,
+    "clarity": -2,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 0,
+    "wbShiftBlue": -1
+  }
+}

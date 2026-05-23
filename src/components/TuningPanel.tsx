@@ -115,6 +115,34 @@ export function TuningPanel({
     }
   }
 
+  const getWBMode = (): 'preset' | 'kelvin' => {
+    // customSettings.whiteBalanceKelvin explicitly set → user chose kelvin mode
+    if (customSettings?.whiteBalanceKelvin !== undefined) return 'kelvin'
+    // customSettings.whiteBalance explicitly set → user chose preset mode (overrides recipe kelvin)
+    if (customSettings?.whiteBalance !== undefined) return 'preset'
+    // Fall back to recipe's default
+    if (recipe?.settings?.whiteBalanceKelvin !== undefined) return 'kelvin'
+    return 'preset'
+  }
+
+  const getKelvinValue = (): number => {
+    if (customSettings?.whiteBalanceKelvin !== undefined) return customSettings.whiteBalanceKelvin
+    if (recipe?.settings?.whiteBalanceKelvin !== undefined) return recipe.settings.whiteBalanceKelvin
+    return 5500
+  }
+
+  const handleWBModeChange = (mode: 'preset' | 'kelvin') => {
+    if (mode === 'kelvin') {
+      onSettingsChange({ ...customSettings, whiteBalance: undefined, whiteBalanceKelvin: 5500 })
+    } else {
+      onSettingsChange({ ...customSettings, whiteBalanceKelvin: undefined, whiteBalance: 'auto' })
+    }
+  }
+
+  const handleKelvinChange = (value: number) => {
+    onSettingsChange({ ...customSettings, whiteBalanceKelvin: value })
+  }
+
   // Получаем значение слайдера
   const getSliderValue = (key: keyof RecipeSettings): number => {
     const customValue = customSettings?.[key]
@@ -333,29 +361,77 @@ export function TuningPanel({
             </ToggleGroup>
           </div>
 
-          {/* White Balance preset */}
+          {/* White Balance */}
           <div className="space-y-2">
-            <label id="toggle-label-whiteBalance" className="text-sm text-zinc-300 block">
-              White Balance
-            </label>
-            <ToggleGroup
-              type="single"
-              value={getWBPreset()}
-              onValueChange={handleWBChange}
-              className="grid grid-cols-2 gap-1"
-              aria-labelledby="toggle-label-whiteBalance"
-            >
-              {WB_OPTIONS.map((option) => (
-                <ToggleGroupItem
-                  key={option.value}
-                  value={option.value}
-                  aria-label={option.label}
-                  className="text-xs w-full"
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-zinc-300">White Balance</span>
+              <div className="flex rounded-md overflow-hidden border border-zinc-700">
+                <button
+                  onClick={() => handleWBModeChange('preset')}
+                  className={`px-2 py-1 text-xs transition-colors ${
+                    getWBMode() === 'preset'
+                      ? 'bg-zinc-600 text-white'
+                      : 'bg-transparent text-zinc-500 hover:text-zinc-300'
+                  }`}
+                  aria-pressed={getWBMode() === 'preset'}
+                  aria-label="White Balance Preset mode"
                 >
-                  {option.label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+                  Preset
+                </button>
+                <button
+                  onClick={() => handleWBModeChange('kelvin')}
+                  className={`px-2 py-1 text-xs transition-colors ${
+                    getWBMode() === 'kelvin'
+                      ? 'bg-zinc-600 text-white'
+                      : 'bg-transparent text-zinc-500 hover:text-zinc-300'
+                  }`}
+                  aria-pressed={getWBMode() === 'kelvin'}
+                  aria-label="White Balance Kelvin mode"
+                >
+                  Kelvin
+                </button>
+              </div>
+            </div>
+
+            {getWBMode() === 'preset' ? (
+              <ToggleGroup
+                type="single"
+                value={getWBPreset()}
+                onValueChange={handleWBChange}
+                className="grid grid-cols-2 gap-1"
+                aria-label="White Balance preset"
+              >
+                {WB_OPTIONS.map((option) => (
+                  <ToggleGroupItem
+                    key={option.value}
+                    value={option.value}
+                    aria-label={option.label}
+                    className="text-xs w-full"
+                  >
+                    {option.label}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="slider-kelvin" className="text-sm text-zinc-500">Temperature</label>
+                  <span className="text-sm text-zinc-500 tabular-nums" aria-hidden="true">
+                    {getKelvinValue()}K
+                  </span>
+                </div>
+                <Slider
+                  id="slider-kelvin"
+                  value={[getKelvinValue()]}
+                  min={2500}
+                  max={10000}
+                  step={100}
+                  onValueChange={(values) => handleKelvinChange(values[0])}
+                  className="w-full"
+                  aria-label={`White balance ${getKelvinValue()} Kelvin`}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

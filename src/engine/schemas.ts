@@ -134,6 +134,14 @@ function isValidRecipeSettings(value: unknown): value is RecipeSettings {
   if (!checkOptionalNumber(obj, 'wbShiftRed')) return false
   if (!checkOptionalNumber(obj, 'wbShiftBlue')) return false
 
+  // Validate whiteBalanceKelvin range
+  if (obj.whiteBalanceKelvin !== undefined) {
+    if (typeof obj.whiteBalanceKelvin !== 'number' ||
+        obj.whiteBalanceKelvin < 2500 || obj.whiteBalanceKelvin > 10000) {
+      return false
+    }
+  }
+
   return true
 }
 
@@ -177,7 +185,20 @@ export function parseRecipe(data: unknown): Recipe {
     }
     recipe.author = obj.author
   }
-  
+
+  if (obj.sourceUrl !== undefined) {
+    if (typeof obj.sourceUrl !== 'string') throw new Error('Invalid recipe: sourceUrl must be a string')
+    recipe.sourceUrl = obj.sourceUrl
+  }
+  if (obj.description !== undefined) {
+    if (typeof obj.description !== 'string') throw new Error('Invalid recipe: description must be a string')
+    recipe.description = obj.description
+  }
+  if (obj.cameraModel !== undefined) {
+    if (typeof obj.cameraModel !== 'string') throw new Error('Invalid recipe: cameraModel must be a string')
+    recipe.cameraModel = obj.cameraModel
+  }
+
   return recipe
 }
 

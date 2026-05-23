@@ -1,0 +1,24 @@
+{
+  "id": "astia-cinestill",
+  "name": "Astia CineStill",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "astia",
+  "sourceUrl": "https://fujixweekly.com/tag/astia-film-simulation-recipe/",
+  "description": "CineStill 400D-inspired cinematic portrait look on Astia base",
+  "cameraModel": "X-T5",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": -2,
+    "shadow": 0,
+    "color": 2,
+    "sharpness": -2,
+    "clarity": -4,
+    "grainEffect": "strong",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "weak",
+    "whiteBalance": "fluorescent",
+    "wbShiftRed": -2,
+    "wbShiftBlue": 4
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "astia-light",
+  "name": "Astia Light",
+  "author": "Community",
+  "filmSimulation": "astia",
+  "description": "Light, airy Astia for soft portrait and lifestyle photography",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": -1,
+    "shadow": 0,
+    "color": 0,
+    "sharpness": -2,
+    "clarity": -2,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "whiteBalance": "daylight",
+    "wbShiftRed": 1,
+    "wbShiftBlue": -1
+  }
+}

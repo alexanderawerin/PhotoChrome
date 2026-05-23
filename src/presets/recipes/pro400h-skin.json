@@ -1,0 +1,21 @@
+{
+  "id": "pro400h-skin",
+  "name": "Pro 400H Skin",
+  "author": "Community",
+  "filmSimulation": "pro-400h",
+  "description": "Flattering skin tones for Pro 400H style portraits",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": -1,
+    "shadow": 2,
+    "color": 1,
+    "sharpness": -1,
+    "clarity": -1,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 2,
+    "wbShiftBlue": 0
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "chrome-portrait",
+  "name": "Chrome Portrait",
+  "author": "Community",
+  "filmSimulation": "classic-chrome",
+  "description": "Warm, soft Classic Chrome for flattering portrait photography",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": -2,
+    "shadow": -1,
+    "color": 2,
+    "sharpness": -2,
+    "clarity": -2,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 2,
+    "wbShiftBlue": -4
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "chrome-natural",
+  "name": "Chrome Natural",
+  "author": "Community",
+  "filmSimulation": "classic-chrome",
+  "description": "Natural, balanced Classic Chrome for everyday photography",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": -1,
+    "shadow": -1,
+    "color": 1,
+    "sharpness": -1,
+    "clarity": 0,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "weak",
+    "colorChromeFXBlue": "off",
+    "whiteBalance": "daylight",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 0
+  }
+}

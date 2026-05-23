@@ -1,0 +1,24 @@
+{
+  "id": "provia-slide",
+  "name": "Provia Slide",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "provia",
+  "sourceUrl": "https://fujixweekly.com/2024/04/15/provia-slide-fujifilm-x-pro2-x-trans-iii-film-simulation-recipe/",
+  "description": "Clean slide film look inspired by Fujicolor Provia 100F reversal film",
+  "cameraModel": "X-Pro2",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": -1,
+    "shadow": 1,
+    "color": 3,
+    "sharpness": -1,
+    "clarity": 0,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "whiteBalance": "fluorescent",
+    "wbShiftRed": -1,
+    "wbShiftBlue": -8
+  }
+}

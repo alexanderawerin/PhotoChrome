@@ -1,0 +1,22 @@
+{
+  "id": "kodak-portra-800",
+  "name": "Kodak Portra 800",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "classic-chrome",
+  "description": "Warm cinematic look inspired by Kodak Portra 800 film",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -2,
+    "shadow": 0,
+    "color": 3,
+    "sharpness": -2,
+    "clarity": -3,
+    "grainEffect": "strong",
+    "grainSize": "large",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "off",
+    "whiteBalanceKelvin": 6600,
+    "wbShiftRed": -1,
+    "wbShiftBlue": -3
+  }
+}

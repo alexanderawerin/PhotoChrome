@@ -1,21 +1,22 @@
 {
-  "id": "superia-clean",
-  "name": "Superia Clean",
+  "id": "superia-travel",
+  "name": "Superia Travel",
   "author": "Community",
   "filmSimulation": "superia",
+  "description": "Punchy, saturated look for travel and outdoor photography",
   "settings": {
-    "dynamicRange": "DR100",
+    "dynamicRange": "DR200",
     "highlight": 0,
-    "shadow": 0,
-    "color": 0,
+    "shadow": 1,
+    "color": 2,
     "sharpness": 0,
     "clarity": 0,
     "grainEffect": "off",
     "grainSize": "small",
     "colorChromeEffect": "off",
     "colorChromeFXBlue": "off",
+    "whiteBalance": "daylight",
     "wbShiftRed": 0,
     "wbShiftBlue": 0
   }
 }
-

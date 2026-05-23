@@ -13,6 +13,9 @@ export const APP_VERSION = '1.3'
 /** Application URL for watermark */
 export const APP_URL = 'photochrome.netdesigner.ru'
 
+/** GitHub repository URL */
+export const GITHUB_REPO_URL = 'https://github.com/alexanderawerin/photochrome'
+
 // ============================================================================
 // Image Processing
 // ============================================================================

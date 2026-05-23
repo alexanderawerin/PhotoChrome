@@ -1,0 +1,22 @@
+{
+  "id": "provia-afternoon",
+  "name": "Provia Afternoon",
+  "author": "Community",
+  "filmSimulation": "provia",
+  "description": "Warm afternoon light Provia for outdoor and travel photography",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": 1,
+    "shadow": 0,
+    "color": 2,
+    "sharpness": 0,
+    "clarity": 1,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "weak",
+    "colorChromeFXBlue": "off",
+    "whiteBalance": "daylight",
+    "wbShiftRed": 1,
+    "wbShiftBlue": -1
+  }
+}

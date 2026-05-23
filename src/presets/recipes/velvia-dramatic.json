@@ -1,0 +1,21 @@
+{
+  "id": "velvia-dramatic",
+  "name": "Velvia Dramatic",
+  "author": "Community",
+  "filmSimulation": "velvia",
+  "description": "Dramatic, high-impact Velvia with bold colors and deep shadows",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -2,
+    "shadow": -1,
+    "color": 4,
+    "sharpness": 0,
+    "clarity": 4,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 0
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "velvia-soft",
+  "name": "Velvia Soft",
+  "author": "Community",
+  "filmSimulation": "velvia",
+  "description": "Toned-down Velvia for gentle, everyday color photography",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": -1,
+    "shadow": 0,
+    "color": -1,
+    "sharpness": -1,
+    "clarity": -1,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "weak",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 0
+  }
+}

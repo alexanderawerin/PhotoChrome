@@ -1,0 +1,18 @@
+{
+  "id": "acros-street-grain",
+  "name": "Acros Street Grain",
+  "author": "Community",
+  "filmSimulation": "acros",
+  "description": "Gritty street B&W with expressive grain",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -1,
+    "shadow": 2,
+    "sharpness": 0,
+    "clarity": 0,
+    "grainEffect": "strong",
+    "grainSize": "large",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 0
+  }
+}

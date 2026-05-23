@@ -1,0 +1,22 @@
+{
+  "id": "classic-neg-cinema",
+  "name": "Classic Neg Cinema",
+  "author": "Community",
+  "filmSimulation": "classic-neg",
+  "description": "Cinematic Classic Negative with film grain for moody storytelling",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -1,
+    "shadow": -1,
+    "color": 2,
+    "sharpness": -2,
+    "clarity": -2,
+    "grainEffect": "strong",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "weak",
+    "whiteBalance": "auto",
+    "wbShiftRed": 0,
+    "wbShiftBlue": -2
+  }
+}

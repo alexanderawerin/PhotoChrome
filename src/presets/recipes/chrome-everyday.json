@@ -1,12 +1,13 @@
 {
-  "id": "astia-clean",
-  "name": "Astia Clean",
+  "id": "chrome-everyday",
+  "name": "Chrome Everyday",
   "author": "Community",
-  "filmSimulation": "astia",
+  "filmSimulation": "classic-chrome",
+  "description": "Understated, neutral Classic Chrome for everyday casual photography",
   "settings": {
     "dynamicRange": "DR100",
-    "highlight": 0,
-    "shadow": 0,
+    "highlight": -1,
+    "shadow": -1,
     "color": 0,
     "sharpness": 0,
     "clarity": 0,
@@ -18,4 +19,3 @@
     "wbShiftBlue": 0
   }
 }
-

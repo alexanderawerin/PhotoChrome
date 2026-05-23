@@ -1,0 +1,23 @@
+{
+  "id": "provia-vibrant",
+  "name": "Provia Vibrant",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "provia",
+  "description": "Punchy, saturated Provia look for landscapes and travel",
+  "cameraModel": "X-Pro3",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": 2,
+    "shadow": 1,
+    "color": 2,
+    "sharpness": 0,
+    "clarity": -3,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "weak",
+    "whiteBalance": "daylight",
+    "wbShiftRed": -3,
+    "wbShiftBlue": 0
+  }
+}
