@@ -116,7 +116,11 @@ export function TuningPanel({
   }
 
   const getWBMode = (): 'preset' | 'kelvin' => {
+    // customSettings.whiteBalanceKelvin explicitly set → user chose kelvin mode
     if (customSettings?.whiteBalanceKelvin !== undefined) return 'kelvin'
+    // customSettings.whiteBalance explicitly set → user chose preset mode (overrides recipe kelvin)
+    if (customSettings?.whiteBalance !== undefined) return 'preset'
+    // Fall back to recipe's default
     if (recipe?.settings?.whiteBalanceKelvin !== undefined) return 'kelvin'
     return 'preset'
   }
