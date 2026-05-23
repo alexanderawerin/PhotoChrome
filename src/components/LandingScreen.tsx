@@ -105,7 +105,7 @@ export function LandingScreen({ onFileSelect }: LandingScreenProps) {
             Photochrome
           </h1>
           <p className="text-sm text-zinc-500 max-w-xs mx-auto leading-relaxed">
-            Film simulations<br/>for your photos and videos
+            One hundred film simulations<br/>for your photos and videos
           </p>
         </header>
 

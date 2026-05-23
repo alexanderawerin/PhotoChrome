@@ -20,6 +20,15 @@ type Tab = 'whats-new' | 'shortcuts' | 'feedback'
 
 const WHATS_NEW = [
   {
+    version: '1.4',
+    items: [
+      '100 ready-made film recipes to choose from',
+      'Set white balance by color temperature (Kelvin)',
+      "Editor's Choice: a curated selection of top recipes",
+      'Send feedback directly from the app',
+    ],
+  },
+  {
     version: '1.3',
     items: [
       'More accurate colors based on real Fujifilm camera profiles',
