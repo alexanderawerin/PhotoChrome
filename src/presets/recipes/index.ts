@@ -2,13 +2,11 @@ import { Recipe } from '../../engine/types'
 import { parseRecipe } from '../../engine/schemas'
 
 // Provia
-// import proviaCleanData from './provia-clean.json'
 import proviaPortraitData from './provia-portrait.json'
 import portraVibesData from './portra-vibes.json'
 import proviaVividData from './provia-vivid.json'
 
 // Velvia
-// import velviaCleanData from './velvia-clean.json'
 import vividSunsetData from './vivid-sunset.json'
 import warmSummerData from './warm-summer.json'
 import velviaSunsetData from './velvia-sunset.json'
@@ -18,7 +16,6 @@ import velviaVibrantData from './velvia-vibrant.json'
 import velviaLandscapeData from './velvia-landscape.json'
 
 // Astia
-// import astiaCleanData from './astia-clean.json'
 import astiaPortraitData from './astia-portrait.json'
 import astiaSoftDaylightData from './astia-soft-daylight.json'
 import astiaNaturalData from './astia-natural.json'
@@ -26,13 +23,11 @@ import astiaWarmData from './astia-warm.json'
 import astiaStudioData from './astia-studio.json'
 
 // Pro 400H
-// import pro400hCleanData from './pro400h-clean.json'
 import pro400hPortraitData from './pro400h-portrait.json'
 import pro400hOverexposedData from './pro400h-overexposed.json'
 import pro400hWeddingData from './pro400h-wedding.json'
 
 // Superia
-// import superiaCleanData from './superia-clean.json'
 import superia400Data from './superia-400.json'
 import superiaSummerData from './superia-summer.json'
 import superiaNostalgicData from './superia-nostalgic.json'
@@ -40,7 +35,6 @@ import superiaVintageData from './superia-vintage.json'
 import superiaDaylightData from './superia-daylight.json'
 
 // Acros (B&W)
-// import acrosCleanData from './acros-clean.json'
 import acrosStandardData from './acros-standard.json'
 import acrosHighContrastData from './acros-high-contrast.json'
 import acrosSoftData from './acros-soft.json'
@@ -48,13 +42,11 @@ import acrosYellowData from './acros-yellow.json'
 import acrosRedData from './acros-red.json'
 
 // Neopan (B&W)
-// import neopanCleanData from './neopan-clean.json'
 import neopan400Data from './neopan-400.json'
 import neopan1600Data from './neopan-1600.json'
 import neopanContrastData from './neopan-contrast.json'
 
 // Eterna (Cinema)
-// import eternaCleanData from './eterna-clean.json'
 import eternaCinemaData from './eterna-cinema.json'
 import eternaBleachBypassData from './eterna-bleach-bypass.json'
 import eternaTealOrangeData from './eterna-teal-orange.json'
@@ -62,7 +54,6 @@ import eternaMutedData from './eterna-muted.json'
 import eternaNightData from './eterna-night.json'
 
 // Classic Chrome
-// import classicChromeCleanData from './classic-chrome-clean.json'
 import moodyChromeData from './moody-chrome.json'
 import cinematicTealData from './cinematic-teal.json'
 import classicChromeWarmData from './classic-chrome-warm.json'
@@ -74,7 +65,6 @@ import classicChromeStreetData from './classic-chrome-street.json'
 import classicChromeVintageData from './classic-chrome-vintage.json'
 
 // Classic Negative
-// import classicNegCleanData from './classic-neg-clean.json'
 import mapleLetterData from './maple-letter.json'
 import classicNegMutedData from './classic-neg-muted.json'
 import classicNegSoftData from './classic-neg-soft.json'
@@ -89,13 +79,11 @@ import classicNegVibrantData from './classic-neg-vibrant.json'
  */
 const RAW_RECIPES: Record<string, unknown> = {
   // Provia
-  // 'provia-clean': proviaCleanData,
   'provia-portrait': proviaPortraitData,
   'portra-vibes': portraVibesData,
   'provia-vivid': proviaVividData,
 
   // Velvia
-  // 'velvia-clean': velviaCleanData,
   'vivid-sunset': vividSunsetData,
   'warm-summer': warmSummerData,
   'velvia-sunset': velviaSunsetData,
@@ -105,7 +93,6 @@ const RAW_RECIPES: Record<string, unknown> = {
   'velvia-landscape': velviaLandscapeData,
   
   // Astia
-  // 'astia-clean': astiaCleanData,
   'astia-portrait': astiaPortraitData,
   'astia-soft-daylight': astiaSoftDaylightData,
   'astia-natural': astiaNaturalData,
@@ -113,13 +100,11 @@ const RAW_RECIPES: Record<string, unknown> = {
   'astia-studio': astiaStudioData,
 
   // Pro 400H
-  // 'pro400h-clean': pro400hCleanData,
   'pro400h-portrait': pro400hPortraitData,
   'pro400h-overexposed': pro400hOverexposedData,
   'pro400h-wedding': pro400hWeddingData,
 
   // Superia
-  // 'superia-clean': superiaCleanData,
   'superia-400': superia400Data,
   'superia-summer': superiaSummerData,
   'superia-nostalgic': superiaNostalgicData,
@@ -127,7 +112,6 @@ const RAW_RECIPES: Record<string, unknown> = {
   'superia-daylight': superiaDaylightData,
 
   // Acros (B&W)
-  // 'acros-clean': acrosCleanData,
   'acros-standard': acrosStandardData,
   'acros-high-contrast': acrosHighContrastData,
   'acros-soft': acrosSoftData,
@@ -135,13 +119,11 @@ const RAW_RECIPES: Record<string, unknown> = {
   'acros-red': acrosRedData,
 
   // Neopan (B&W)
-  // 'neopan-clean': neopanCleanData,
   'neopan-400': neopan400Data,
   'neopan-1600': neopan1600Data,
   'neopan-contrast': neopanContrastData,
 
   // Eterna (Cinema)
-  // 'eterna-clean': eternaCleanData,
   'eterna-cinema': eternaCinemaData,
   'eterna-bleach-bypass': eternaBleachBypassData,
   'eterna-teal-orange': eternaTealOrangeData,
@@ -149,7 +131,6 @@ const RAW_RECIPES: Record<string, unknown> = {
   'eterna-night': eternaNightData,
 
   // Classic Chrome
-  // 'classic-chrome-clean': classicChromeCleanData,
   'moody-chrome': moodyChromeData,
   'cinematic-teal': cinematicTealData,
   'classic-chrome-warm': classicChromeWarmData,
@@ -161,7 +142,6 @@ const RAW_RECIPES: Record<string, unknown> = {
   'classic-chrome-vintage': classicChromeVintageData,
 
   // Classic Negative
-  // 'classic-neg-clean': classicNegCleanData,
   'maple-letter': mapleLetterData,
   'classic-neg-muted': classicNegMutedData,
   'classic-neg-soft': classicNegSoftData,

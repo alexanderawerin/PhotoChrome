@@ -47,6 +47,7 @@ export interface RecipeSettings {
   colorChromeEffect?: EffectStrength
   colorChromeFXBlue?: EffectStrength
   whiteBalance?: 'auto' | 'daylight' | 'shade' | 'cloudy' | 'tungsten' | 'fluorescent'
+  whiteBalanceKelvin?: number  // 2500-10000, overrides whiteBalance when set
   wbShiftRed?: number   // -9 to +9
   wbShiftBlue?: number  // -9 to +9
 }
@@ -57,6 +58,10 @@ export interface Recipe {
   author?: string
   filmSimulation: string
   settings: RecipeSettings
+  // Optional metadata
+  sourceUrl?: string     // e.g. "https://fujixweekly.com/..."
+  description?: string   // max ~120 chars
+  cameraModel?: string   // e.g. "X-T5"
 }
 
 export interface ProcessingOptions {
