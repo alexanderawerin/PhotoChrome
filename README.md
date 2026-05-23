@@ -5,7 +5,10 @@ Apply legendary Fujifilm film simulations to your photos and videos right in the
 ## Features
 
 - **10 film simulations**: Provia, Velvia, Classic Chrome, Classic Neg, Astia, Eterna, Acros, Superia, Pro 400H, Neopan
-- **52 ready-made presets**: Community-curated recipes grouped by style
+- **100 ready-made presets**: Community-curated recipes grouped by style
+- **Editor's Choice**: 10 curated top picks by the community
+- **White Balance Kelvin**: Fine-tune color temperature from 2500K to 10000K
+- **Send feedback**: Report bugs or request features directly from the Help dialog
 - **Live preview**: Instant preview of all presets on your photo
 - **Editing tools**: Rotate, crop with draggable frame, fine-tune any parameter
 - **Video support**: Apply simulations to videos up to 30 seconds
