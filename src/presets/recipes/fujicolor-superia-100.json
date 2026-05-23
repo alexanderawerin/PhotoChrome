@@ -2,7 +2,7 @@
   "id": "fujicolor-superia-100",
   "name": "Fujicolor Superia 100",
   "author": "Fuji X Weekly",
-  "filmSimulation": "superia",
+  "filmSimulation": "classic-neg",
   "description": "Nostalgic family snapshot quality from Fujicolor Superia 100 film",
   "settings": {
     "dynamicRange": "DR100",
