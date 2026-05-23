@@ -1,10 +1,10 @@
 import { useMemo, Fragment, useRef, useEffect, useState } from 'react'
-import { Shuffle, Heart, Film, Layers } from 'lucide-react'
+import { Shuffle, Heart, Film, Layers, Star } from 'lucide-react'
 import { Button } from './ui/button'
 import { ButtonGroup } from './ui/button-group'
 import { Recipe } from '../engine/types'
 import { RecipeCard } from './RecipeCard'
-import { getAllRecipes, getRecipesGroupedBySimulation, getRecipesGroupedByUseCase, RECIPES } from '../presets/recipes'
+import { getAllRecipes, getRecipesGroupedBySimulation, getRecipesGroupedByUseCase, getEditorsChoiceRecipes, RECIPES } from '../presets/recipes'
 
 type GroupingMode = 'film' | 'useCase'
 
@@ -57,6 +57,8 @@ export function RecipePanel({
       .map(id => RECIPES[id])
       .filter((recipe): recipe is Recipe => recipe !== undefined)
   }, [favoriteIds])
+
+  const editorsChoiceRecipes = getEditorsChoiceRecipes()
 
   // Compensate scroll position when favorites are added (horizontal mode only)
   useEffect(() => {
@@ -354,6 +356,46 @@ export function RecipePanel({
               </div>
             )}
           </section>
+
+          {/* Editor's Choice */}
+          {editorsChoiceRecipes.length > 0 && (
+            <section aria-label="Editor's Choice presets">
+              <div className="flex items-center gap-2 mb-2 px-1">
+                <Star className="w-3.5 h-3.5 text-zinc-400" aria-hidden="true" />
+                <h3
+                  className="text-xs font-medium text-zinc-400 uppercase tracking-wider"
+                  id="group-editors-choice"
+                >
+                  Editor's Choice
+                </h3>
+                <div className="flex-1 h-px bg-zinc-800" aria-hidden="true" />
+                <span
+                  className="text-[10px] text-zinc-600"
+                  aria-label={`${editorsChoiceRecipes.length} presets`}
+                >
+                  {editorsChoiceRecipes.length}
+                </span>
+              </div>
+              <div
+                className="grid grid-cols-2 gap-2"
+                role="list"
+                aria-labelledby="group-editors-choice"
+              >
+                {editorsChoiceRecipes.map((recipe) => (
+                  <div key={`ec-${recipe.id}`} role="listitem">
+                    <RecipeCard
+                      recipe={recipe}
+                      sourceImage={sourceImage}
+                      isActive={activeRecipeId === recipe.id}
+                      isFavorite={favoritesSet.has(recipe.id)}
+                      onFavoriteToggle={onFavoriteToggle}
+                      onClick={() => onRecipeSelect(recipe)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Groups - by film or use case */}
           {groupingMode === 'film' ? (

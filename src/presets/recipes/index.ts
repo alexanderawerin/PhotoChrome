@@ -514,13 +514,13 @@ export const getRecipesGroupedByUseCase = (): UseCaseGroup[] => {
     bw: [],
     everyday: [],
   }
-  
+
   // Группируем рецепты по категории использования
   Object.entries(RECIPES).forEach(([id, recipe]) => {
     const useCase = RECIPE_USE_CASES[id] || 'everyday'
     groups[useCase].push(recipe)
   })
-  
+
   // Возвращаем в заданном порядке
   return USE_CASE_ORDER
     .filter(useCaseId => groups[useCaseId]?.length > 0)
@@ -529,4 +529,24 @@ export const getRecipesGroupedByUseCase = (): UseCaseGroup[] => {
       useCaseName: USE_CASE_NAMES[useCaseId],
       recipes: groups[useCaseId]
     }))
+}
+
+// Curated top 10 — ordered by popularity and source recognition
+export const EDITORS_CHOICE: readonly string[] = [
+  'classic-color',
+  'velvia-vivid',
+  'kodak-portra-800',
+  'provia-slide',
+  'astia-cinestill',
+  'eterna-summer',
+  'acros-film-grain',
+  'classic-amber',
+  'pro400h-pastel',
+  'neopan-documentary',
+]
+
+export function getEditorsChoiceRecipes(): Recipe[] {
+  return EDITORS_CHOICE
+    .map(id => RECIPES[id])
+    .filter((r): r is Recipe => r !== undefined)
 }
