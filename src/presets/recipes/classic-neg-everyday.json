@@ -1,0 +1,21 @@
+{
+  "id": "classic-neg-everyday",
+  "name": "Classic Neg Everyday",
+  "author": "Community",
+  "filmSimulation": "classic-neg",
+  "description": "Versatile all-around Classic Negative for any shooting situation",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -2,
+    "shadow": -2,
+    "color": 2,
+    "sharpness": -2,
+    "clarity": 0,
+    "grainEffect": "strong",
+    "grainSize": "large",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "weak",
+    "wbShiftRed": 2,
+    "wbShiftBlue": -2
+  }
+}

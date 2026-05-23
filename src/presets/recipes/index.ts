@@ -102,6 +102,22 @@ import classicNegStreetData from './classic-neg-street.json'
 import fadedMemoriesData from './faded-memories.json'
 import classicNegWarmData from './classic-neg-warm.json'
 import classicNegVibrantData from './classic-neg-vibrant.json'
+import classicAmberData from './classic-amber.json'
+import retroFujicolorData from './retro-fujicolor.json'
+import classicNegEverydayData from './classic-neg-everyday.json'
+
+// Superia (additional)
+import reggiesuperiaData from './reggies-superia.json'
+import fujicolorSuperia100Data from './fujicolor-superia-100.json'
+
+// Eterna (Cinema) - additional
+import eternaWarmNegData from './eterna-warm-neg.json'
+import eternaGrainData from './eterna-grain.json'
+
+// Acros (B&W) - additional
+import acrosFilmGrainData from './acros-film-grain.json'
+import acrosKodakTmaxData from './acros-kodak-tmax.json'
+import acrosStreetGrainData from './acros-street-grain.json'
 
 /**
  * Raw recipe data organized by ID.
@@ -209,6 +225,22 @@ const RAW_RECIPES: Record<string, unknown> = {
   'faded-memories': fadedMemoriesData,
   'classic-neg-warm': classicNegWarmData,
   'classic-neg-vibrant': classicNegVibrantData,
+  'classic-amber': classicAmberData,
+  'retro-fujicolor': retroFujicolorData,
+  'classic-neg-everyday': classicNegEverydayData,
+
+  // Superia (additional)
+  'reggies-superia': reggiesuperiaData,
+  'fujicolor-superia-100': fujicolorSuperia100Data,
+
+  // Eterna (Cinema) (additional)
+  'eterna-warm-neg': eternaWarmNegData,
+  'eterna-grain': eternaGrainData,
+
+  // Acros (B&W) (additional)
+  'acros-film-grain': acrosFilmGrainData,
+  'acros-kodak-tmax': acrosKodakTmaxData,
+  'acros-street-grain': acrosStreetGrainData,
 }
 
 /**
@@ -352,6 +384,7 @@ export const RECIPE_USE_CASES: Record<string, UseCase> = {
   'faded-memories': 'street',
   'rainy-day': 'street',
   'kodak-emulsion': 'street',
+  'classic-amber': 'street',
   
   // Cinema
   'eterna-cinema': 'cinema',
@@ -364,6 +397,8 @@ export const RECIPE_USE_CASES: Record<string, UseCase> = {
   'moody-chrome': 'cinema',
   'cinematic-teal': 'cinema',
   'pro400h-cinematic': 'cinema',
+  'eterna-warm-neg': 'cinema',
+  'eterna-grain': 'cinema',
   
   // B&W
   'acros-standard': 'bw',
@@ -380,6 +415,9 @@ export const RECIPE_USE_CASES: Record<string, UseCase> = {
   'neopan-fine-art': 'bw',
   'neopan-portrait': 'bw',
   'neopan-street': 'bw',
+  'acros-film-grain': 'bw',
+  'acros-kodak-tmax': 'bw',
+  'acros-street-grain': 'bw',
   
   // Everyday
   'superia-400': 'everyday',
@@ -393,6 +431,12 @@ export const RECIPE_USE_CASES: Record<string, UseCase> = {
   'chrome-natural': 'everyday',
   'kodak-portra-800': 'cinema',
   'velvia-soft': 'everyday',
+  'retro-fujicolor': 'everyday',
+  'classic-neg-everyday': 'everyday',
+  'fujicolor-superia-100': 'everyday',
+
+  // Portrait (additional)
+  'reggies-superia': 'portrait',
 }
 
 export interface UseCaseGroup {

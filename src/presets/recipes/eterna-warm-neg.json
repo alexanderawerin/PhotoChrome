@@ -1,0 +1,21 @@
+{
+  "id": "eterna-warm-neg",
+  "name": "Eterna Warm Neg",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "eterna",
+  "description": "Warm cinematic negative look for night and indoor scenes",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": 1,
+    "shadow": 2,
+    "color": 4,
+    "sharpness": -1,
+    "clarity": 0,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 6,
+    "wbShiftBlue": -7
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "acros-kodak-tmax",
+  "name": "Acros Kodak T-Max",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "acros",
+  "description": "Acros tuned to mimic smooth Kodak T-Max 100 tonality",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": 1,
+    "shadow": 3,
+    "sharpness": 2,
+    "clarity": 1,
+    "grainEffect": "strong",
+    "grainSize": "large",
+    "wbShiftRed": 4,
+    "wbShiftBlue": 7
+  }
+}

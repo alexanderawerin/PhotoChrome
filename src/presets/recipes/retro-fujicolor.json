@@ -1,0 +1,22 @@
+{
+  "id": "retro-fujicolor",
+  "name": "Retro Fujicolor",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "classic-neg",
+  "description": "90s point-and-shoot film aesthetic for everyday moments",
+  "cameraModel": "X-T5",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -2,
+    "shadow": -2,
+    "color": -1,
+    "sharpness": -2,
+    "clarity": 0,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": -1,
+    "wbShiftBlue": -3
+  }
+}
