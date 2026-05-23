@@ -41,4 +41,28 @@ test.describe('Editor — Kelvin White Balance', () => {
     await expect(panel.getByText('Auto')).toBeVisible()
     await expect(panel.locator('#slider-kelvin')).not.toBeVisible()
   })
+
+  test('recipe with kelvin WB: switching to preset mode disables kelvin', async ({ page, editorPage }) => {
+    // Select Classic Color — a recipe that has whiteBalanceKelvin: 5300
+    // Use .first() because the card appears in both Editor's Choice and Classic Chrome sections
+    const classicColorCard = page.locator('aside [aria-label="Apply preset Classic Color"]').first()
+    await classicColorCard.click()
+    await page.locator('aside [aria-label="Apply preset Classic Color, selected"]').first().waitFor({ state: 'visible', timeout: 10_000 })
+
+    // Open tuning panel for this recipe
+    await page.locator('[aria-label^="Tune "]').first().click()
+    await expect(tuningOverlay(page)).toHaveClass(/tuning-panel-open/)
+
+    const panel = tuningOverlay(page)
+
+    // Recipe has whiteBalanceKelvin — panel should start in Kelvin mode
+    await expect(panel.locator('#slider-kelvin')).toBeVisible()
+
+    // Switch to Preset mode explicitly
+    await panel.getByRole('button', { name: 'White Balance Preset mode' }).click()
+
+    // Kelvin slider must disappear and preset buttons must be visible
+    await expect(panel.locator('#slider-kelvin')).not.toBeVisible()
+    await expect(panel.getByText('Auto')).toBeVisible()
+  })
 })
