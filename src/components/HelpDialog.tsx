@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { APP_VERSION } from '../constants'
+import { Bug, Lightbulb, Github } from 'lucide-react'
+import { APP_VERSION, GITHUB_REPO_URL } from '../constants'
 import {
   Sheet,
   SheetContent,
@@ -15,7 +16,7 @@ interface HelpDialogProps {
   totalImages?: number
 }
 
-type Tab = 'whats-new' | 'shortcuts'
+type Tab = 'whats-new' | 'shortcuts' | 'feedback'
 
 const WHATS_NEW = [
   {
@@ -116,12 +117,25 @@ export function HelpDialog({ isOpen, onClose, totalImages = 1 }: HelpDialogProps
           >
             Shortcuts
           </button>
+          <button
+            onClick={() => setActiveTab('feedback')}
+            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+              activeTab === 'feedback'
+                ? 'text-white border-b-2 border-white -mb-px'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+            aria-selected={activeTab === 'feedback'}
+            role="tab"
+          >
+            Feedback
+          </button>
         </div>
 
         {/* Content */}
         <div className="py-4">
           {activeTab === 'whats-new' && <WhatsNewContent />}
           {activeTab === 'shortcuts' && <ShortcutsContent shortcuts={keyboardShortcuts} />}
+          {activeTab === 'feedback' && <FeedbackContent />}
         </div>
 
         {/* Disclaimer */}
@@ -189,6 +203,45 @@ function ShortcutsContent({ shortcuts }: ShortcutsContentProps) {
           </KbdGroup>
         </div>
       ))}
+    </div>
+  )
+}
+
+function FeedbackContent() {
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-zinc-400">
+        Help improve Photochrome — report bugs or suggest new features on GitHub.
+      </p>
+      <div className="space-y-2">
+        <a
+          href={`${GITHUB_REPO_URL}/issues/new?template=bug_report.yml`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors text-sm text-zinc-300"
+        >
+          <Bug className="w-4 h-4 text-zinc-500" />
+          Report a Bug
+        </a>
+        <a
+          href={`${GITHUB_REPO_URL}/issues/new?template=feature_request.yml`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors text-sm text-zinc-300"
+        >
+          <Lightbulb className="w-4 h-4 text-zinc-500" />
+          Request a Feature
+        </a>
+      </div>
+      <a
+        href={GITHUB_REPO_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 text-xs text-zinc-600 hover:text-zinc-500 transition-colors"
+      >
+        <Github className="w-3.5 h-3.5" />
+        View on GitHub
+      </a>
     </div>
   )
 }
