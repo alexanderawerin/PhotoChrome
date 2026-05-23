@@ -1,0 +1,22 @@
+{
+  "id": "pro400h-cool",
+  "name": "Pro 400H Cool",
+  "author": "Community",
+  "filmSimulation": "pro-400h",
+  "description": "Cool, clean Pro 400H look for everyday and indoor photography",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": 0,
+    "shadow": 0,
+    "color": 0,
+    "sharpness": 0,
+    "clarity": 0,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "whiteBalanceKelvin": 5000,
+    "wbShiftRed": -1,
+    "wbShiftBlue": -2
+  }
+}

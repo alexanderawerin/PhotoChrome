@@ -1,0 +1,21 @@
+{
+  "id": "classic-neg-portrait",
+  "name": "Classic Neg Portrait",
+  "author": "Community",
+  "filmSimulation": "classic-neg",
+  "description": "Soft Classic Negative optimized for flattering portrait photography",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": -2,
+    "shadow": 0,
+    "color": 1,
+    "sharpness": -2,
+    "clarity": -2,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 2,
+    "wbShiftBlue": -1
+  }
+}

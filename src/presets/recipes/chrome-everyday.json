@@ -1,0 +1,21 @@
+{
+  "id": "chrome-everyday",
+  "name": "Chrome Everyday",
+  "author": "Community",
+  "filmSimulation": "classic-chrome",
+  "description": "Understated, neutral Classic Chrome for everyday casual photography",
+  "settings": {
+    "dynamicRange": "DR100",
+    "highlight": -1,
+    "shadow": -1,
+    "color": 0,
+    "sharpness": 0,
+    "clarity": 0,
+    "grainEffect": "off",
+    "grainSize": "small",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 0
+  }
+}

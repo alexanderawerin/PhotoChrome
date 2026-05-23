@@ -1,0 +1,21 @@
+{
+  "id": "superia-grain",
+  "name": "Superia Grain",
+  "author": "Community",
+  "filmSimulation": "superia",
+  "description": "Grain-forward Superia look for street and documentary photography",
+  "settings": {
+    "dynamicRange": "DR200",
+    "highlight": 0,
+    "shadow": 1,
+    "color": 1,
+    "sharpness": -1,
+    "clarity": 0,
+    "grainEffect": "strong",
+    "grainSize": "large",
+    "colorChromeEffect": "off",
+    "colorChromeFXBlue": "off",
+    "wbShiftRed": 0,
+    "wbShiftBlue": 0
+  }
+}

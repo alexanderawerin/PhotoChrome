@@ -9,6 +9,7 @@ import proviaSlideData from './provia-slide.json'
 import proviaLightData from './provia-daylight.json'
 import proviaVibrantData from './provia-vibrant.json'
 import proviaFilmData from './provia-film.json'
+import proviaAfternoonData from './provia-afternoon.json'
 
 // Velvia
 import vividSunsetData from './vivid-sunset.json'
@@ -32,6 +33,7 @@ import astiaWarmData from './astia-warm.json'
 import astiaStudioData from './astia-studio.json'
 import astiaCineStillData from './astia-cinestill.json'
 import astiaEverydayData from './astia-everyday.json'
+import astiaLightData from './astia-light.json'
 
 // Pro 400H
 import pro400hPortraitData from './pro400h-portrait.json'
@@ -41,6 +43,7 @@ import pro400hSummerData from './pro400h-summer.json'
 import pro400hCinematicData from './pro400h-cinematic.json'
 import pro400hPastelData from './pro400h-pastel.json'
 import pro400hSkinData from './pro400h-skin.json'
+import pro400hCoolData from './pro400h-cool.json'
 
 // Superia
 import superia400Data from './superia-400.json'
@@ -50,6 +53,7 @@ import superiaVintageData from './superia-vintage.json'
 import superiaDaylightData from './superia-daylight.json'
 import superiaPortraitData from './superia-portrait.json'
 import superiaTravelData from './superia-travel.json'
+import superiaGrainData from './superia-grain.json'
 
 // Acros (B&W)
 import acrosStandardData from './acros-standard.json'
@@ -68,6 +72,7 @@ import neopanDocumentaryData from './neopan-documentary.json'
 import neopanFineArtData from './neopan-fine-art.json'
 import neopanPortraitData from './neopan-portrait.json'
 import neopanStreetData from './neopan-street.json'
+import neopanClassicData from './neopan-classic.json'
 
 // Eterna (Cinema)
 import eternaCinemaData from './eterna-cinema.json'
@@ -93,6 +98,7 @@ import kodakEmulsionData from './kodak-emulsion.json'
 import kodakPortra800Data from './kodak-portra-800.json'
 import chromePortraitData from './chrome-portrait.json'
 import chromeNaturalData from './chrome-natural.json'
+import chromeEverydayData from './chrome-everyday.json'
 
 // Classic Negative
 import mapleLetterData from './maple-letter.json'
@@ -105,6 +111,8 @@ import classicNegVibrantData from './classic-neg-vibrant.json'
 import classicAmberData from './classic-amber.json'
 import retroFujicolorData from './retro-fujicolor.json'
 import classicNegEverydayData from './classic-neg-everyday.json'
+import classicNegPortraitData from './classic-neg-portrait.json'
+import classicNegCinemaData from './classic-neg-cinema.json'
 
 // Superia (additional)
 import reggiesuperiaData from './reggies-superia.json'
@@ -132,6 +140,7 @@ const RAW_RECIPES: Record<string, unknown> = {
   'provia-daylight': proviaLightData,
   'provia-vibrant': proviaVibrantData,
   'provia-film': proviaFilmData,
+  'provia-afternoon': proviaAfternoonData,
 
   // Velvia
   'vivid-sunset': vividSunsetData,
@@ -155,6 +164,7 @@ const RAW_RECIPES: Record<string, unknown> = {
   'astia-studio': astiaStudioData,
   'astia-cinestill': astiaCineStillData,
   'astia-everyday': astiaEverydayData,
+  'astia-light': astiaLightData,
 
   // Pro 400H
   'pro400h-portrait': pro400hPortraitData,
@@ -164,6 +174,7 @@ const RAW_RECIPES: Record<string, unknown> = {
   'pro400h-cinematic': pro400hCinematicData,
   'pro400h-pastel': pro400hPastelData,
   'pro400h-skin': pro400hSkinData,
+  'pro400h-cool': pro400hCoolData,
 
   // Superia
   'superia-400': superia400Data,
@@ -173,6 +184,7 @@ const RAW_RECIPES: Record<string, unknown> = {
   'superia-daylight': superiaDaylightData,
   'superia-portrait': superiaPortraitData,
   'superia-travel': superiaTravelData,
+  'superia-grain': superiaGrainData,
 
   // Acros (B&W)
   'acros-standard': acrosStandardData,
@@ -191,6 +203,7 @@ const RAW_RECIPES: Record<string, unknown> = {
   'neopan-fine-art': neopanFineArtData,
   'neopan-portrait': neopanPortraitData,
   'neopan-street': neopanStreetData,
+  'neopan-classic': neopanClassicData,
 
   // Eterna (Cinema)
   'eterna-cinema': eternaCinemaData,
@@ -216,6 +229,7 @@ const RAW_RECIPES: Record<string, unknown> = {
   'kodak-portra-800': kodakPortra800Data,
   'chrome-portrait': chromePortraitData,
   'chrome-natural': chromeNaturalData,
+  'chrome-everyday': chromeEverydayData,
 
   // Classic Negative
   'maple-letter': mapleLetterData,
@@ -228,6 +242,8 @@ const RAW_RECIPES: Record<string, unknown> = {
   'classic-amber': classicAmberData,
   'retro-fujicolor': retroFujicolorData,
   'classic-neg-everyday': classicNegEverydayData,
+  'classic-neg-portrait': classicNegPortraitData,
+  'classic-neg-cinema': classicNegCinemaData,
 
   // Superia (additional)
   'reggies-superia': reggiesuperiaData,
@@ -437,6 +453,16 @@ export const RECIPE_USE_CASES: Record<string, UseCase> = {
 
   // Portrait (additional)
   'reggies-superia': 'portrait',
+
+  // Batch E additions
+  'provia-afternoon': 'landscape',
+  'astia-light': 'portrait',
+  'pro400h-cool': 'everyday',
+  'superia-grain': 'street',
+  'neopan-classic': 'bw',
+  'chrome-everyday': 'everyday',
+  'classic-neg-portrait': 'portrait',
+  'classic-neg-cinema': 'cinema',
 }
 
 export interface UseCaseGroup {
