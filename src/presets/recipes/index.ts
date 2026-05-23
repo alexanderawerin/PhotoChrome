@@ -441,7 +441,7 @@ export const RECIPE_USE_CASES: Record<string, UseCase> = {
   'superia-nostalgic': 'everyday',
   'superia-vintage': 'everyday',
   'superia-daylight': 'everyday',
-  'superia-everyday': 'everyday',
+  'astia-everyday': 'everyday',
   'provia-film': 'everyday',
   'classic-color': 'everyday',
   'chrome-natural': 'everyday',
