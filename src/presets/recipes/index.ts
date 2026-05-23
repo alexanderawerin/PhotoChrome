@@ -18,6 +18,11 @@ import velviaNatureData from './velvia-nature.json'
 import goldenHourData from './golden-hour.json'
 import velviaVibrantData from './velvia-vibrant.json'
 import velviaLandscapeData from './velvia-landscape.json'
+import velviaVividChromeData from './velvia-vivid-chrome.json'
+import velviaVividData from './velvia-vivid.json'
+import velviaDramaticData from './velvia-dramatic.json'
+import velviaSoftData from './velvia-soft.json'
+import velviaCoolData from './velvia-cool.json'
 
 // Astia
 import astiaPortraitData from './astia-portrait.json'
@@ -83,6 +88,11 @@ import streetClassicData from './street-classic.json'
 import rainyDayData from './rainy-day.json'
 import classicChromeStreetData from './classic-chrome-street.json'
 import classicChromeVintageData from './classic-chrome-vintage.json'
+import classicColorData from './classic-color.json'
+import kodakEmulsionData from './kodak-emulsion.json'
+import kodakPortra800Data from './kodak-portra-800.json'
+import chromePortraitData from './chrome-portrait.json'
+import chromeNaturalData from './chrome-natural.json'
 
 // Classic Negative
 import mapleLetterData from './maple-letter.json'
@@ -115,6 +125,11 @@ const RAW_RECIPES: Record<string, unknown> = {
   'golden-hour': goldenHourData,
   'velvia-vibrant': velviaVibrantData,
   'velvia-landscape': velviaLandscapeData,
+  'velvia-vivid-chrome': velviaVividChromeData,
+  'velvia-vivid': velviaVividData,
+  'velvia-dramatic': velviaDramaticData,
+  'velvia-soft': velviaSoftData,
+  'velvia-cool': velviaCoolData,
   
   // Astia
   'astia-portrait': astiaPortraitData,
@@ -180,6 +195,11 @@ const RAW_RECIPES: Record<string, unknown> = {
   'rainy-day': rainyDayData,
   'classic-chrome-street': classicChromeStreetData,
   'classic-chrome-vintage': classicChromeVintageData,
+  'classic-color': classicColorData,
+  'kodak-emulsion': kodakEmulsionData,
+  'kodak-portra-800': kodakPortra800Data,
+  'chrome-portrait': chromePortraitData,
+  'chrome-natural': chromeNaturalData,
 
   // Classic Negative
   'maple-letter': mapleLetterData,
@@ -297,9 +317,14 @@ export const RECIPE_USE_CASES: Record<string, UseCase> = {
   'pro400h-pastel': 'portrait',
   'pro400h-skin': 'portrait',
   'superia-portrait': 'portrait',
-  
+  'chrome-portrait': 'portrait',
+
   // Landscape
   'velvia-landscape': 'landscape',
+  'velvia-vivid-chrome': 'landscape',
+  'velvia-vivid': 'landscape',
+  'velvia-dramatic': 'landscape',
+  'velvia-cool': 'landscape',
   'velvia-nature': 'landscape',
   'velvia-vibrant': 'landscape',
   'velvia-sunset': 'landscape',
@@ -326,6 +351,7 @@ export const RECIPE_USE_CASES: Record<string, UseCase> = {
   'maple-letter': 'street',
   'faded-memories': 'street',
   'rainy-day': 'street',
+  'kodak-emulsion': 'street',
   
   // Cinema
   'eterna-cinema': 'cinema',
@@ -363,6 +389,10 @@ export const RECIPE_USE_CASES: Record<string, UseCase> = {
   'superia-daylight': 'everyday',
   'superia-everyday': 'everyday',
   'provia-film': 'everyday',
+  'classic-color': 'everyday',
+  'chrome-natural': 'everyday',
+  'kodak-portra-800': 'cinema',
+  'velvia-soft': 'everyday',
 }
 
 export interface UseCaseGroup {

@@ -1,0 +1,22 @@
+{
+  "id": "kodak-emulsion",
+  "name": "Kodak Emulsion",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "classic-chrome",
+  "description": "Punchy, gritty Classic Chrome inspired by Kodak film stocks",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -2,
+    "shadow": -2,
+    "color": 3,
+    "sharpness": -2,
+    "clarity": -3,
+    "grainEffect": "strong",
+    "grainSize": "large",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "off",
+    "whiteBalance": "shade",
+    "wbShiftRed": -2,
+    "wbShiftBlue": 2
+  }
+}

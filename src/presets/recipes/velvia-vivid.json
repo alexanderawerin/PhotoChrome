@@ -1,0 +1,23 @@
+{
+  "id": "velvia-vivid",
+  "name": "Velvia Vivid",
+  "author": "Fuji X Weekly",
+  "filmSimulation": "velvia",
+  "description": "Maximum vibrance Velvia for colorful landscapes and flowers",
+  "cameraModel": "X-T5",
+  "settings": {
+    "dynamicRange": "DR400",
+    "highlight": -1,
+    "shadow": -1,
+    "color": 4,
+    "sharpness": 1,
+    "clarity": 3,
+    "grainEffect": "weak",
+    "grainSize": "small",
+    "colorChromeEffect": "strong",
+    "colorChromeFXBlue": "weak",
+    "whiteBalance": "auto",
+    "wbShiftRed": 1,
+    "wbShiftBlue": -3
+  }
+}
