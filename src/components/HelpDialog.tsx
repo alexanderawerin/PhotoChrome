@@ -20,6 +20,13 @@ type Tab = 'whats-new' | 'shortcuts' | 'feedback'
 
 const WHATS_NEW = [
   {
+    version: '1.5',
+    items: [
+      'Smart Picks: recipe recommendations tailored to your photo',
+      "Editor's Choice now also visible on mobile",
+    ],
+  },
+  {
     version: '1.4',
     items: [
       '100 ready-made film recipes to choose from',

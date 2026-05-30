@@ -23,6 +23,7 @@ import { DEFAULT_CROP_RATIO_DESKTOP, DEFAULT_CROP_RATIO_MOBILE } from '../consta
 import { useTuning } from '../hooks/useTuning'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useViewportHeight, getViewportHeightStyle } from '../hooks/useViewportHeight'
+import { useRecipeRecommendations } from '../hooks/useRecipeRecommendations'
 
 interface EditorProps {
   images: ImageItem[]
@@ -76,6 +77,12 @@ export function Editor({
   const isMdUp = useIsMdUp()
   const defaultCropRatio = isMdUp ? DEFAULT_CROP_RATIO_DESKTOP : DEFAULT_CROP_RATIO_MOBILE
   const { getFavoriteIds, toggleFavorite } = useFavorites()
+
+  const { recipeIds: smartPicksIds } = useRecipeRecommendations(
+    currentImage?.id ?? null,
+    currentImage?.thumbnail ?? null,
+    currentImage?.exif
+  )
 
   // Refs для доступа к актуальным значениям из callbacks (избегаем stale closures)
   const customSettingsRef = useRef<RecipeSettings>(currentImage.customSettings)
@@ -468,6 +475,7 @@ export function Editor({
             onRandomRecipe={handleRandomRecipe}
             onFavoriteToggle={toggleFavorite}
             horizontal
+            smartPicksIds={smartPicksIds}
           />
         </div>
 
@@ -525,6 +533,7 @@ export function Editor({
         onSettingsChange={tuning.updateSettings}
         onTuningApply={tuning.applyTuning}
         onTuningCancel={tuning.cancelTuning}
+        smartPicksIds={smartPicksIds}
       />
 
       {/* Mobile: TuningPanel */}
@@ -632,6 +641,7 @@ interface DesktopSidePanelProps {
   onSettingsChange: (settings: RecipeSettings) => void
   onTuningApply: () => void
   onTuningCancel: () => void
+  smartPicksIds: string[]
 }
 
 function DesktopSidePanel({
@@ -649,6 +659,7 @@ function DesktopSidePanel({
   onSettingsChange,
   onTuningApply,
   onTuningCancel,
+  smartPicksIds,
 }: DesktopSidePanelProps) {
   return (
     <aside
@@ -669,6 +680,7 @@ function DesktopSidePanel({
           onRandomRecipe={onRandomRecipe}
           onFavoriteToggle={onFavoriteToggle}
           onApplyToAll={onApplyToAll}
+          smartPicksIds={smartPicksIds}
         />
         
         <div className={`tuning-panel-overlay ${isTuning && activeRecipe ? 'tuning-panel-open' : 'tuning-panel-closed'}`}>

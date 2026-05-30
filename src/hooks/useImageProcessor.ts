@@ -3,6 +3,7 @@ import { ImageProcessor } from '../engine/processor'
 import { ImageItem, Recipe } from '../engine/types'
 import { getSimulation } from '../presets/simulations'
 import { THUMBNAIL_MAX_SIZE } from '../constants'
+import { extractExif } from '../engine/exif'
 
 export interface ProcessedImage {
   /** Оригинальное изображение в полном разрешении */
@@ -41,9 +42,10 @@ export function useImageProcessor() {
     try {
       // Загружаем все изображения параллельно
       const loadPromises = files.map(async (file) => {
-        const [original, thumbnail] = await Promise.all([
+        const [original, thumbnail, exif] = await Promise.all([
           ImageProcessor.loadImage(file),
-          ImageProcessor.createThumbnail(file, THUMBNAIL_MAX_SIZE)
+          ImageProcessor.createThumbnail(file, THUMBNAIL_MAX_SIZE),
+          extractExif(file)
         ])
 
         return {
@@ -52,6 +54,7 @@ export function useImageProcessor() {
           fileName: file.name,
           original,
           thumbnail,
+          exif,
           recipe: null,
           customSettings: {},
           transformedOriginal: original,

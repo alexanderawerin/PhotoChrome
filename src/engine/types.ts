@@ -1,5 +1,7 @@
 // Типы для движка обработки изображений
 
+import type { ExifSubset } from './exif'
+
 export type EffectStrength = 'off' | 'weak' | 'strong'
 export type GrainSize = 'small' | 'large'
 export type Rotation = 0 | 90 | 180 | 270
@@ -84,6 +86,8 @@ export interface ImageItem {
   original: ImageData
   /** Превью для быстрой обработки */
   thumbnail: ImageData
+  /** EXIF-данные (ISO, цветовая температура) для рекомендаций */
+  exif?: ExifSubset
 
   /** Выбранный рецепт для этого изображения */
   recipe: Recipe | null

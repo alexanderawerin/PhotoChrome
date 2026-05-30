@@ -16,18 +16,29 @@ test.describe("Editor — Editor's Choice", () => {
   })
 
   test("Editor's Choice section appears before Film/UseCase groups", async ({ page, editorPage }) => {
-    const panel = page.locator('aside')
-    const headings = panel.locator('h3')
+    const sectionOrder = await page.locator('aside section[aria-label]').evaluateAll(
+      sections => sections.map(s => s.getAttribute('aria-label'))
+    )
 
-    // Collect heading texts in order
-    const texts = await headings.allTextContents()
-    const editorsChoiceIndex = texts.findIndex(t => t.trim() === "Editor's Choice")
-    const filmGroupIndex = texts.findIndex((t, i) => i > 0 && t.trim() !== 'Favorites' && t.trim() !== "Editor's Choice")
+    const favoritesIndex = sectionOrder.indexOf('Favorite presets')
+    const smartPicksIndex = sectionOrder.indexOf('Smart Picks')
+    const editorsChoiceIndex = sectionOrder.indexOf("Editor's Choice presets")
+    const firstFilmGroupIndex = sectionOrder.findIndex(
+      label => label !== null && label.endsWith(' presets') &&
+        label !== 'Favorite presets' &&
+        label !== 'Smart Picks' &&
+        label !== "Editor's Choice presets"
+    )
 
     expect(editorsChoiceIndex).toBeGreaterThan(-1)
-    // Editor's Choice must come before any film/use-case groups
-    if (filmGroupIndex !== -1) {
-      expect(editorsChoiceIndex).toBeLessThan(filmGroupIndex)
+    if (favoritesIndex !== -1) {
+      expect(favoritesIndex).toBeLessThan(editorsChoiceIndex)
+    }
+    if (smartPicksIndex !== -1) {
+      expect(smartPicksIndex).toBeLessThan(editorsChoiceIndex)
+    }
+    if (firstFilmGroupIndex !== -1) {
+      expect(editorsChoiceIndex).toBeLessThan(firstFilmGroupIndex)
     }
   })
 })
