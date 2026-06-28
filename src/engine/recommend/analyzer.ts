@@ -14,7 +14,7 @@ export function extractFeatures(imageData: ImageData, exif?: ExifSubset): PhotoF
   const totalPixels = width * height
   const stride = Math.max(1, Math.floor(Math.sqrt(totalPixels / TARGET_SAMPLES)))
 
-  let sumR = 0, sumG = 0, sumB = 0
+  let sumR = 0, sumB = 0
   let sumL = 0, sumL2 = 0
   let shadowCount = 0, highlightCount = 0
   let sumSat = 0
@@ -29,7 +29,7 @@ export function extractFeatures(imageData: ImageData, exif?: ExifSubset): PhotoF
       const b = data[i + 2] / 255
 
       const l = 0.2126 * r + 0.7152 * g + 0.0722 * b
-      sumR += r; sumG += g; sumB += b
+      sumR += r; sumB += b
       sumL += l
       sumL2 += l * l
       if (l < SHADOW_THRESHOLD) shadowCount++

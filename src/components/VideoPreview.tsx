@@ -143,7 +143,7 @@ export function VideoPreview({
         // No filter - draw video directly
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
       }
-    } catch (err) {
+    } catch {
       // Fallback to unfiltered video on error
       try {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
