@@ -23,6 +23,8 @@ tsconfig.tsbuildinfo
 !.vscode/extensions.json
 .idea
 .cursor/
+.claude/
+.codex/
 .DS_Store
 *.suo
 *.ntvs*
@@ -34,4 +36,3 @@ tsconfig.tsbuildinfo
 test-results/
 playwright-report/
 blob-report/
-
