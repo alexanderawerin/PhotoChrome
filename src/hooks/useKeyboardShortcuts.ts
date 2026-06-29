@@ -189,7 +189,6 @@ export function useKeyboardShortcuts(
     onPanelToggle,
     onExport,
     onCompareStart,
-    onCompareEnd,
     onNextImage,
     onPreviousImage,
     totalImages,
@@ -211,4 +210,3 @@ export function useKeyboardShortcuts(
     }
   }, [handleKeyDown, handleKeyUp])
 }
-

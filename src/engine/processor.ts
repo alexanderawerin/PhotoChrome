@@ -7,10 +7,8 @@ import {
   applySaturation,
   applyWhiteBalanceShift,
   applyToneAdjustment,
-  applyDynamicRange,
-  applyWhiteBalancePreset,
-  applyWhiteBalanceKelvin,
 } from './color'
+import { applyPreprocessSettings, needsPreprocess } from './preprocess'
 import { applyGrain, grainEffectToStrength, grainSizeToNumber } from './grain'
 import {
   applyClarity,
@@ -64,27 +62,13 @@ export class ImageProcessor {
     // 1. Pre-process: Dynamic Range и White Balance Preset
     //    Эти эффекты не реализованы в GL shader, применяем на CPU перед основным pipeline.
     let inputData = imageData
-    const needsPreprocess =
-      (settings?.dynamicRange && settings.dynamicRange !== 'DR100') ||
-      (settings?.whiteBalance && settings.whiteBalance !== 'auto') ||
-      (settings?.whiteBalanceKelvin !== undefined)
-
-    if (needsPreprocess) {
+    if (needsPreprocess(settings)) {
       inputData = new ImageData(
         new Uint8ClampedArray(imageData.data),
         imageData.width,
         imageData.height
       )
-      if (settings?.dynamicRange && settings.dynamicRange !== 'DR100') {
-        applyDynamicRange(inputData, settings.dynamicRange)
-      }
-      if (settings?.whiteBalance && settings.whiteBalance !== 'auto') {
-        applyWhiteBalancePreset(inputData, settings.whiteBalance)
-      }
-      // Apply kelvin WB (overrides preset if both are set)
-      if (settings?.whiteBalanceKelvin !== undefined) {
-        applyWhiteBalanceKelvin(inputData, settings.whiteBalanceKelvin)
-      }
+      applyPreprocessSettings(inputData, settings)
     }
 
     // 2. HaldCLUT simulations use CPU (reliable trilinear interpolation).

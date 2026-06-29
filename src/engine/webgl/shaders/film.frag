@@ -11,6 +11,12 @@ out vec4 fragColor;
 uniform sampler2D uTexture;
 uniform vec2 uResolution;
 
+// Pre-simulation settings, matching the CPU pipeline
+uniform int uDynamicRange; // 0 = DR100, 1 = DR200, 2 = DR400
+uniform vec2 uWbPresetShift; // R/B shift in Fujifilm units
+uniform bool uUseKelvin;
+uniform vec2 uKelvinScale; // R/B multipliers relative to 5500K
+
 // HaldCLUT 3D LUT (replaces curve + colorBalance + saturation)
 uniform sampler3D uHaldCLUT;
 uniform bool uUseHaldCLUT;
@@ -26,7 +32,8 @@ uniform vec3 uHighlightsBalance; // RGB shift for highlights
 uniform bool uUseColorBalance;
 
 // Saturation
-uniform float uSaturation; // -1 to +1, 0 = no change
+uniform float uSimulationSaturation; // Base curve-simulation adjustment
+uniform float uRecipeSaturation; // Recipe color setting, always applied
 
 // White balance shift
 uniform float uWbShiftRed;  // -9 to +9
@@ -67,6 +74,25 @@ void main() {
   vec4 color = texture(uTexture, vUv);
   vec3 rgb = color.rgb;
 
+  if (uDynamicRange > 0) {
+    float lum = luminance(rgb);
+    float shadowLift = uDynamicRange == 1 ? 15.0 / 255.0 : 30.0 / 255.0;
+    float highlightCompress = uDynamicRange == 1 ? 0.06 : 0.12;
+    float lift = shadowLift * pow(1.0 - lum, 2.0);
+    float compress = -highlightCompress * pow(lum, 2.0);
+    rgb += vec3(lift + compress);
+  }
+
+  if (uWbPresetShift.x != 0.0 || uWbPresetShift.y != 0.0) {
+    rgb.r += uWbPresetShift.x * 2.5 / 255.0;
+    rgb.b += uWbPresetShift.y * 2.5 / 255.0;
+  }
+
+  if (uUseKelvin) {
+    rgb.r *= uKelvinScale.x;
+    rgb.b *= uKelvinScale.y;
+  }
+
   // === SIMULATION: HaldCLUT or curve-based ===
 
   if (uUseHaldCLUT) {
@@ -94,14 +120,20 @@ void main() {
     }
 
     // 3. Simulation saturation (fallback — only base saturation from simulation)
-    if (uSaturation != 0.0) {
+    if (uSimulationSaturation != 0.0) {
       float gray = luminance(rgb);
-      float multiplier = 1.0 + uSaturation;
+      float multiplier = 1.0 + uSimulationSaturation;
       rgb = vec3(gray) + (rgb - vec3(gray)) * multiplier;
     }
   }
 
   // === RECIPE SETTINGS (always applied) ===
+
+  if (uRecipeSaturation != 0.0) {
+    float gray = luminance(rgb);
+    float multiplier = 1.0 + uRecipeSaturation;
+    rgb = vec3(gray) + (rgb - vec3(gray)) * multiplier;
+  }
 
   // 4. White balance shift
   if (uWbShiftRed != 0.0 || uWbShiftBlue != 0.0) {

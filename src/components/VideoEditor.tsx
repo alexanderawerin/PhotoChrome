@@ -7,7 +7,7 @@ import { RecipePanel } from './RecipePanel'
 import { TuningPanel } from './TuningPanel'
 import { HelpDialog } from './HelpDialog'
 import { Recipe, RecipeSettings, ProcessingOptions } from '../engine/types'
-import { getSimulation } from '../presets/simulations'
+import { getSimulation, loadSimulationLUT } from '../presets/simulations'
 import { getAllRecipes } from '../presets/recipes'
 import { useFavorites } from '../hooks/useFavorites'
 import { VideoData, VideoExportState } from '../hooks/useVideoProcessor'
@@ -90,6 +90,7 @@ export function VideoEditor({
   const [showOriginal, setShowOriginal] = useState(false)
   const [isPanelOpen, setIsPanelOpen] = useState(true)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
+  const [loadedSimulationId, setLoadedSimulationId] = useState<string | null>(null)
 
   // Favorites
   const { getFavoriteIds, toggleFavorite } = useFavorites()
@@ -119,6 +120,7 @@ export function VideoEditor({
 
     const simulation = getSimulation(activeRecipe.filmSimulation)
     if (!simulation) return null
+    if (simulation.lutImage && loadedSimulationId !== simulation.id) return null
 
     return {
       simulation,
@@ -127,7 +129,21 @@ export function VideoEditor({
         ...customSettings,
       },
     }
-  }, [activeRecipe, customSettings])
+  }, [activeRecipe, customSettings, loadedSimulationId])
+
+  useEffect(() => {
+    if (!activeRecipe) return
+    let cancelled = false
+    setLoadedSimulationId(null)
+
+    loadSimulationLUT(activeRecipe.filmSimulation).then(() => {
+      if (!cancelled) setLoadedSimulationId(activeRecipe.filmSimulation)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [activeRecipe])
 
   /**
    * Handle recipe selection
@@ -509,4 +525,3 @@ export function VideoEditor({
     </main>
   )
 }
-

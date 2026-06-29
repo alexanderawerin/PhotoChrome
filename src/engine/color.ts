@@ -1,6 +1,6 @@
 import { ColorBalanceConfig } from './types'
 import { clamp, luminance } from './utils'
-import { kelvinToRGBMultipliers } from './whitebalance'
+import { kelvinToRGBScale } from './whitebalance'
 
 /**
  * Эмулирует расширение динамического диапазона Fujifilm (DR100/200/400).
@@ -127,21 +127,11 @@ export function applySaturation(imageData: ImageData, factor: number): void {
 }
 
 /**
- * Reference white balance multipliers for 5500K (daylight neutral).
- * Computed once at module load to normalize Kelvin adjustments.
- */
-const WB_REF_5500K = kelvinToRGBMultipliers(5500)
-
-/**
  * Applies white balance correction based on a color temperature in Kelvin.
  * Uses Tanner Helland's approximation. Kelvin range: 2500-10000.
  */
 export function applyWhiteBalanceKelvin(imageData: ImageData, kelvin: number): void {
-  const [rMult, , bMult] = kelvinToRGBMultipliers(kelvin)
-  // Normalize relative to 5500K (daylight neutral)
-  const [rRef, , bRef] = WB_REF_5500K
-  const rScale = rMult / rRef
-  const bScale = bMult / bRef
+  const [rScale, bScale] = kelvinToRGBScale(kelvin)
 
   const data = imageData.data
   for (let i = 0; i < data.length; i += 4) {

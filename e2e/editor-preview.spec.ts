@@ -42,6 +42,95 @@ async function canvasIsNotBlack(page: import('@playwright/test').Page, canvasSel
 }
 
 test.describe('Editor — Preview Rendering', () => {
+  test('WebGL pipeline compiles and applies preprocessing settings', async ({ page, landingPage }) => {
+    const pixel = await page.evaluate(async () => {
+      // Vite serves this browser-only module; it is intentionally imported inside the page.
+      // @ts-expect-error Absolute Vite module paths are not visible to the Node test compiler.
+      const { WebGLProcessor } = await import('/src/engine/webgl/processor.ts')
+      const processor = new WebGLProcessor()
+
+      try {
+        processor.init(4, 4)
+        const data = new Uint8ClampedArray(4 * 4 * 4)
+        for (let i = 0; i < data.length; i += 4) {
+          data[i] = 100
+          data[i + 1] = 100
+          data[i + 2] = 100
+          data[i + 3] = 255
+        }
+
+        const output = processor.processFrame(
+          new ImageData(data, 4, 4),
+          {
+            simulation: {
+              id: 'webgl-audit',
+              name: 'WebGL audit',
+              curve: { points: [[0, 0], [255, 255]] },
+            },
+            settings: {
+              dynamicRange: 'DR200',
+              whiteBalanceKelvin: 3000,
+            },
+          }
+        )
+
+        const context = output.getContext('2d')
+        if (!context) throw new Error('2D output context unavailable')
+        return Array.from(context.getImageData(2, 2, 1, 1).data)
+      } finally {
+        processor.dispose()
+      }
+    })
+
+    expect(pixel[0], 'Warm Kelvin preprocessing should raise red over blue').toBeGreaterThan(pixel[2])
+    expect(pixel[3]).toBe(255)
+  })
+
+  test('WebGL applies recipe saturation after a HaldCLUT', async ({ page, landingPage }) => {
+    const chroma = await page.evaluate(async () => {
+      // @ts-expect-error Absolute Vite module paths are not visible to the Node test compiler.
+      const { WebGLProcessor } = await import('/src/engine/webgl/processor.ts')
+      // @ts-expect-error Absolute Vite module paths are not visible to the Node test compiler.
+      const { getSimulation, loadSimulationLUT } = await import('/src/presets/simulations/index.ts')
+      const simulation = getSimulation('provia')
+      if (!simulation) throw new Error('Provia simulation unavailable')
+      await loadSimulationLUT('provia')
+
+      const processor = new WebGLProcessor()
+      try {
+        processor.init(4, 4)
+        const data = new Uint8ClampedArray(4 * 4 * 4)
+        for (let i = 0; i < data.length; i += 4) {
+          data[i] = 180
+          data[i + 1] = 100
+          data[i + 2] = 60
+          data[i + 3] = 255
+        }
+        const source = new ImageData(data, 4, 4)
+
+        const renderChroma = (color: number) => {
+          const output = processor.processFrame(source, {
+            simulation,
+            settings: { color },
+          })
+          const context = output.getContext('2d')
+          if (!context) throw new Error('2D output context unavailable')
+          const pixel = context.getImageData(2, 2, 1, 1).data
+          return Math.max(pixel[0], pixel[1], pixel[2]) - Math.min(pixel[0], pixel[1], pixel[2])
+        }
+
+        return {
+          muted: renderChroma(-4),
+          vivid: renderChroma(4),
+        }
+      } finally {
+        processor.dispose()
+      }
+    })
+
+    expect(chroma.vivid).toBeGreaterThan(chroma.muted)
+  })
+
   test('main preview is not black after selecting a recipe', async ({ page, editorPage }) => {
     await selectFirstRecipe(page)
     // Wait for processing to complete

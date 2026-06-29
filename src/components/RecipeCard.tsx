@@ -4,7 +4,7 @@ import { Spinner } from './ui/spinner'
 import { Card } from './ui/card'
 import { Recipe } from '../engine/types'
 import { ImageProcessor } from '../engine/processor'
-import { getSimulation } from '../presets/simulations'
+import { getSimulation, loadSimulationLUT } from '../presets/simulations'
 import { 
   RECIPE_CARD_PREVIEW_SIZE, 
   PREVIEW_GENERATION_DELAY,
@@ -47,25 +47,6 @@ let reusableSourceCanvas: HTMLCanvasElement | null = null
 let reusableSourceCtx: CanvasRenderingContext2D | null = null
 let reusableTargetCanvas: HTMLCanvasElement | null = null
 let reusableTargetCtx: CanvasRenderingContext2D | null = null
-
-/**
- * Очищает все кэши превью.
- * Вызывайте при смене изображения или для освобождения памяти.
- */
-export function clearPreviewCaches(): void {
-  smallImageCache.clear()
-  processedPreviewCache.clear()
-}
-
-/**
- * Возвращает размер кэшей для отладки.
- */
-export function getPreviewCacheStats(): { smallImages: number; processedPreviews: number } {
-  return {
-    smallImages: smallImageCache.size,
-    processedPreviews: processedPreviewCache.size
-  }
-}
 
 /**
  * Создаёт уникальный ключ для кэширования на основе imageData.
@@ -171,7 +152,7 @@ function RecipeCardComponent({
   useEffect(() => {
     let cancelled = false
 
-    const generatePreview = () => {
+    const generatePreview = async () => {
       if (cancelled) return
 
       try {
@@ -199,6 +180,9 @@ function RecipeCardComponent({
           setIsGenerating(false)
           return
         }
+
+        await loadSimulationLUT(recipe.filmSimulation)
+        if (cancelled) return
 
         const processed = ImageProcessor.process(smallImage, {
           simulation,

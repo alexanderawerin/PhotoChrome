@@ -149,64 +149,46 @@ export function Editor({
   // ============================================================================
 
   useEffect(() => {
-    // При смене изображения загружаем LUT (если нужен) и обновляем превью
+    let cancelled = false
+
     const loadAndPreview = async () => {
-      if (currentImage.recipe) {
-        await loadSimulationLUT(currentImage.recipe.filmSimulation)
+      setIsProcessing(true)
+      try {
+        if (currentImage.recipe) {
+          await loadSimulationLUT(currentImage.recipe.filmSimulation)
+        }
+        if (!cancelled) {
+          updatePreview(
+            currentImage.transformedThumbnail,
+            currentImage.recipe,
+            currentImage.customSettings
+          )
+        }
+      } finally {
+        if (!cancelled) setIsProcessing(false)
       }
-      updatePreview(
-        currentImage.transformedThumbnail,
-        currentImage.recipe,
-        currentImage.customSettings
-      )
     }
     loadAndPreview()
-  }, [currentIndex, currentImage.transformedThumbnail, currentImage.recipe, currentImage.customSettings, updatePreview])
+
+    return () => {
+      cancelled = true
+    }
+  }, [currentImage.id, currentImage.transformedThumbnail, currentImage.recipe, currentImage.customSettings, updatePreview])
 
   // ============================================================================
   // Recipe Processing
   // ============================================================================
 
   /**
-   * Применяет рецепт к изображению
-   */
-  const applyRecipeToImage = useCallback((
-    imageData: ImageData,
-    recipe: Recipe,
-    settings?: RecipeSettings
-  ): ImageData => {
-    const simulation = getSimulation(recipe.filmSimulation)
-    if (!simulation) {
-      console.error(`Simulation ${recipe.filmSimulation} not found`)
-      return imageData
-    }
-
-    return ImageProcessor.process(imageData, {
-      simulation,
-      settings: settings ?? recipe.settings
-    })
-  }, [])
-
-  /**
    * Выбор рецепта (обновляет только текущее изображение)
    */
-  const handleRecipeSelect = useCallback(async (recipe: Recipe) => {
+  const handleRecipeSelect = useCallback((recipe: Recipe) => {
     onImageUpdate(currentImage.id, {
       recipe,
       customSettings: {} // Сброс настроек при смене рецепта
     })
     tuning.resetSettings()
-    setIsProcessing(true)
-
-    try {
-      // Загрузить HaldCLUT если доступен (lazy, кэшируется)
-      await loadSimulationLUT(recipe.filmSimulation)
-      const processed = applyRecipeToImage(transform.transformedThumbnail, recipe, recipe.settings)
-      setPreviewImage(processed)
-    } finally {
-      setIsProcessing(false)
-    }
-  }, [currentImage, onImageUpdate, transform.transformedThumbnail, applyRecipeToImage, tuning])
+  }, [currentImage.id, onImageUpdate, tuning])
 
   /**
    * Применить текущий рецепт и настройки ко всем изображениям
@@ -321,7 +303,8 @@ export function Editor({
 
       const a = document.createElement('a')
       a.href = url
-      a.download = `photochrome_${currentImage.recipe.id}_${currentImage.fileName}`
+      const baseName = currentImage.fileName.replace(/\.[^.]+$/, '')
+      a.download = `photochrome_${currentImage.recipe.id}_${baseName}.jpg`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)

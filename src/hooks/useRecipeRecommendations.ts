@@ -21,24 +21,39 @@ export function useRecipeRecommendations(
   const [recipeIds, setRecipeIds] = useState<string[]>([])
   const workerRef = useRef<Worker | null>(null)
   const cacheRef = useRef<Map<string, string[]>>(new Map())
+  const pendingRequestsRef = useRef<Map<string, string>>(new Map())
   const requestCounterRef = useRef(0)
   const currentRequestRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (typeof Worker === 'undefined') return
     let worker: Worker | null = null
+    const pendingRequests = pendingRequestsRef.current
     try {
       worker = new Worker(
         new URL('../engine/recommend/recommend.worker.ts', import.meta.url),
         { type: 'module' }
       )
       worker.addEventListener('message', (e: MessageEvent<WorkerMessage>) => {
-        if (e.data.requestId !== currentRequestRef.current) return
+        const requestImageId = pendingRequests.get(e.data.requestId)
+        if (!requestImageId) return
+        pendingRequests.delete(e.data.requestId)
+
         if (e.data.type === 'result') {
-          setRecipeIds(e.data.recipeIds)
+          if (cacheRef.current.size >= CACHE_MAX) {
+            const firstKey = cacheRef.current.keys().next().value
+            if (firstKey) cacheRef.current.delete(firstKey)
+          }
+          cacheRef.current.set(requestImageId, e.data.recipeIds)
+
+          if (e.data.requestId === currentRequestRef.current) {
+            setRecipeIds(e.data.recipeIds)
+          }
         }
       })
       worker.addEventListener('error', (e: ErrorEvent) => {
+        pendingRequests.clear()
+        currentRequestRef.current = null
         console.warn('Smart Picks worker error:', e.message)
       })
       workerRef.current = worker
@@ -49,6 +64,7 @@ export function useRecipeRecommendations(
     return () => {
       worker?.terminate()
       workerRef.current = null
+      pendingRequests.clear()
     }
   }, [])
 
@@ -61,6 +77,8 @@ export function useRecipeRecommendations(
 
     const cached = cacheRef.current.get(imageId)
     if (cached) {
+      cacheRef.current.delete(imageId)
+      cacheRef.current.set(imageId, cached)
       setRecipeIds(cached)
       currentRequestRef.current = null
       return
@@ -74,20 +92,7 @@ export function useRecipeRecommendations(
 
       const reqId = String(++requestCounterRef.current)
       currentRequestRef.current = reqId
-
-      const onMessage = (e: MessageEvent<WorkerMessage>) => {
-        if (e.data.requestId !== reqId) return
-        if (e.data.type === 'result') {
-          if (cacheRef.current.size >= CACHE_MAX) {
-            const firstKey = cacheRef.current.keys().next().value
-            if (firstKey) cacheRef.current.delete(firstKey)
-          }
-          cacheRef.current.set(imageId, e.data.recipeIds)
-          setRecipeIds(e.data.recipeIds)
-        }
-        worker.removeEventListener('message', onMessage)
-      }
-      worker.addEventListener('message', onMessage)
+      pendingRequestsRef.current.set(reqId, imageId)
 
       worker.postMessage({
         type: 'analyze',

@@ -42,3 +42,11 @@ export function kelvinToRGBMultipliers(kelvin: number): [number, number, number]
   const gNorm = g === 0 ? 1 : g
   return [r / gNorm, 1, b / gNorm]
 }
+
+const DAYLIGHT_MULTIPLIERS = kelvinToRGBMultipliers(5500)
+
+export function kelvinToRGBScale(kelvin: number): [number, number] {
+  const [r, , b] = kelvinToRGBMultipliers(kelvin)
+  const [rRef, , bRef] = DAYLIGHT_MULTIPLIERS
+  return [r / rRef, b / bRef]
+}

@@ -14,9 +14,8 @@ import {
   applySaturation,
   applyWhiteBalanceShift,
   applyToneAdjustment,
-  applyDynamicRange,
-  applyWhiteBalancePreset,
 } from './color'
+import { applyPreprocessSettings } from './preprocess'
 import { applyGrain, grainEffectToStrength, grainSizeToNumber } from './grain'
 import { applyClarity, applySharpness, applyColorChrome, applyColorChromeFXBlue } from './effects'
 
@@ -62,13 +61,7 @@ function processData(imageData: ImageData, options: ProcessingOptions, lut: Hald
     imageData.height
   )
 
-  // Pre-process: Dynamic Range и White Balance Preset
-  if (settings?.dynamicRange && settings.dynamicRange !== 'DR100') {
-    applyDynamicRange(processed, settings.dynamicRange)
-  }
-  if (settings?.whiteBalance && settings.whiteBalance !== 'auto') {
-    applyWhiteBalancePreset(processed, settings.whiteBalance)
-  }
+  applyPreprocessSettings(processed, settings)
 
   // Simulation: HaldCLUT or curve-based
   if (lut) {

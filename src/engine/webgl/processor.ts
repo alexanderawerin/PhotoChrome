@@ -8,6 +8,7 @@ import { ProcessingOptions, RecipeSettings, CurvePoints } from '../types'
 import type { HaldCLUT } from '../haldclut'
 import { getCachedLUT } from '../../presets/simulations'
 import { grainEffectToStrength, grainSizeToNumber } from '../grain'
+import { kelvinToRGBScale } from '../whitebalance'
 
 // Import shaders as raw strings
 import baseVert from './shaders/base.vert?raw'
@@ -555,6 +556,39 @@ export class WebGLProcessor {
       this.height
     )
 
+    const dynamicRange = settings?.dynamicRange === 'DR400'
+      ? 2
+      : settings?.dynamicRange === 'DR200'
+        ? 1
+        : 0
+    gl.uniform1i(gl.getUniformLocation(program, 'uDynamicRange'), dynamicRange)
+
+    const presetShifts: Record<string, [number, number]> = {
+      auto: [0, 0],
+      daylight: [0, 0],
+      shade: [3, -3],
+      cloudy: [1, -1],
+      tungsten: [-6, 5],
+      fluorescent: [-3, 2],
+    }
+    const [presetRed, presetBlue] = presetShifts[settings?.whiteBalance ?? 'auto']
+    gl.uniform2f(
+      gl.getUniformLocation(program, 'uWbPresetShift'),
+      presetRed,
+      presetBlue
+    )
+
+    const hasKelvin = settings?.whiteBalanceKelvin !== undefined
+    const [kelvinRed, kelvinBlue] = hasKelvin
+      ? kelvinToRGBScale(settings.whiteBalanceKelvin!)
+      : [1, 1]
+    gl.uniform1i(gl.getUniformLocation(program, 'uUseKelvin'), hasKelvin ? 1 : 0)
+    gl.uniform2f(
+      gl.getUniformLocation(program, 'uKelvinScale'),
+      kelvinRed,
+      kelvinBlue
+    )
+
     // Color balance
     if (simulation.colorBalance) {
       gl.uniform1i(gl.getUniformLocation(program, 'uUseColorBalance'), 1)
@@ -574,13 +608,14 @@ export class WebGLProcessor {
       gl.uniform1i(gl.getUniformLocation(program, 'uUseColorBalance'), 0)
     }
 
-    // Base saturation from simulation
-    let saturation = simulation.saturation ?? 0
-    // Add recipe color setting
-    if (settings?.color !== undefined) {
-      saturation += settings.color / 10
-    }
-    gl.uniform1f(gl.getUniformLocation(program, 'uSaturation'), saturation)
+    gl.uniform1f(
+      gl.getUniformLocation(program, 'uSimulationSaturation'),
+      simulation.saturation ?? 0
+    )
+    gl.uniform1f(
+      gl.getUniformLocation(program, 'uRecipeSaturation'),
+      settings?.color !== undefined ? settings.color / 10 : 0
+    )
 
     // White balance shift
     gl.uniform1f(
@@ -780,4 +815,3 @@ export function getPhotoWebGLProcessor(): WebGLProcessor {
   }
   return photoProcessorInstance
 }
-
