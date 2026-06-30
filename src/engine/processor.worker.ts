@@ -6,6 +6,7 @@
  */
 
 import type { ProcessingPlan, RecipeSettings } from './types'
+import type { HaldCLUT } from './haldclut'
 import { applyHaldCLUT } from './haldclut'
 import { createCurveLUT, applyCurve } from './curves'
 import {
@@ -18,13 +19,25 @@ import { applyPreprocessSettings } from './preprocess'
 import { applyGrain, grainEffectToStrength, grainSizeToNumber } from './grain'
 import { applyClarity, applySharpness, applyColorChrome, applyColorChromeFXBlue } from './effects'
 
-interface WorkerRequest {
+interface ProcessRequest {
+  type: 'process'
   requestId: string
   buffer: ArrayBuffer
   width: number
   height: number
   plan: ProcessingPlan
+  lutId?: string
 }
+
+interface RegisterLutRequest {
+  type: 'register-lut'
+  lutId: string
+  lut: HaldCLUT
+}
+
+type WorkerRequest = ProcessRequest | RegisterLutRequest
+
+const registeredLuts = new Map<string, HaldCLUT>()
 
 function applyRecipeSettings(imageData: ImageData, settings: RecipeSettings): void {
   if (settings.highlight !== undefined || settings.shadow !== undefined) {
@@ -83,13 +96,29 @@ function processData(imageData: ImageData, plan: ProcessingPlan): ImageData {
 }
 
 self.addEventListener('message', (e: MessageEvent<WorkerRequest>) => {
-  const { requestId, buffer, width, height, plan } = e.data
-  const imageData = new ImageData(new Uint8ClampedArray(buffer), width, height)
-  const result = processData(imageData, plan)
+  if (e.data.type === 'register-lut') {
+    registeredLuts.set(e.data.lutId, e.data.lut)
+    return
+  }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(self as any).postMessage(
-    { requestId, buffer: result.data.buffer, width: result.width, height: result.height },
-    [result.data.buffer]
-  )
+  const { requestId, buffer, width, height, plan, lutId } = e.data
+  try {
+    const lut = lutId ? registeredLuts.get(lutId) : plan.lut
+    if (lutId && !lut) throw new Error(`LUT ${lutId} is not registered`)
+    const imageData = new ImageData(new Uint8ClampedArray(buffer), width, height)
+    const result = processData(imageData, { ...plan, lut: lut ?? null })
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(self as any).postMessage(
+      { type: 'result', requestId, buffer: result.data.buffer, width: result.width, height: result.height },
+      [result.data.buffer]
+    )
+  } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(self as any).postMessage({
+      type: 'error',
+      requestId,
+      message: error instanceof Error ? error.message : String(error),
+    })
+  }
 })

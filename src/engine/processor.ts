@@ -33,6 +33,40 @@ export interface ExifInfo {
   settings?: RecipeSettings
 }
 
+export interface ProcessAsyncOptions {
+  signal?: AbortSignal
+  timeoutMs?: number
+}
+
+export class ProcessingTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`Image processing timed out after ${timeoutMs} ms`)
+    this.name = 'ProcessingTimeoutError'
+  }
+}
+
+interface QueuedProcessingRequest {
+  requestId: string
+  imageData: ImageData
+  plan: ProcessingPlan
+  options: Required<Pick<ProcessAsyncOptions, 'timeoutMs'>> & Pick<ProcessAsyncOptions, 'signal'>
+  resolve: (data: ImageData) => void
+  reject: (error: Error) => void
+  timeoutId?: ReturnType<typeof setTimeout>
+  abortHandler?: () => void
+}
+
+const DEFAULT_PROCESSING_TIMEOUT_MS = 120_000
+
+function createAbortError(): Error {
+  if (typeof DOMException !== 'undefined') {
+    return new DOMException('Image processing was cancelled', 'AbortError')
+  }
+  const error = new Error('Image processing was cancelled')
+  error.name = 'AbortError'
+  return error
+}
+
 /**
  * Главный процессор изображений.
  * Применяет симуляцию и все настройки рецепта к изображению.
@@ -46,8 +80,9 @@ export interface ExifInfo {
 export class ImageProcessor {
   // Worker singleton for async CPU processing
   private static processingWorker: Worker | null = null
-  private static workerCallbacks: Map<string, (data: ImageData) => void> = new Map()
-  private static workerRejects: Map<string, (err: Error) => void> = new Map()
+  private static registeredWorkerLuts = new Set<string>()
+  private static activeWorkerRequest: QueuedProcessingRequest | null = null
+  private static workerQueue: QueuedProcessingRequest[] = []
 
   /**
    * Применяет обработку к ImageData.
@@ -146,61 +181,186 @@ export class ImageProcessor {
    */
   static processAsync(
     imageData: ImageData,
-    plan: ProcessingPlan
+    plan: ProcessingPlan,
+    options: ProcessAsyncOptions = {}
   ): Promise<ImageData> {
+    assertProcessingTarget(plan, imageData.width, imageData.height)
+    const timeoutMs = options.timeoutMs ?? DEFAULT_PROCESSING_TIMEOUT_MS
+    if (!Number.isFinite(timeoutMs) || timeoutMs < 0) {
+      return Promise.reject(new Error('Processing timeout must be a non-negative finite number'))
+    }
+    if (options.signal?.aborted) return Promise.reject(createAbortError())
+
     return new Promise((resolve, reject) => {
-      try {
-        assertProcessingTarget(plan, imageData.width, imageData.height)
-        const worker = this.getProcessingWorker()
-        const requestId = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-
-        this.workerCallbacks.set(requestId, resolve)
-        this.workerRejects.set(requestId, reject)
-
-        const buffer = imageData.data.buffer.slice(0)
-        const transferables: ArrayBuffer[] = [buffer]
-
-        const workerPlan: ProcessingPlan = plan.lut
-          ? {
-              ...plan,
-              lut: { ...plan.lut, data: new Uint8ClampedArray(plan.lut.data) },
-            }
-          : plan
-        if (workerPlan.lut) transferables.push(workerPlan.lut.data.buffer)
-
-        worker.postMessage(
-          { requestId, buffer, width: imageData.width, height: imageData.height, plan: workerPlan },
-          transferables
-        )
-      } catch (err) {
-        reject(err)
+      const request: QueuedProcessingRequest = {
+        requestId: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        imageData,
+        plan,
+        options: { signal: options.signal, timeoutMs },
+        resolve,
+        reject,
       }
+
+      request.abortHandler = () => this.cancelWorkerRequest(request)
+      options.signal?.addEventListener('abort', request.abortHandler, { once: true })
+      this.workerQueue.push(request)
+      this.startNextWorkerRequest()
     })
+  }
+
+  private static startNextWorkerRequest(): void {
+    if (this.activeWorkerRequest) return
+
+    const request = this.workerQueue.shift()
+    if (!request) return
+    if (request.options.signal?.aborted) {
+      this.cleanupWorkerRequest(request)
+      request.reject(createAbortError())
+      this.startNextWorkerRequest()
+      return
+    }
+
+    this.activeWorkerRequest = request
+    try {
+      const worker = this.getProcessingWorker()
+      this.registerPlanLut(worker, request.plan)
+
+      const buffer = request.imageData.data.buffer.slice(0)
+      const workerPlan: ProcessingPlan = request.plan.lut
+        ? { ...request.plan, lut: null }
+        : request.plan
+
+      request.timeoutId = setTimeout(() => {
+        if (this.activeWorkerRequest === request) {
+          this.restartWorkerAfterFailure(new ProcessingTimeoutError(request.options.timeoutMs))
+        }
+      }, request.options.timeoutMs)
+
+      worker.postMessage(
+        {
+          type: 'process',
+          requestId: request.requestId,
+          buffer,
+          width: request.imageData.width,
+          height: request.imageData.height,
+          plan: workerPlan,
+          lutId: request.plan.lut ? request.plan.simulation.id : undefined,
+        },
+        [buffer]
+      )
+    } catch (error) {
+      this.restartWorkerAfterFailure(error instanceof Error ? error : new Error(String(error)))
+    }
+  }
+
+  private static registerPlanLut(worker: Worker, plan: ProcessingPlan): void {
+    if (!plan.lut || this.registeredWorkerLuts.has(plan.simulation.id)) return
+
+    const data = new Uint8ClampedArray(plan.lut.data)
+    worker.postMessage({
+      type: 'register-lut',
+      lutId: plan.simulation.id,
+      lut: { ...plan.lut, data },
+    }, [data.buffer])
+    this.registeredWorkerLuts.add(plan.simulation.id)
+  }
+
+  private static cancelWorkerRequest(request: QueuedProcessingRequest): void {
+    if (this.activeWorkerRequest === request) {
+      this.restartWorkerAfterFailure(createAbortError())
+      return
+    }
+
+    const queueIndex = this.workerQueue.indexOf(request)
+    if (queueIndex >= 0) {
+      this.workerQueue.splice(queueIndex, 1)
+      this.cleanupWorkerRequest(request)
+      request.reject(createAbortError())
+    }
+  }
+
+  private static completeWorkerRequest(request: QueuedProcessingRequest, result: ImageData): void {
+    if (this.activeWorkerRequest !== request) return
+    this.activeWorkerRequest = null
+    this.cleanupWorkerRequest(request)
+    request.resolve(result)
+    this.startNextWorkerRequest()
+  }
+
+  private static rejectWorkerRequest(request: QueuedProcessingRequest, error: Error): void {
+    if (this.activeWorkerRequest !== request) return
+    this.activeWorkerRequest = null
+    this.cleanupWorkerRequest(request)
+    request.reject(error)
+    this.startNextWorkerRequest()
+  }
+
+  private static cleanupWorkerRequest(request: QueuedProcessingRequest): void {
+    if (request.timeoutId !== undefined) clearTimeout(request.timeoutId)
+    if (request.abortHandler) {
+      request.options.signal?.removeEventListener('abort', request.abortHandler)
+    }
+  }
+
+  private static restartWorkerAfterFailure(error: Error): void {
+    const request = this.activeWorkerRequest
+    this.activeWorkerRequest = null
+    if (request) this.cleanupWorkerRequest(request)
+    this.terminateProcessingWorker()
+    if (request) request.reject(error)
+    this.startNextWorkerRequest()
+  }
+
+  private static terminateProcessingWorker(): void {
+    this.processingWorker?.terminate()
+    this.processingWorker = null
+    this.registeredWorkerLuts.clear()
+  }
+
+  /** Releases worker resources and rejects active or queued requests. */
+  static disposeProcessingWorker(): void {
+    const error = createAbortError()
+    const requests = [
+      ...(this.activeWorkerRequest ? [this.activeWorkerRequest] : []),
+      ...this.workerQueue,
+    ]
+    this.activeWorkerRequest = null
+    this.workerQueue = []
+    this.terminateProcessingWorker()
+    for (const request of requests) {
+      this.cleanupWorkerRequest(request)
+      request.reject(error)
+    }
   }
 
   private static getProcessingWorker(): Worker {
     if (!this.processingWorker) {
-      this.processingWorker = new Worker(
+      const worker = new Worker(
         new URL('./processor.worker.ts', import.meta.url),
         { type: 'module' }
       )
+      this.processingWorker = worker
 
-      this.processingWorker.addEventListener('message', (e: MessageEvent) => {
-        const { requestId, buffer, width, height } = e.data
-        const resolve = this.workerCallbacks.get(requestId)
-        if (resolve) {
-          this.workerCallbacks.delete(requestId)
-          this.workerRejects.delete(requestId)
-          resolve(new ImageData(new Uint8ClampedArray(buffer), width, height))
+      worker.addEventListener('message', (e: MessageEvent) => {
+        if (this.processingWorker !== worker) return
+        const request = this.activeWorkerRequest
+        if (!request || e.data.requestId !== request.requestId) return
+
+        if (e.data.type === 'error') {
+          this.rejectWorkerRequest(request, new Error(e.data.message || 'Worker processing failed'))
+          return
         }
+        const { buffer, width, height } = e.data
+        this.completeWorkerRequest(
+          request,
+          new ImageData(new Uint8ClampedArray(buffer), width, height)
+        )
       })
 
-      this.processingWorker.addEventListener('error', (e: ErrorEvent) => {
+      worker.addEventListener('error', (e: ErrorEvent) => {
+        if (this.processingWorker !== worker) return
         console.error('Processing worker error:', e.message)
-        this.workerRejects.forEach(reject => reject(new Error(e.message)))
-        this.workerCallbacks.clear()
-        this.workerRejects.clear()
-        this.processingWorker = null
+        this.restartWorkerAfterFailure(new Error(e.message || 'Processing worker failed'))
       })
     }
     return this.processingWorker
