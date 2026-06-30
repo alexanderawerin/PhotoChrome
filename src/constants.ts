@@ -8,7 +8,7 @@
 // ============================================================================
 
 /** Application version */
-export const APP_VERSION = '1.5'
+export const APP_VERSION = '1.6'
 
 /** Application URL for watermark */
 export const APP_URL = 'photochrome.netdesigner.ru'
@@ -132,4 +132,3 @@ export const KEYBOARD_SHORTCUTS = {
   COMPARE: ' ', // Space
   EXPORT: 's', // Ctrl/Cmd+S
 } as const
-

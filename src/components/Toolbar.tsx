@@ -14,6 +14,7 @@ interface ToolbarProps {
   canExport: boolean
   isExporting?: boolean
   onExportAll?: () => void
+  canExportAll?: boolean
   isBatchExporting?: boolean
   // Crop mode
   cropMode?: boolean
@@ -45,6 +46,7 @@ export function Toolbar({
   canExport,
   isExporting = false,
   onExportAll,
+  canExportAll = false,
   isBatchExporting = false,
   cropMode = false,
   cropRatio = DEFAULT_CROP_RATIO_DESKTOP,
@@ -303,7 +305,7 @@ export function Toolbar({
           aria-label={`Apply current preset to all ${totalImages} images`}
         >
           <Layers className="w-4 h-4" aria-hidden="true" />
-          Apply to all {totalImages}
+          Apply to all
         </Button>
       )}
 
@@ -313,7 +315,7 @@ export function Toolbar({
           variant="outline"
           size="default"
           onClick={onExportAll}
-          disabled={isBatchExporting || isExporting}
+          disabled={!canExportAll || isBatchExporting || isExporting}
           aria-label="Export all photos"
           aria-busy={isBatchExporting}
         >

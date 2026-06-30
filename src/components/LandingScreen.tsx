@@ -132,30 +132,29 @@ export function LandingScreen({ onFileSelect }: LandingScreenProps) {
           
           <p 
             className={`
-              text-xs mt-4 text-center transition-colors duration-300 hidden md:block
+              text-xs mt-4 text-center transition-colors duration-300
               ${isDragging ? 'text-white' : 'text-zinc-600'}
             `}
             aria-live="polite"
           >
-            {isDragging ? 'Drop to upload' : 'or drag and drop here'}
+            {isDragging ? (
+              'Drop to upload'
+            ) : (
+              <>
+                © 2026{' '}
+                <a
+                  href="https://netdesigner.ru"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-zinc-300 transition-colors"
+                >
+                  Alexander Awerin
+                </a>
+              </>
+            )}
           </p>
         </div>
       </div>
-
-      {/* Copyright footer */}
-      <footer className="absolute bottom-4 sm:bottom-6 left-0 right-0 text-center z-[100]">
-        <p className="text-xs text-zinc-500">
-          © 2026{' '}
-          <a
-            href="https://netdesigner.ru"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-zinc-300 transition-colors"
-          >
-            Alexander Awerin
-          </a>
-        </p>
-      </footer>
     </main>
   )
 }

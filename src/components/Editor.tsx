@@ -79,7 +79,7 @@ export function Editor({
   const exportAbortControllerRef = useRef<AbortController | null>(null)
   const batchAbortControllerRef = useRef<AbortController | null>(null)
   const [batchProgress, setBatchProgress] = useState<BatchExportProgress | null>(null)
-  const [batchSummary, setBatchSummary] = useState<{
+  const [, setBatchSummary] = useState<{
     status: BatchExportResult['status']
     exported: number
     skipped: number
@@ -379,6 +379,7 @@ export function Editor({
   }, [images])
 
   const isBatchExporting = batchProgress !== null
+  const canExportAll = images.some((image) => Boolean(image.recipe))
 
   useEffect(() => () => {
     exportAbortControllerRef.current?.abort()
@@ -504,6 +505,7 @@ export function Editor({
             canExport={!!currentImage.recipe}
             isExporting={isExporting}
             onExportAll={handleExportAll}
+            canExportAll={canExportAll}
             isBatchExporting={isBatchExporting}
             cropMode={transform.isCropping}
             cropRatio={transform.cropRatio}
@@ -563,7 +565,7 @@ export function Editor({
                 className="flex-1"
               >
                 <Layers className="w-4 h-4" aria-hidden="true" />
-                Apply to all {totalImages}
+                Apply to all
               </Button>
             )}
 
@@ -572,7 +574,7 @@ export function Editor({
                 variant="outline"
                 size="default"
                 onClick={handleExportAll}
-                disabled={isBatchExporting || isExporting}
+                disabled={!canExportAll || isBatchExporting || isExporting}
                 aria-label="Export all photos"
                 aria-busy={isBatchExporting}
                 className="flex-1"
@@ -590,7 +592,7 @@ export function Editor({
               disabled={!currentImage.recipe || isExporting || isBatchExporting}
               aria-label={isExporting ? 'Exporting...' : 'Export processed image'}
               aria-busy={isExporting}
-              className={totalImages > 1 && currentImage.recipe ? 'flex-1' : 'w-full'}
+              className={totalImages > 1 ? 'flex-1' : 'w-full'}
             >
               {isExporting ? (
                 <Spinner className="size-4" randomColor />
@@ -695,21 +697,6 @@ export function Editor({
         </div>
       )}
 
-      {batchSummary && (
-        <div
-          role={batchSummary.status === 'error' ? 'alert' : 'status'}
-          aria-label="Batch export result"
-          className="fixed bottom-4 left-1/2 z-[190] flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white shadow-xl"
-        >
-          <p>
-            {batchSummary.status === 'success' && 'Batch export complete: '}
-            {batchSummary.status === 'cancelled' && 'Batch export cancelled: '}
-            {batchSummary.status === 'error' && `Batch export failed: ${batchSummary.message}. `}
-            {batchSummary.exported} exported, {batchSummary.skipped} skipped, {batchSummary.errors} errors.
-          </p>
-          <Button size="sm" variant="ghost" onClick={() => setBatchSummary(null)}>Dismiss</Button>
-        </div>
-      )}
     </div>
   )
 }

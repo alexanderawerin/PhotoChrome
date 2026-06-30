@@ -6,7 +6,7 @@ import {
 } from '../../constants'
 import { encodeAudio, extractAudioData } from './audio'
 import { getExportCapabilities, isSafari, testVideoEncoderWorks } from './capabilities'
-import { ExportCancelledError } from './errors'
+import { closeCodecSafely, ExportCancelledError } from './errors'
 import { seekVideoWithTimeout } from './frames'
 import { createVideoMuxer } from './muxing'
 
@@ -33,7 +33,12 @@ export async function exportVideo(
   const totalFrames = Math.floor(duration * fps)
 
   onProgress(0, 'Checking codec support...')
-  const capabilities = await getExportCapabilities()
+  const capabilities = await getExportCapabilities({
+    width,
+    height,
+    framerate: fps,
+    bitrate: VIDEO_EXPORT_BITRATE,
+  })
   if (!capabilities.videoSupported || !capabilities.recommendedCodec) {
     throw new Error('H.264 video encoding is not supported in this browser. Please use Chrome or Edge.')
   }
@@ -113,7 +118,8 @@ export async function exportVideo(
     await waitForEncoderQueue(safariMode ? 0 : 3)
     if (videoEncoder.state !== 'configured') {
       videoFrame.close()
-      throw new Error('VideoEncoder is not in configured state')
+      await new Promise(resolve => setTimeout(resolve, 0))
+      throw encoderError ?? new Error('VideoEncoder is not in configured state')
     }
     videoEncoder.encode(videoFrame, { keyFrame })
     videoFrame.close()
@@ -160,12 +166,12 @@ export async function exportVideo(
     await videoEncoder.flush()
     await videoPacketWrites
     if (encoderError) throw encoderError
-    videoEncoder.close()
+    closeCodecSafely(videoEncoder)
     const blob = await muxer.finalize()
     onProgress(100, 'Done!')
     return blob
   } catch (error) {
-    videoEncoder.close()
+    closeCodecSafely(videoEncoder)
     await muxer.cancel().catch(() => {})
     if (error instanceof WebGLContextLostError) {
       throw new Error('Video processing was interrupted due to graphics hardware reset. Please try again.')

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Bug, Lightbulb, Github } from 'lucide-react'
-import { APP_VERSION, GITHUB_REPO_URL } from '../constants'
+import { GITHUB_REPO_URL } from '../constants'
 import {
   Sheet,
   SheetContent,
@@ -19,6 +19,12 @@ interface HelpDialogProps {
 type Tab = 'whats-new' | 'shortcuts' | 'feedback'
 
 const WHATS_NEW = [
+  {
+    version: '1.6',
+    items: [
+      'Export all photos at once as a ZIP archive',
+    ],
+  },
   {
     version: '1.5',
     items: [
@@ -98,10 +104,7 @@ export function HelpDialog({ isOpen, onClose, totalImages = 1 }: HelpDialogProps
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="bg-zinc-900 border-zinc-800 w-[320px] sm:w-[380px] overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="text-white">
-            Photochrome
-            <sup className="text-[10px] text-zinc-500 ml-1">{APP_VERSION}</sup>
-          </SheetTitle>
+          <SheetTitle className="sr-only">Photochrome help</SheetTitle>
           <SheetDescription className="sr-only">
             Help and release notes
           </SheetDescription>
@@ -119,7 +122,7 @@ export function HelpDialog({ isOpen, onClose, totalImages = 1 }: HelpDialogProps
             aria-selected={activeTab === 'whats-new'}
             role="tab"
           >
-            New
+            What's New
           </button>
           <button
             onClick={() => setActiveTab('shortcuts')}

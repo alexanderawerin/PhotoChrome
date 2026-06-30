@@ -9,6 +9,8 @@ interface VideoPreviewProps {
   video: HTMLVideoElement
   /** Shared processing plan */
   processingPlan: ProcessingPlan | null
+  /** Pause playback rendering while another process owns the video element. */
+  isSuspended?: boolean
   /** Alt text for accessibility */
   alt?: string
   /** Callback for mouse/touch down (for before/after comparison) */
@@ -26,6 +28,7 @@ interface VideoPreviewProps {
 export function VideoPreview({
   video,
   processingPlan,
+  isSuspended = false,
   alt = 'Video preview',
   onMouseDown,
   onMouseUp,
@@ -35,6 +38,8 @@ export function VideoPreview({
   const wrapperRef = useRef<HTMLDivElement>(null)
   const animationRef = useRef<number>(0)
   const isRunningRef = useRef(false)
+  const isSuspendedRef = useRef(isSuspended)
+  isSuspendedRef.current = isSuspended
   
   // Use refs to avoid stale closures in animation loop
   const processingPlanRef = useRef(processingPlan)
@@ -121,6 +126,7 @@ export function VideoPreview({
    * Render a single frame to canvas
    */
   const renderFrame = useCallback(() => {
+    if (isSuspendedRef.current) return
     const canvas = canvasRef.current
     if (!canvas || !video || video.videoWidth === 0) return
 
@@ -157,6 +163,7 @@ export function VideoPreview({
    * Animation loop
    */
   const startLoop = useCallback(() => {
+    if (isSuspendedRef.current) return
     if (isRunningRef.current) return
     isRunningRef.current = true
 
@@ -258,6 +265,7 @@ export function VideoPreview({
 
     const handleSeeked = () => {
       if (!isMountedRef.current) return
+      if (isSuspendedRef.current) return
       renderFrame()
     }
 
@@ -273,6 +281,15 @@ export function VideoPreview({
       video.removeEventListener('seeked', handleSeeked)
     }
   }, [video, startLoop, stopLoop, renderFrame])
+
+  useEffect(() => {
+    if (isSuspended) {
+      stopLoop()
+      return
+    }
+    renderFrame()
+    if (!video.paused) startLoop()
+  }, [isSuspended, video, renderFrame, startLoop, stopLoop])
 
   /**
    * Render frame when filter changes

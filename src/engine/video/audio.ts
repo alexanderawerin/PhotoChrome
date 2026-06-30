@@ -1,5 +1,5 @@
 import { VIDEO_AUDIO_BITRATE, VIDEO_AUDIO_SAMPLE_RATE } from '../../constants'
-import { ExportCancelledError } from './errors'
+import { closeCodecSafely, ExportCancelledError } from './errors'
 
 export async function extractAudioData(
   videoSrc: string,
@@ -75,7 +75,7 @@ export async function encodeAudio(
   )
   for (let frame = 0; frame < Math.ceil(totalSamples / samplesPerFrame); frame++) {
     if (isCancelled?.()) {
-      encoder.close()
+      closeCodecSafely(encoder)
       throw new ExportCancelledError()
     }
     const startSample = frame * samplesPerFrame
@@ -94,7 +94,7 @@ export async function encodeAudio(
   }
   await encoder.flush()
   await packetWrites
-  encoder.close()
+  closeCodecSafely(encoder)
   if (packetWriteError) throw packetWriteError
 }
 

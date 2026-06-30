@@ -372,6 +372,7 @@ export function VideoEditor({
           <VideoPreview
             video={video}
             processingPlan={showOriginal ? null : processingPlan}
+            isSuspended={exportState.isExporting}
             onMouseDown={handleCompareStart}
             onMouseUp={handleCompareEnd}
             onMouseLeave={handleCompareEnd}

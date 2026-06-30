@@ -98,6 +98,10 @@ export function useVideoProcessor() {
     async (plan: ProcessingPlan): Promise<Blob | null> => {
       if (!videoData) return null
 
+      const previewTime = videoData.video.currentTime
+      const shouldResumePreview = !videoData.video.paused && !videoData.video.ended
+      videoData.video.pause()
+
       cancelledRef.current = false
       setExportState({
         isExporting: true,
@@ -140,6 +144,11 @@ export function useVideoProcessor() {
         const message = err instanceof Error ? err.message : 'Export failed'
         setExportState({ isExporting: false, progress: 0, status: '', error: message })
         throw err
+      } finally {
+        if (Number.isFinite(previewTime)) videoData.video.currentTime = previewTime
+        if (shouldResumePreview) {
+          void videoData.video.play().catch(() => {})
+        }
       }
     },
     [videoData]
