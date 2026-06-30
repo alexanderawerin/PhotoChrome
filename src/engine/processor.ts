@@ -1,6 +1,5 @@
-import { ProcessingOptions, RecipeSettings } from './types'
+import { ProcessingPlan, RecipeSettings } from './types'
 import { applyHaldCLUT } from './haldclut'
-import { getCachedLUT } from '../presets/simulations'
 import { createCurveLUT, applyCurve } from './curves'
 import {
   applyColorBalance,
@@ -17,6 +16,7 @@ import {
   applyColorChromeFXBlue
 } from './effects'
 import { getPhotoWebGLProcessor } from './webgl/processor'
+import { assertProcessingTarget } from './processing-plan'
 
 // Maximum image dimension for WebGL processing (texture size limit)
 const WEBGL_MAX_DIMENSION = 4096
@@ -55,9 +55,10 @@ export class ImageProcessor {
    */
   static process(
     imageData: ImageData,
-    options: ProcessingOptions
+    plan: ProcessingPlan
   ): ImageData {
-    const { settings } = options
+    assertProcessingTarget(plan, imageData.width, imageData.height)
+    const { settings } = plan
 
     // 1. Pre-process: Dynamic Range и White Balance Preset
     //    Эти эффекты не реализованы в GL shader, применяем на CPU перед основным pipeline.
@@ -73,15 +74,15 @@ export class ImageProcessor {
 
     // 2. HaldCLUT simulations use CPU (reliable trilinear interpolation).
     //    WebGL sampler3D is unstable across browsers — CPU LUT is ~50ms for 1600px thumbnails.
-    const lut = getCachedLUT(options.simulation.id)
+    const { lut } = plan
     if (!lut) {
       // Curve-based simulations can use WebGL (no 3D texture needed)
-      const webglResult = this.processWithWebGL(inputData, options)
+      const webglResult = this.processWithWebGL(inputData, plan)
       if (webglResult) return webglResult
     }
 
     // 3. CPU path (HaldCLUT lookup or curve-based fallback)
-    return this.processCPU(inputData, options)
+    return this.processCPU(inputData, plan)
   }
 
   /**
@@ -90,7 +91,7 @@ export class ImageProcessor {
    */
   private static processWithWebGL(
     imageData: ImageData,
-    options: ProcessingOptions
+    plan: ProcessingPlan
   ): ImageData | null {
     if (
       imageData.width > WEBGL_MAX_DIMENSION ||
@@ -103,7 +104,7 @@ export class ImageProcessor {
     try {
       const processor = getPhotoWebGLProcessor()
       processor.init(imageData.width, imageData.height)
-      const resultCanvas = processor.processFrame(imageData, options, 0)
+      const resultCanvas = processor.processFrame(imageData, plan, 0)
       const ctx = resultCanvas.getContext('2d')
       if (!ctx) return null
       return ctx.getImageData(0, 0, resultCanvas.width, resultCanvas.height)
@@ -117,7 +118,7 @@ export class ImageProcessor {
    */
   private static processCPU(
     imageData: ImageData,
-    options: ProcessingOptions
+    plan: ProcessingPlan
   ): ImageData {
     const processed = new ImageData(
       new Uint8ClampedArray(imageData.data),
@@ -125,10 +126,9 @@ export class ImageProcessor {
       imageData.height
     )
 
-    const { simulation, settings } = options
+    const { simulation, settings, lut } = plan
 
     // HaldCLUT path: single 3D LUT lookup replaces curve + colorBalance + saturation
-    const lut = getCachedLUT(simulation.id)
     if (lut) {
       applyHaldCLUT(processed, lut)
     } else {
@@ -157,10 +157,11 @@ export class ImageProcessor {
    */
   static processAsync(
     imageData: ImageData,
-    options: ProcessingOptions
+    plan: ProcessingPlan
   ): Promise<ImageData> {
     return new Promise((resolve, reject) => {
       try {
+        assertProcessingTarget(plan, imageData.width, imageData.height)
         const worker = this.getProcessingWorker()
         const requestId = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
 
@@ -170,20 +171,16 @@ export class ImageProcessor {
         const buffer = imageData.data.buffer.slice(0)
         const transferables: ArrayBuffer[] = [buffer]
 
-        // Include cached HaldCLUT data for the worker
-        const lut = getCachedLUT(options.simulation.id)
-        let lutData: ArrayBuffer | undefined
-        let lutWidth: number | undefined
-        let lutLevel: number | undefined
-        if (lut) {
-          lutData = lut.data.buffer.slice(0)
-          lutWidth = lut.width
-          lutLevel = lut.level
-          transferables.push(lutData)
-        }
+        const workerPlan: ProcessingPlan = plan.lut
+          ? {
+              ...plan,
+              lut: { ...plan.lut, data: new Uint8ClampedArray(plan.lut.data) },
+            }
+          : plan
+        if (workerPlan.lut) transferables.push(workerPlan.lut.data.buffer)
 
         worker.postMessage(
-          { requestId, buffer, width: imageData.width, height: imageData.height, options, lutData, lutWidth, lutLevel },
+          { requestId, buffer, width: imageData.width, height: imageData.height, plan: workerPlan },
           transferables
         )
       } catch (err) {

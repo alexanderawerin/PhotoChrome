@@ -3,7 +3,7 @@
  * Handles video loading, frame extraction, and export
  */
 
-import { ProcessingOptions } from './types'
+import { ProcessingPlan } from './types'
 import { WebGLProcessor, WebGLContextLostError } from './webgl/processor'
 import {
   VIDEO_MAX_DURATION,
@@ -454,7 +454,7 @@ export async function supportsAudioEncoding(): Promise<boolean> {
  */
 export async function exportVideo(
   video: HTMLVideoElement,
-  options: ProcessingOptions,
+  plan: ProcessingPlan,
   onProgress: (progress: number, status: string) => void,
   isCancelled?: () => boolean
 ): Promise<Blob> {
@@ -665,7 +665,7 @@ export async function exportVideo(
       frameCtx.drawImage(video, 0, 0)
 
       // Process frame with WebGL
-      const processedCanvas = processor.processFrame(frameCanvas, options, time)
+      const processedCanvas = processor.processFrame(frameCanvas, plan, time)
 
       // Create video frame
       const videoFrame = new VideoFrame(processedCanvas, {
@@ -858,4 +858,3 @@ export async function getExportCapabilities(): Promise<{
     recommendedCodec,
   }
 }
-

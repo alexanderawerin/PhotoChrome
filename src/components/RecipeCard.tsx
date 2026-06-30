@@ -4,7 +4,8 @@ import { Spinner } from './ui/spinner'
 import { Card } from './ui/card'
 import { Recipe } from '../engine/types'
 import { ImageProcessor } from '../engine/processor'
-import { getSimulation, loadSimulationLUT } from '../presets/simulations'
+import { loadSimulationLUT } from '../presets/simulations'
+import { createProcessingPlan } from '../engine/processing-plan'
 import { 
   RECIPE_CARD_PREVIEW_SIZE, 
   PREVIEW_GENERATION_DELAY,
@@ -175,19 +176,13 @@ function RecipeCardComponent({
           return
         }
 
-        const simulation = getSimulation(recipe.filmSimulation)
-        if (!simulation || cancelled) {
-          setIsGenerating(false)
-          return
-        }
-
         await loadSimulationLUT(recipe.filmSimulation)
         if (cancelled) return
 
-        const processed = ImageProcessor.process(smallImage, {
-          simulation,
-          settings: recipe.settings
-        })
+        const processed = ImageProcessor.process(
+          smallImage,
+          createProcessingPlan(recipe, smallImage)
+        )
 
         if (!cancelled) {
           // Сохраняем в кэш с FIFO-вытеснением

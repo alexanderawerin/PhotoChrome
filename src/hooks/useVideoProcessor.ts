@@ -12,7 +12,7 @@ import {
   canUseMediaRecorder,
   isSafari,
 } from '../engine/safari-export'
-import { ProcessingOptions } from '../engine/types'
+import { ProcessingPlan } from '../engine/types'
 import { THUMBNAIL_MAX_SIZE } from '../constants'
 
 export interface VideoData {
@@ -93,7 +93,7 @@ export function useVideoProcessor() {
    * Falls back to FFmpeg.wasm for Safari.
    */
   const exportVideoWithEffects = useCallback(
-    async (options: ProcessingOptions): Promise<Blob | null> => {
+    async (plan: ProcessingPlan): Promise<Blob | null> => {
       if (!videoData) return null
 
       cancelledRef.current = false
@@ -110,7 +110,7 @@ export function useVideoProcessor() {
         const blob = useSafariFallback
           ? await exportVideoWithMediaRecorder(
               videoData.video,
-              options,
+              plan,
               (progress, status) => {
                 setExportState({ isExporting: true, progress, status })
               },
@@ -118,7 +118,7 @@ export function useVideoProcessor() {
             )
           : await exportVideo(
               videoData.video,
-              options,
+              plan,
               (progress, status) => {
                 setExportState({ isExporting: true, progress, status })
               },
@@ -183,4 +183,3 @@ export function useVideoProcessor() {
     reset,
   }
 }
-

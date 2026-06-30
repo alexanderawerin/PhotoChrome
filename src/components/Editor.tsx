@@ -13,7 +13,8 @@ import { ThumbnailStrip } from './ThumbnailStrip'
 import { ImageCounter } from './ImageCounter'
 import { Recipe, RecipeSettings, ImageItem } from '../engine/types'
 import { ImageProcessor, ExifInfo } from '../engine/processor'
-import { getSimulation, loadSimulationLUT } from '../presets/simulations'
+import { loadSimulationLUT } from '../presets/simulations'
+import { createProcessingPlan } from '../engine/processing-plan'
 import { getAllRecipes } from '../presets/recipes'
 import { AspectRatio } from '../engine/transform'
 import { useFavorites } from '../hooks/useFavorites'
@@ -97,15 +98,8 @@ export function Editor({
     settings: RecipeSettings
   ) => {
     if (recipe) {
-      const simulation = getSimulation(recipe.filmSimulation)
-      if (simulation) {
-        const mergedSettings = { ...recipe.settings, ...settings }
-        const processed = ImageProcessor.process(thumbData, {
-          simulation,
-          settings: mergedSettings
-        })
-        setPreviewImage(processed)
-      }
+      const plan = createProcessingPlan(recipe, thumbData, settings)
+      setPreviewImage(ImageProcessor.process(thumbData, plan))
     } else {
       setPreviewImage(thumbData)
     }
@@ -279,15 +273,17 @@ export function Editor({
 
     setIsExporting(true)
     try {
-      const simulation = getSimulation(currentImage.recipe.filmSimulation)
-      if (!simulation) return
-
       const mergedSettings = tuning.getMergedSettings(currentImage.recipe)
+      const plan = createProcessingPlan(
+        currentImage.recipe,
+        transform.transformedOriginal,
+        mergedSettings
+      )
 
       // Используем async Worker для полноразмерного экспорта (не блокирует UI)
       const processed = await ImageProcessor.processAsync(
         transform.transformedOriginal,
-        { simulation, settings: mergedSettings }
+        plan
       )
 
       const withWatermark = ImageProcessor.addWatermark(processed, APP_URL)

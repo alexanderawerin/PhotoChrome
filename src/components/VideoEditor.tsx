@@ -6,8 +6,9 @@ import { VideoPreview } from './VideoPreview'
 import { RecipePanel } from './RecipePanel'
 import { TuningPanel } from './TuningPanel'
 import { HelpDialog } from './HelpDialog'
-import { Recipe, RecipeSettings, ProcessingOptions } from '../engine/types'
-import { getSimulation, loadSimulationLUT } from '../presets/simulations'
+import { Recipe, RecipeSettings, ProcessingPlan } from '../engine/types'
+import { loadSimulationLUT } from '../presets/simulations'
+import { createProcessingPlan } from '../engine/processing-plan'
 import { getAllRecipes } from '../presets/recipes'
 import { useFavorites } from '../hooks/useFavorites'
 import { VideoData, VideoExportState } from '../hooks/useVideoProcessor'
@@ -17,7 +18,7 @@ interface VideoEditorProps {
   videoData: VideoData
   fileName: string
   onBack: () => void
-  onExport: (options: ProcessingOptions) => Promise<Blob | null>
+  onExport: (plan: ProcessingPlan) => Promise<Blob | null>
   exportState: VideoExportState
   onCancelExport: () => void
 }
@@ -115,21 +116,11 @@ export function VideoEditor({
   /**
    * Calculate processing options for WebGL preview
    */
-  const processingOptions = useMemo((): ProcessingOptions | null => {
+  const processingPlan = useMemo((): ProcessingPlan | null => {
     if (!activeRecipe) return null
-
-    const simulation = getSimulation(activeRecipe.filmSimulation)
-    if (!simulation) return null
-    if (simulation.lutImage && loadedSimulationId !== simulation.id) return null
-
-    return {
-      simulation,
-      settings: {
-        ...activeRecipe.settings,
-        ...customSettings,
-      },
-    }
-  }, [activeRecipe, customSettings, loadedSimulationId])
+    if (loadedSimulationId !== activeRecipe.filmSimulation) return null
+    return createProcessingPlan(activeRecipe, metadata, customSettings)
+  }, [activeRecipe, customSettings, loadedSimulationId, metadata])
 
   useEffect(() => {
     if (!activeRecipe) return
@@ -210,10 +201,10 @@ export function VideoEditor({
    * Export video
    */
   const handleExport = useCallback(async () => {
-    if (!activeRecipe || !processingOptions) return
+    if (!activeRecipe || !processingPlan) return
 
     try {
-      const blob = await onExport(processingOptions)
+      const blob = await onExport(processingPlan)
 
       if (blob) {
         // Download
@@ -229,7 +220,7 @@ export function VideoEditor({
     } catch (err) {
       console.error('Export failed:', err)
     }
-  }, [activeRecipe, fileName, processingOptions, onExport])
+  }, [activeRecipe, fileName, processingPlan, onExport])
 
   /**
    * Compare before/after
@@ -363,7 +354,7 @@ export function VideoEditor({
         <div className="flex-1 min-h-0 px-3 md:px-6 relative overflow-hidden">
           <VideoPreview
             video={video}
-            processingOptions={showOriginal ? null : processingOptions}
+            processingPlan={showOriginal ? null : processingPlan}
             onMouseDown={handleCompareStart}
             onMouseUp={handleCompareEnd}
             onMouseLeave={handleCompareEnd}

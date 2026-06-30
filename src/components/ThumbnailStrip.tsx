@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react'
 import { Film } from 'lucide-react'
 import { ImageItem, Recipe, RecipeSettings } from '../engine/types'
 import { ImageProcessor } from '../engine/processor'
-import { getSimulation } from '../presets/simulations'
+import { createProcessingPlan } from '../engine/processing-plan'
 
 interface ThumbnailStripProps {
   images: ImageItem[]
@@ -105,14 +105,10 @@ function ThumbnailPreview({
     // Применяем рецепт, если он есть
     let processedData = imageData
     if (recipe) {
-      const simulation = getSimulation(recipe.filmSimulation)
-      if (simulation) {
-        const mergedSettings = { ...recipe.settings, ...customSettings }
-        processedData = ImageProcessor.process(imageData, {
-          simulation,
-          settings: mergedSettings
-        })
-      }
+      processedData = ImageProcessor.process(
+        imageData,
+        createProcessingPlan(recipe, imageData, customSettings)
+      )
     }
 
     canvas.width = processedData.width

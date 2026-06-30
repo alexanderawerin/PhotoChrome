@@ -5,8 +5,7 @@
  * Используется для полноразмерного экспорта через ImageProcessor.processAsync().
  */
 
-import type { ProcessingOptions, RecipeSettings } from './types'
-import type { HaldCLUT } from './haldclut'
+import type { ProcessingPlan, RecipeSettings } from './types'
 import { applyHaldCLUT } from './haldclut'
 import { createCurveLUT, applyCurve } from './curves'
 import {
@@ -24,11 +23,7 @@ interface WorkerRequest {
   buffer: ArrayBuffer
   width: number
   height: number
-  options: ProcessingOptions
-  // HaldCLUT data (transferred from main thread)
-  lutData?: ArrayBuffer
-  lutWidth?: number
-  lutLevel?: number
+  plan: ProcessingPlan
 }
 
 function applyRecipeSettings(imageData: ImageData, settings: RecipeSettings): void {
@@ -52,8 +47,8 @@ function applyRecipeSettings(imageData: ImageData, settings: RecipeSettings): vo
   }
 }
 
-function processData(imageData: ImageData, options: ProcessingOptions, lut: HaldCLUT | null): ImageData {
-  const { simulation, settings } = options
+function processData(imageData: ImageData, plan: ProcessingPlan): ImageData {
+  const { simulation, settings, lut } = plan
 
   const processed = new ImageData(
     new Uint8ClampedArray(imageData.data),
@@ -88,21 +83,9 @@ function processData(imageData: ImageData, options: ProcessingOptions, lut: Hald
 }
 
 self.addEventListener('message', (e: MessageEvent<WorkerRequest>) => {
-  const { requestId, buffer, width, height, options, lutData, lutWidth, lutLevel } = e.data
+  const { requestId, buffer, width, height, plan } = e.data
   const imageData = new ImageData(new Uint8ClampedArray(buffer), width, height)
-
-  // Reconstruct HaldCLUT from transferred data
-  let lut: HaldCLUT | null = null
-  if (lutData && lutWidth && lutLevel) {
-    lut = {
-      level: lutLevel,
-      gridSize: lutLevel * lutLevel,
-      width: lutWidth,
-      data: new Uint8ClampedArray(lutData),
-    }
-  }
-
-  const result = processData(imageData, options, lut)
+  const result = processData(imageData, plan)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(self as any).postMessage(

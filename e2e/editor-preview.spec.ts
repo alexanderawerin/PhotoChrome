@@ -47,6 +47,8 @@ test.describe('Editor — Preview Rendering', () => {
       // Vite serves this browser-only module; it is intentionally imported inside the page.
       // @ts-expect-error Absolute Vite module paths are not visible to the Node test compiler.
       const { WebGLProcessor } = await import('/src/engine/webgl/processor.ts')
+      // @ts-expect-error Absolute Vite module paths are not visible to the Node test compiler.
+      const { createProcessingPlanFromSimulation } = await import('/src/engine/processing-plan.ts')
       const processor = new WebGLProcessor()
 
       try {
@@ -61,7 +63,8 @@ test.describe('Editor — Preview Rendering', () => {
 
         const output = processor.processFrame(
           new ImageData(data, 4, 4),
-          {
+          createProcessingPlanFromSimulation({
+            recipe: { id: 'webgl-audit', name: 'WebGL audit', simulationId: 'webgl-audit' },
             simulation: {
               id: 'webgl-audit',
               name: 'WebGL audit',
@@ -71,7 +74,8 @@ test.describe('Editor — Preview Rendering', () => {
               dynamicRange: 'DR200',
               whiteBalanceKelvin: 3000,
             },
-          }
+            targetSize: { width: 4, height: 4 },
+          })
         )
 
         const context = output.getContext('2d')
@@ -92,6 +96,10 @@ test.describe('Editor — Preview Rendering', () => {
       const { WebGLProcessor } = await import('/src/engine/webgl/processor.ts')
       // @ts-expect-error Absolute Vite module paths are not visible to the Node test compiler.
       const { getSimulation, loadSimulationLUT } = await import('/src/presets/simulations/index.ts')
+      // @ts-expect-error Absolute Vite module paths are not visible to the Node test compiler.
+      const { createProcessingPlanFromSimulation } = await import('/src/engine/processing-plan.ts')
+      // @ts-expect-error Absolute Vite module paths are not visible to the Node test compiler.
+      const { getCachedLUT } = await import('/src/presets/simulations/index.ts')
       const simulation = getSimulation('provia')
       if (!simulation) throw new Error('Provia simulation unavailable')
       await loadSimulationLUT('provia')
@@ -109,10 +117,13 @@ test.describe('Editor — Preview Rendering', () => {
         const source = new ImageData(data, 4, 4)
 
         const renderChroma = (color: number) => {
-          const output = processor.processFrame(source, {
+          const output = processor.processFrame(source, createProcessingPlanFromSimulation({
+            recipe: { id: 'provia-test', name: 'Provia test', simulationId: simulation.id },
             simulation,
             settings: { color },
-          })
+            lut: getCachedLUT(simulation.id),
+            targetSize: { width: 4, height: 4 },
+          }))
           const context = output.getContext('2d')
           if (!context) throw new Error('2D output context unavailable')
           const pixel = context.getImageData(2, 2, 1, 1).data

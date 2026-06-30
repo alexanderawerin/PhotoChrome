@@ -3,7 +3,7 @@
  * More stable than WebCodecs VideoEncoder in Safari
  */
 
-import { ProcessingOptions } from './types'
+import { ProcessingPlan } from './types'
 import { WebGLProcessor } from './webgl/processor'
 
 /**
@@ -23,7 +23,7 @@ export function canUseMediaRecorder(): boolean {
  */
 export async function exportVideoWithMediaRecorder(
   video: HTMLVideoElement,
-  options: ProcessingOptions,
+  plan: ProcessingPlan,
   onProgress: (progress: number, status: string) => void,
   isCancelled?: () => boolean
 ): Promise<Blob> {
@@ -110,7 +110,7 @@ export async function exportVideoWithMediaRecorder(
       frameCtx.drawImage(video, 0, 0)
 
       // Process with WebGL
-      const processedCanvas = processor.processFrame(frameCanvas, options, time)
+      const processedCanvas = processor.processFrame(frameCanvas, plan, time)
 
       // Draw to output canvas (scaled to even dimensions)
       outputCtx.drawImage(
@@ -191,4 +191,3 @@ export function isSafari(): boolean {
   const ua = navigator.userAgent
   return ua.includes('Safari') && !ua.includes('Chrome') && !ua.includes('Chromium')
 }
-

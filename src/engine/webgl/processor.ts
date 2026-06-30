@@ -4,11 +4,11 @@
  * Does NOT replace CPU processor for images - they coexist
  */
 
-import { ProcessingOptions, RecipeSettings, CurvePoints } from '../types'
+import { ProcessingPlan, RecipeSettings, CurvePoints } from '../types'
 import type { HaldCLUT } from '../haldclut'
-import { getCachedLUT } from '../../presets/simulations'
 import { grainEffectToStrength, grainSizeToNumber } from '../grain'
 import { kelvinToRGBScale } from '../whitebalance'
+import { assertProcessingTarget } from '../processing-plan'
 
 // Import shaders as raw strings
 import baseVert from './shaders/base.vert?raw'
@@ -414,9 +414,10 @@ export class WebGLProcessor {
    */
   processFrame(
     source: HTMLVideoElement | HTMLCanvasElement | ImageData,
-    options: ProcessingOptions,
+    plan: ProcessingPlan,
     time: number = 0
   ): HTMLCanvasElement {
+    assertProcessingTarget(plan, this.width, this.height)
     if (this.contextLost) {
       throw new WebGLContextLostError()
     }
@@ -426,7 +427,7 @@ export class WebGLProcessor {
     }
 
     const { gl, canvas, outputCanvas, outputCtx, filmProgram, blurProgram, sharpenProgram, quadBuffer, dummy3DTexture } = this.resources
-    const { simulation, settings } = options
+    const { simulation, settings, lut } = plan
 
     // Create source texture
     const sourceTexture = createTexture(gl, source)
@@ -434,7 +435,6 @@ export class WebGLProcessor {
     // Get or create HaldCLUT 3D texture (cached) or curve LUT (per-frame)
     let haldCLUTTexture: WebGLTexture | null = null
     let curveLUT: WebGLTexture | null = null
-    const lut = getCachedLUT(simulation.id)
 
     if (lut) {
       // Reuse cached GPU texture for this simulation
@@ -545,7 +545,7 @@ export class WebGLProcessor {
   private setFilmUniforms(
     gl: WebGL2RenderingContext,
     program: WebGLProgram,
-    simulation: ProcessingOptions['simulation'],
+    simulation: ProcessingPlan['simulation'],
     settings: RecipeSettings | undefined,
     time: number
   ): void {

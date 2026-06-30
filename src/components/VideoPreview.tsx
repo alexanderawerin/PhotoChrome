@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react'
-import { ProcessingOptions } from '../engine/types'
+import { ProcessingPlan } from '../engine/types'
 import { getWebGLProcessor } from '../engine/webgl/processor'
 import { Button } from './ui/button'
 
 interface VideoPreviewProps {
   /** HTML Video element */
   video: HTMLVideoElement
-  /** Processing options (simulation + settings) */
-  processingOptions: ProcessingOptions | null
+  /** Shared processing plan */
+  processingPlan: ProcessingPlan | null
   /** Alt text for accessibility */
   alt?: string
   /** Callback for mouse/touch down (for before/after comparison) */
@@ -25,7 +25,7 @@ interface VideoPreviewProps {
  */
 export function VideoPreview({
   video,
-  processingOptions,
+  processingPlan,
   alt = 'Video preview',
   onMouseDown,
   onMouseUp,
@@ -37,8 +37,8 @@ export function VideoPreview({
   const isRunningRef = useRef(false)
   
   // Use refs to avoid stale closures in animation loop
-  const processingOptionsRef = useRef(processingOptions)
-  processingOptionsRef.current = processingOptions
+  const processingPlanRef = useRef(processingPlan)
+  processingPlanRef.current = processingPlan
   
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(true)
@@ -127,17 +127,17 @@ export function VideoPreview({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const options = processingOptionsRef.current
+    const plan = processingPlanRef.current
 
     try {
-      if (options) {
+      if (plan) {
         // Use WebGL processor for filtered output
         const processor = getWebGLProcessor()
         
         // Ensure processor is initialized with correct dimensions
         processor.init(video.videoWidth, video.videoHeight)
         
-        const outputCanvas = processor.processFrame(video, options, video.currentTime)
+        const outputCanvas = processor.processFrame(video, plan, video.currentTime)
         ctx.drawImage(outputCanvas, 0, 0, canvas.width, canvas.height)
       } else {
         // No filter - draw video directly
@@ -287,7 +287,7 @@ export function VideoPreview({
     if (!video.paused) {
       startLoop()
     }
-  }, [processingOptions, isReady, video, renderFrame, startLoop])
+  }, [processingPlan, isReady, video, renderFrame, startLoop])
 
   /**
    * Auto-play on mount

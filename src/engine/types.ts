@@ -1,6 +1,7 @@
 // Типы для движка обработки изображений
 
 import type { ExifSubset } from './exif'
+import type { HaldCLUT } from './haldclut'
 
 export type EffectStrength = 'off' | 'weak' | 'strong'
 export type GrainSize = 'small' | 'large'
@@ -66,9 +67,28 @@ export interface Recipe {
   cameraModel?: string   // e.g. "X-T5"
 }
 
-export interface ProcessingOptions {
+export interface ProcessingTargetSize {
+  width: number
+  height: number
+}
+
+export interface ProcessingRecipeIdentity {
+  id: string
+  name: string
+  simulationId: string
+}
+
+/**
+ * Structured-clone-safe description consumed unchanged by CPU, worker and
+ * WebGL processing paths.
+ */
+export interface ProcessingPlan {
+  version: 1
+  recipe: ProcessingRecipeIdentity
   simulation: FilmSimulation
-  settings?: RecipeSettings
+  settings: RecipeSettings
+  lut: HaldCLUT | null
+  targetSize: ProcessingTargetSize
 }
 
 /**
@@ -111,4 +131,3 @@ export interface MultiImageState {
   /** Индекс текущего активного изображения */
   currentIndex: number
 }
-

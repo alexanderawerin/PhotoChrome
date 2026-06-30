@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { ImageProcessor } from '../engine/processor'
 import { ImageItem, Recipe } from '../engine/types'
-import { getSimulation } from '../presets/simulations'
+import { createProcessingPlan } from '../engine/processing-plan'
 import { THUMBNAIL_MAX_SIZE } from '../constants'
 import { extractExif } from '../engine/exif'
 import {
@@ -166,15 +166,10 @@ export function useImageProcessor() {
       if (!currentImage) return null
 
       try {
-        const simulation = getSimulation(recipe.filmSimulation)
-        if (!simulation) {
-          throw new Error(`Симуляция ${recipe.filmSimulation} не найдена`)
-        }
-
-        return ImageProcessor.process(currentImage.thumbnail, {
-          simulation,
-          settings: recipe.settings
-        })
+        return ImageProcessor.process(
+          currentImage.thumbnail,
+          createProcessingPlan(recipe, currentImage.thumbnail)
+        )
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Не удалось обработать изображение'
         setError(message)
@@ -195,15 +190,10 @@ export function useImageProcessor() {
       if (!currentImage) return null
 
       try {
-        const simulation = getSimulation(recipe.filmSimulation)
-        if (!simulation) {
-          throw new Error(`Симуляция ${recipe.filmSimulation} не найдена`)
-        }
-
-        return ImageProcessor.process(currentImage.original, {
-          simulation,
-          settings: recipe.settings
-        })
+        return ImageProcessor.process(
+          currentImage.original,
+          createProcessingPlan(recipe, currentImage.original)
+        )
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Не удалось обработать изображение'
         setError(message)
