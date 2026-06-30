@@ -332,6 +332,44 @@ export class ImageProcessor {
   }
 
   /**
+   * Decodes a file once and derives both full-size and preview ImageData from
+   * the same ImageBitmap. The bitmap is always released after canvas copies.
+   */
+  static async decodeImagePair(
+    file: File,
+    thumbnailMaxSize: number,
+    validateDimensions?: (width: number, height: number) => void
+  ): Promise<{ original: ImageData; thumbnail: ImageData; width: number; height: number }> {
+    const bitmap = await createImageBitmap(file)
+    try {
+      const { width, height } = bitmap
+      validateDimensions?.(width, height)
+      const scale = Math.min(1, thumbnailMaxSize / Math.max(width, height))
+      const thumbnailWidth = Math.max(1, Math.round(width * scale))
+      const thumbnailHeight = Math.max(1, Math.round(height * scale))
+
+      const toImageData = (targetWidth: number, targetHeight: number): ImageData => {
+        const canvas = document.createElement('canvas')
+        canvas.width = targetWidth
+        canvas.height = targetHeight
+        const context = canvas.getContext('2d')
+        if (!context) throw new Error('Failed to get canvas context')
+        context.drawImage(bitmap, 0, 0, targetWidth, targetHeight)
+        return context.getImageData(0, 0, targetWidth, targetHeight)
+      }
+
+      return {
+        original: toImageData(width, height),
+        thumbnail: toImageData(thumbnailWidth, thumbnailHeight),
+        width,
+        height,
+      }
+    } finally {
+      bitmap.close()
+    }
+  }
+
+  /**
    * Добавляет водяной знак на изображение
    */
   static addWatermark(

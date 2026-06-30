@@ -2,14 +2,13 @@ import { useRef, useState, useCallback } from 'react'
 import { Upload, Camera } from 'lucide-react'
 import { Button } from './ui/button'
 import { PhotoArc } from './PhotoArc'
+import { SUPPORTED_IMAGE_TYPES } from '../engine/media-selection'
 
 interface LandingScreenProps {
   onFileSelect: (files: File | File[], type: 'image' | 'video') => void
 }
 
 /** Accepted image MIME types */
-const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-
 /** Accepted video MIME types */
 const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/mov']
 
@@ -17,7 +16,7 @@ const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'vid
  * Validates that a file is an accepted image type.
  */
 function isValidImageFile(file: File): boolean {
-  return file.type.startsWith('image/') || ACCEPTED_IMAGE_TYPES.includes(file.type)
+  return SUPPORTED_IMAGE_TYPES.includes(file.type.toLowerCase() as typeof SUPPORTED_IMAGE_TYPES[number])
 }
 
 /**
@@ -35,13 +34,14 @@ export function LandingScreen({ onFileSelect }: LandingScreenProps) {
     const files = Array.from(event.target.files || [])
     if (files.length === 0) return
 
-    const images = files.filter(isValidImageFile)
-    const videos = files.filter(isValidVideoFile)
-
-    if (images.length > 0) {
-      onFileSelect(images, 'image') // Массив изображений
-    } else if (videos.length > 0) {
-      onFileSelect(videos[0], 'video') // Одно видео
+    if (files.every(isValidImageFile)) {
+      onFileSelect(files, 'image')
+    } else if (files.length === 1 && isValidVideoFile(files[0])) {
+      onFileSelect(files[0], 'video')
+    } else {
+      // Pass the complete group to the image validator so mixed/unsupported
+      // selections fail atomically instead of silently dropping files.
+      onFileSelect(files, 'image')
     }
   }, [onFileSelect])
 
@@ -56,13 +56,12 @@ export function LandingScreen({ onFileSelect }: LandingScreenProps) {
     const files = Array.from(event.dataTransfer.files)
     if (files.length === 0) return
 
-    const images = files.filter(isValidImageFile)
-    const videos = files.filter(isValidVideoFile)
-
-    if (images.length > 0) {
-      onFileSelect(images, 'image')
-    } else if (videos.length > 0) {
-      onFileSelect(videos[0], 'video')
+    if (files.every(isValidImageFile)) {
+      onFileSelect(files, 'image')
+    } else if (files.length === 1 && isValidVideoFile(files[0])) {
+      onFileSelect(files[0], 'video')
+    } else {
+      onFileSelect(files, 'image')
     }
   }, [onFileSelect])
 
@@ -113,7 +112,7 @@ export function LandingScreen({ onFileSelect }: LandingScreenProps) {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*,video/*"
+            accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
             multiple
             onChange={handleFileSelect}
             className="sr-only"

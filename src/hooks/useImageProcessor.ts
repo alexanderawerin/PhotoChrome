@@ -4,6 +4,12 @@ import { ImageItem, Recipe } from '../engine/types'
 import { getSimulation } from '../presets/simulations'
 import { THUMBNAIL_MAX_SIZE } from '../constants'
 import { extractExif } from '../engine/exif'
+import {
+  validateMediaSelection,
+  type MediaSelectionItem,
+} from '../engine/media-selection'
+
+const MAX_CONCURRENT_DECODES = 2
 
 export interface ProcessedImage {
   /** Оригинальное изображение в полном разрешении */
@@ -32,38 +38,64 @@ export function useImageProcessor() {
   const [error, setError] = useState<string | null>(null)
 
   /**
-   * Загружает массив изображений параллельно.
-   * Создаёт оригиналы и thumbnails для всех файлов.
+   * Атомарно загружает массив изображений, декодируя не более двух файлов
+   * одновременно. Частичный результат никогда не попадает в состояние.
    */
   const loadImages = useCallback(async (files: File[]) => {
     setIsLoading(true)
     setError(null)
 
     try {
-      // Загружаем все изображения параллельно
-      const loadPromises = files.map(async (file) => {
-        const [original, thumbnail, exif] = await Promise.all([
-          ImageProcessor.loadImage(file),
-          ImageProcessor.createThumbnail(file, THUMBNAIL_MAX_SIZE),
-          extractExif(file)
-        ])
+      const initialValidation = validateMediaSelection(files.map(file => ({ file })))
+      if (!initialValidation.valid) throw new Error(initialValidation.error.message)
 
-        return {
-          id: generateImageId(),
-          file,
-          fileName: file.name,
-          original,
-          thumbnail,
-          exif,
-          recipe: null,
-          customSettings: {},
-          transformedOriginal: original,
-          transformedThumbnail: thumbnail,
-          rotation: 0
-        } as ImageItem
-      })
+      const decodedItems: MediaSelectionItem[] = files.map(file => ({ file }))
+      const loadedImages = new Array<ImageItem>(files.length)
+      let nextIndex = 0
+      let failure: unknown
 
-      const loadedImages = await Promise.all(loadPromises)
+      const decodeNext = async () => {
+        while (failure === undefined) {
+          const index = nextIndex++
+          if (index >= files.length) return
+          const file = files[index]
+
+          try {
+            const [{ original, thumbnail }, exif] = await Promise.all([
+              ImageProcessor.decodeImagePair(file, THUMBNAIL_MAX_SIZE, (width, height) => {
+                // Validate dimensions before allocating full-size canvas pixels.
+                decodedItems[index] = { file, width, height }
+                const validation = validateMediaSelection(decodedItems)
+                if (!validation.valid) throw new Error(validation.error.message)
+              }),
+              extractExif(file),
+            ])
+
+            loadedImages[index] = {
+              id: generateImageId(),
+              file,
+              fileName: file.name,
+              original,
+              thumbnail,
+              exif,
+              recipe: null,
+              customSettings: {},
+              transformedOriginal: original,
+              transformedThumbnail: thumbnail,
+              rotation: 0,
+            }
+          } catch (error) {
+            failure = error
+          }
+        }
+      }
+
+      await Promise.all(Array.from(
+        { length: Math.min(MAX_CONCURRENT_DECODES, files.length) },
+        decodeNext
+      ))
+      if (failure !== undefined) throw failure
+
       setImages(loadedImages)
       setCurrentIndex(0)
     } catch (err) {
@@ -245,4 +277,3 @@ export function useImageProcessor() {
     loadImage: async (file: File) => loadImages([file])
   }
 }
-
