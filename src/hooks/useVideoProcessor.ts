@@ -30,6 +30,7 @@ export interface VideoExportState {
   isExporting: boolean
   progress: number
   status: string
+  error: string | null
 }
 
 /**
@@ -44,6 +45,7 @@ export function useVideoProcessor() {
     isExporting: false,
     progress: 0,
     status: '',
+    error: null,
   })
 
   const cancelledRef = useRef(false)
@@ -101,6 +103,7 @@ export function useVideoProcessor() {
         isExporting: true,
         progress: 0,
         status: 'Starting...',
+        error: null,
       })
 
       try {
@@ -112,7 +115,7 @@ export function useVideoProcessor() {
               videoData.video,
               plan,
               (progress, status) => {
-                setExportState({ isExporting: true, progress, status })
+                setExportState({ isExporting: true, progress, status, error: null })
               },
               () => cancelledRef.current
             )
@@ -120,23 +123,22 @@ export function useVideoProcessor() {
               videoData.video,
               plan,
               (progress, status) => {
-                setExportState({ isExporting: true, progress, status })
+                setExportState({ isExporting: true, progress, status, error: null })
               },
               () => cancelledRef.current
             )
 
-        setExportState({ isExporting: false, progress: 100, status: 'Done!' })
+        setExportState({ isExporting: false, progress: 100, status: 'Done!', error: null })
         return blob
       } catch (err) {
         if (err instanceof ExportCancelledError || 
             (err instanceof Error && err.message === 'Export cancelled')) {
-          setExportState({ isExporting: false, progress: 0, status: '' })
+          setExportState({ isExporting: false, progress: 0, status: '', error: null })
           return null
         }
 
         const message = err instanceof Error ? err.message : 'Export failed'
-        setError(message)
-        setExportState({ isExporting: false, progress: 0, status: '' })
+        setExportState({ isExporting: false, progress: 0, status: '', error: message })
         throw err
       }
     },
@@ -150,6 +152,10 @@ export function useVideoProcessor() {
     cancelledRef.current = true
   }, [])
 
+  const dismissExportError = useCallback(() => {
+    setExportState(previous => ({ ...previous, error: null }))
+  }, [])
+
   /**
    * Reset state
    */
@@ -160,7 +166,7 @@ export function useVideoProcessor() {
     }
     setVideoData(null)
     setError(null)
-    setExportState({ isExporting: false, progress: 0, status: '' })
+    setExportState({ isExporting: false, progress: 0, status: '', error: null })
     cancelledRef.current = false
   }, [])
 
@@ -179,6 +185,7 @@ export function useVideoProcessor() {
     exportVideoWithEffects,
     /** Cancel export */
     cancelExport,
+    dismissExportError,
     /** Reset state */
     reset,
   }

@@ -104,6 +104,7 @@ function AppContent() {
     loadVideoFile,
     exportVideoWithEffects,
     cancelExport,
+    dismissExportError,
     reset: resetVideo,
   } = useVideoProcessor()
 
@@ -206,6 +207,7 @@ function AppContent() {
         onExport={exportVideoWithEffects}
         exportState={exportState}
         onCancelExport={cancelExport}
+        onDismissExportError={dismissExportError}
       />
     )
   }
@@ -225,4 +227,3 @@ function App() {
 }
 
 export default App
-

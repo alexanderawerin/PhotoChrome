@@ -21,6 +21,7 @@ interface VideoEditorProps {
   onExport: (plan: ProcessingPlan) => Promise<Blob | null>
   exportState: VideoExportState
   onCancelExport: () => void
+  onDismissExportError: () => void
 }
 
 /**
@@ -83,6 +84,7 @@ export function VideoEditor({
   onExport,
   exportState,
   onCancelExport,
+  onDismissExportError,
 }: VideoEditorProps) {
   const { video, thumbnail, metadata } = videoData
   const [activeRecipe, setActiveRecipe] = useState<Recipe | null>(null)
@@ -349,6 +351,21 @@ export function VideoEditor({
             <div className="w-8 h-8 md:hidden" />
           </div>
         </header>
+
+        {exportState.error && (
+          <div
+            role="alert"
+            className="mx-3 md:mx-6 mb-2 flex items-center gap-3 rounded-lg border border-rose-900/70 bg-rose-950/80 px-3 py-2 text-sm text-rose-100"
+          >
+            <p className="min-w-0 flex-1">Video export failed: {exportState.error}</p>
+            <Button size="sm" variant="outline" onClick={handleExport} disabled={exportState.isExporting}>
+              Retry
+            </Button>
+            <Button size="sm" variant="ghost" onClick={onDismissExportError}>
+              Dismiss
+            </Button>
+          </div>
+        )}
 
         {/* Preview area */}
         <div className="flex-1 min-h-0 px-3 md:px-6 relative overflow-hidden">

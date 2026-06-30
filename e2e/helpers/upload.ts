@@ -25,6 +25,12 @@ export async function uploadMultipleImages(
   await fileInput.setInputFiles(filenames.map(f => fixturePath(f)))
 }
 
+/** Upload the deterministic three-second H.264/AAC fixture. */
+export async function uploadVideo(page: Page, filename = 'test-video.mp4') {
+  await page.locator('input#media-upload').setInputFiles(fixturePath(filename))
+  await page.getByText('3s • 640×360').waitFor({ state: 'visible', timeout: 15_000 })
+}
+
 /** Wait for the editor to be fully loaded after image upload. */
 export async function waitForEditor(page: Page) {
   // Wait for loading overlay to disappear

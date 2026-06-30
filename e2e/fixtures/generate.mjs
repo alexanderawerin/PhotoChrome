@@ -7,6 +7,7 @@
 import sharp from 'sharp'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { spawnSync } from 'child_process'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -44,4 +45,34 @@ async function generateTestImages() {
   console.log('Test images generated successfully.')
 }
 
-generateTestImages()
+function generateTestVideo() {
+  const ffmpeg = process.env.FFMPEG_PATH || 'ffmpeg'
+  const output = join(__dirname, 'test-video.mp4')
+  const result = spawnSync(ffmpeg, [
+    '-hide_banner',
+    '-loglevel', 'error',
+    '-f', 'lavfi',
+    '-i', 'testsrc2=size=640x360:rate=30:duration=3',
+    '-f', 'lavfi',
+    '-i', 'sine=frequency=440:sample_rate=48000:duration=3',
+    '-c:v', 'libx264',
+    '-profile:v', 'baseline',
+    '-pix_fmt', 'yuv420p',
+    '-r', '30',
+    '-c:a', 'aac',
+    '-b:a', '128k',
+    '-movflags', '+faststart',
+    '-shortest',
+    '-y', output,
+  ], { encoding: 'utf8' })
+
+  if (result.error || result.status !== 0) {
+    throw new Error(
+      `Failed to generate test-video.mp4. Install ffmpeg or set FFMPEG_PATH.\n${result.error?.message || result.stderr}`
+    )
+  }
+}
+
+await generateTestImages()
+generateTestVideo()
+console.log('Test fixtures generated successfully.')
