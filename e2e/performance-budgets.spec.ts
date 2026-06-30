@@ -1,5 +1,7 @@
 import { test, expect } from './helpers/fixtures'
 import { fixturePath, selectFirstRecipe, uploadVideo, waitForEditor } from './helpers/upload'
+import { readFile } from 'node:fs/promises'
+import { unzipSync } from 'fflate'
 
 const BUDGETS_MS = {
   twoPhotoEditor: 5_000,
@@ -7,6 +9,7 @@ const BUDGETS_MS = {
   firstTenCards: 5_000,
   photoExport: 10_000,
   videoExport: 45_000,
+  twentyPhotoBatch: 120_000,
 } as const
 
 async function mainPreviewSignature(page: import('@playwright/test').Page): Promise<number> {
@@ -85,5 +88,32 @@ test.describe('Chromium performance budgets', () => {
     await page.getByRole('button', { name: 'Export video' }).click()
     await downloadPromise
     expect(performance.now() - startedAt).toBeLessThanOrEqual(BUDGETS_MS.videoExport)
+  })
+
+  test('twenty-photo batch export meets its budget', async ({ page, landingPage }) => {
+    test.setTimeout(140_000)
+    const photos = Array.from(
+      { length: 20 },
+      (_, index) => fixturePath(index % 2 === 0 ? 'test-image.jpg' : 'test-image-2.jpg')
+    )
+    await page.locator('input#media-upload').setInputFiles(photos)
+    await waitForEditor(page)
+    await expect(page.locator('[role="tablist"][aria-label="Image thumbnails"] [role="tab"]')).toHaveCount(20)
+    await selectFirstRecipe(page)
+    await page.getByRole('button', { name: 'Apply current preset to all 20 images' }).first().click()
+    await page.waitForTimeout(500)
+
+    const downloadPromise = page.waitForEvent('download')
+    const startedAt = performance.now()
+    await page.getByRole('button', { name: 'Export all photos' }).first().click()
+    const download = await downloadPromise
+    const elapsed = performance.now() - startedAt
+    expect(elapsed).toBeLessThanOrEqual(BUDGETS_MS.twentyPhotoBatch)
+
+    const path = await download.path()
+    if (!path) throw new Error('Batch download path unavailable')
+    const entries = unzipSync(new Uint8Array(await readFile(path)))
+    expect(Object.keys(entries).filter(name => name.endsWith('.jpg'))).toHaveLength(20)
+    expect(entries['export-report.txt']).toBeUndefined()
   })
 })

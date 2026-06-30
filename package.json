@@ -24,6 +24,7 @@
     "@radix-ui/react-toggle-group": "^1.1.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "fflate": "^0.8.3",
     "lucide-react": "^0.454.0",
     "mediabunny": "^1.49.0",
     "piexifjs": "^1.0.6",

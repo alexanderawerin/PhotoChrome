@@ -1,4 +1,4 @@
-import { RotateCw, RotateCcw, Crop, Check, Share, Settings2, Film, HelpCircle, Layers } from 'lucide-react'
+import { RotateCw, RotateCcw, Crop, Check, Share, Settings2, Film, HelpCircle, Layers, Archive } from 'lucide-react'
 import { Spinner } from './ui/spinner'
 import { Button } from './ui/button'
 import { ButtonGroup } from './ui/button-group'
@@ -13,6 +13,8 @@ interface ToolbarProps {
   onExport: () => void
   canExport: boolean
   isExporting?: boolean
+  onExportAll?: () => void
+  isBatchExporting?: boolean
   // Crop mode
   cropMode?: boolean
   cropRatio?: AspectRatio
@@ -42,6 +44,8 @@ export function Toolbar({
   onExport,
   canExport,
   isExporting = false,
+  onExportAll,
+  isBatchExporting = false,
   cropMode = false,
   cropRatio = DEFAULT_CROP_RATIO_DESKTOP,
   onCropRatioChange,
@@ -116,7 +120,7 @@ export function Toolbar({
         variant="default"
         size="default"
         onClick={onExport}
-        disabled={!canExport || isExporting}
+        disabled={!canExport || isExporting || isBatchExporting}
         aria-label={isExporting ? 'Exporting...' : 'Export processed image'}
         aria-busy={isExporting}
         className="w-full"
@@ -304,11 +308,25 @@ export function Toolbar({
       )}
 
       {/* Export */}
+      {totalImages > 1 && onExportAll && (
+        <Button
+          variant="outline"
+          size="default"
+          onClick={onExportAll}
+          disabled={isBatchExporting || isExporting}
+          aria-label="Export all photos"
+          aria-busy={isBatchExporting}
+        >
+          {isBatchExporting ? <Spinner className="size-4" /> : <Archive className="w-4 h-4" aria-hidden="true" />}
+          {isBatchExporting ? 'Exporting all...' : 'Export all'}
+        </Button>
+      )}
+
       <Button
         variant="default"
         size="default"
         onClick={onExport}
-        disabled={!canExport || isExporting}
+        disabled={!canExport || isExporting || isBatchExporting}
         aria-label={isExporting ? 'Exporting...' : 'Export processed image (Ctrl+S)'}
         aria-busy={isExporting}
       >

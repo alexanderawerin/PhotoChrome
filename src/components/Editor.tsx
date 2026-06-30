@@ -26,6 +26,11 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useViewportHeight, getViewportHeightStyle } from '../hooks/useViewportHeight'
 import { useRecipeRecommendations } from '../hooks/useRecipeRecommendations'
 import { exportPhoto, type PhotoExportResult } from '../engine/photo-export'
+import {
+  exportPhotoBatch,
+  type BatchExportProgress,
+  type BatchExportResult,
+} from '../engine/batch-export'
 
 interface EditorProps {
   images: ImageItem[]
@@ -72,6 +77,15 @@ export function Editor({
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [exportError, setExportError] = useState<Extract<PhotoExportResult, { status: 'error' }>['error'] | null>(null)
   const exportAbortControllerRef = useRef<AbortController | null>(null)
+  const batchAbortControllerRef = useRef<AbortController | null>(null)
+  const [batchProgress, setBatchProgress] = useState<BatchExportProgress | null>(null)
+  const [batchSummary, setBatchSummary] = useState<{
+    status: BatchExportResult['status']
+    exported: number
+    skipped: number
+    errors: number
+    message?: string
+  } | null>(null)
 
   // ============================================================================
   // Custom Hooks
@@ -309,7 +323,67 @@ export function Editor({
     }
   }, [currentImage, transform.transformedOriginal, tuning])
 
-  useEffect(() => () => exportAbortControllerRef.current?.abort(), [])
+  const handleExportAll = useCallback(async () => {
+    batchAbortControllerRef.current?.abort()
+    const controller = new AbortController()
+    batchAbortControllerRef.current = controller
+    setBatchSummary(null)
+    setBatchProgress({
+      current: 0,
+      total: images.length,
+      fileName: null,
+      exported: 0,
+      skipped: 0,
+      errors: 0,
+    })
+
+    let result: BatchExportResult
+    try {
+      result = await exportPhotoBatch(images, {
+        signal: controller.signal,
+        onProgress: setBatchProgress,
+      })
+    } catch (error) {
+      result = {
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Failed to load ZIP exporter',
+        exported: 0,
+        skipped: 0,
+        errors: 0,
+      }
+    } finally {
+      if (batchAbortControllerRef.current === controller) batchAbortControllerRef.current = null
+      setBatchProgress(null)
+    }
+
+    if (result.status === 'success') {
+      const url = URL.createObjectURL(result.blob)
+      try {
+        const anchor = document.createElement('a')
+        anchor.href = url
+        anchor.download = result.archiveName
+        document.body.appendChild(anchor)
+        anchor.click()
+        anchor.remove()
+      } finally {
+        URL.revokeObjectURL(url)
+      }
+    }
+    setBatchSummary({
+      status: result.status,
+      exported: result.exported,
+      skipped: result.skipped,
+      errors: result.errors,
+      message: result.status === 'error' ? result.message : undefined,
+    })
+  }, [images])
+
+  const isBatchExporting = batchProgress !== null
+
+  useEffect(() => () => {
+    exportAbortControllerRef.current?.abort()
+    batchAbortControllerRef.current?.abort()
+  }, [])
 
   // ============================================================================
   // Compare (before/after)
@@ -429,6 +503,8 @@ export function Editor({
             onExport={handleExport}
             canExport={!!currentImage.recipe}
             isExporting={isExporting}
+            onExportAll={handleExportAll}
+            isBatchExporting={isBatchExporting}
             cropMode={transform.isCropping}
             cropRatio={transform.cropRatio}
             onCropRatioChange={transform.setCropRatio}
@@ -491,12 +567,27 @@ export function Editor({
               </Button>
             )}
 
+            {totalImages > 1 && (
+              <Button
+                variant="outline"
+                size="default"
+                onClick={handleExportAll}
+                disabled={isBatchExporting || isExporting}
+                aria-label="Export all photos"
+                aria-busy={isBatchExporting}
+                className="flex-1"
+              >
+                <Layers className="w-4 h-4" aria-hidden="true" />
+                Export all
+              </Button>
+            )}
+
             {/* Export button */}
             <Button
               variant="default"
               size="default"
               onClick={handleExport}
-              disabled={!currentImage.recipe || isExporting}
+              disabled={!currentImage.recipe || isExporting || isBatchExporting}
               aria-label={isExporting ? 'Exporting...' : 'Export processed image'}
               aria-busy={isExporting}
               className={totalImages > 1 && currentImage.recipe ? 'flex-1' : 'w-full'}
@@ -571,6 +662,52 @@ export function Editor({
               Applying preset to {totalImages} images...
             </p>
           </div>
+        </div>
+      )}
+
+      {batchProgress && (
+        <div
+          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[200] p-4"
+          role="status"
+          aria-label="Batch export progress"
+          aria-live="polite"
+        >
+          <div className="w-full max-w-sm space-y-4 rounded-2xl bg-zinc-900 p-6">
+            <div>
+              <p className="font-medium text-white">Exporting all photos</p>
+              <p className="mt-1 truncate text-xs text-zinc-400">
+                {batchProgress.fileName ?? 'Preparing archive...'}
+              </p>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
+              <div
+                className="h-full bg-white transition-[width] duration-200"
+                style={{ width: `${batchProgress.total === 0 ? 100 : (batchProgress.current / batchProgress.total) * 100}%` }}
+              />
+            </div>
+            <p className="text-xs text-zinc-400">
+              {batchProgress.current}/{batchProgress.total} · {batchProgress.exported} exported · {batchProgress.skipped} skipped · {batchProgress.errors} errors
+            </p>
+            <Button variant="outline" className="w-full" onClick={() => batchAbortControllerRef.current?.abort()}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {batchSummary && (
+        <div
+          role={batchSummary.status === 'error' ? 'alert' : 'status'}
+          aria-label="Batch export result"
+          className="fixed bottom-4 left-1/2 z-[190] flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white shadow-xl"
+        >
+          <p>
+            {batchSummary.status === 'success' && 'Batch export complete: '}
+            {batchSummary.status === 'cancelled' && 'Batch export cancelled: '}
+            {batchSummary.status === 'error' && `Batch export failed: ${batchSummary.message}. `}
+            {batchSummary.exported} exported, {batchSummary.skipped} skipped, {batchSummary.errors} errors.
+          </p>
+          <Button size="sm" variant="ghost" onClick={() => setBatchSummary(null)}>Dismiss</Button>
         </div>
       )}
     </div>
