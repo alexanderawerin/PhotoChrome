@@ -152,11 +152,11 @@ test.describe('Editor — Preview Rendering', () => {
   })
 
   test('recipe card previews are not black', async ({ page, editorPage }) => {
-    // Wait for card previews to generate (debounced at 50ms each)
-    await page.waitForTimeout(2000)
-
-    // Check several recipe card canvases in the aside panel
     const cardCanvases = page.locator('aside [aria-label^="Apply preset"] canvas')
+    await expect.poll(() => cardCanvases.count(), {
+      timeout: 5_000,
+      message: 'Recipe card previews should finish rendering',
+    }).toBeGreaterThan(0)
     const count = await cardCanvases.count()
     expect(count).toBeGreaterThan(0)
 

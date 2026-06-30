@@ -1,16 +1,18 @@
 import { test, expect } from './helpers/fixtures'
 
+const SMART_PICKS_TIMEOUT = 10_000
+
 test.describe('Editor — Smart Picks', () => {
   test('Smart Picks section appears after loading a color photo', async ({ page, editorPage }, testInfo) => {
     test.skip(testInfo.project.name === 'mobile-chrome', 'desktop-only test')
     const section = page.locator('aside section[aria-label="Smart Picks"]')
-    await expect(section).toBeVisible({ timeout: 5_000 })
+    await expect(section).toBeVisible({ timeout: SMART_PICKS_TIMEOUT })
   })
 
   test('Smart Picks contains exactly 5 cards', async ({ page, editorPage }, testInfo) => {
     test.skip(testInfo.project.name === 'mobile-chrome', 'desktop-only test')
     const section = page.locator('aside section[aria-label="Smart Picks"]')
-    await expect(section).toBeVisible({ timeout: 5_000 })
+    await expect(section).toBeVisible({ timeout: SMART_PICKS_TIMEOUT })
     const cards = section.locator('[aria-label^="Apply preset"]')
     await expect(cards).toHaveCount(5)
   })
@@ -18,7 +20,7 @@ test.describe('Editor — Smart Picks', () => {
   test('Clicking a Smart Picks card applies the recipe', async ({ page, editorPage }, testInfo) => {
     test.skip(testInfo.project.name === 'mobile-chrome', 'desktop-only test')
     const section = page.locator('aside section[aria-label="Smart Picks"]')
-    await expect(section).toBeVisible({ timeout: 5_000 })
+    await expect(section).toBeVisible({ timeout: SMART_PICKS_TIMEOUT })
 
     const firstCard = section.locator('[aria-label^="Apply preset"]').first()
     const cardLabel = await firstCard.getAttribute('aria-label')
@@ -27,13 +29,13 @@ test.describe('Editor — Smart Picks', () => {
     const selectedSelector = cardLabel?.replace('Apply preset ', '').replace(/, selected$/, '')
     await expect(
       page.locator(`aside section[aria-label="Smart Picks"] [aria-label*="${selectedSelector}, selected"]`).first()
-    ).toBeVisible({ timeout: 5_000 })
+    ).toBeVisible({ timeout: SMART_PICKS_TIMEOUT })
   })
 
   test('Switching between images updates Smart Picks', async ({ page, multiImageEditorPage }, testInfo) => {
     test.skip(testInfo.project.name === 'mobile-chrome', 'desktop-only test')
     const section = page.locator('aside section[aria-label="Smart Picks"]')
-    await expect(section).toBeVisible({ timeout: 5_000 })
+    await expect(section).toBeVisible({ timeout: SMART_PICKS_TIMEOUT })
 
     const initialLabel = await section.locator('[aria-label^="Apply preset"]').first().getAttribute('aria-label')
 

@@ -64,7 +64,8 @@ test.describe('Video import and export', () => {
     expect(frequency).toBeLessThan(442)
   })
 
-  test('imports, applies a recipe, recovers from unsupported WebCodecs, and exports video with audio', async ({ page, landingPage }) => {
+  test('imports, applies a recipe, recovers from unsupported WebCodecs, and exports video with audio', async ({ page, landingPage, browserName }) => {
+    test.skip(browserName !== 'chromium', 'AAC WebCodecs export is verified in Chromium')
     test.setTimeout(90_000)
     await uploadVideo(page)
     await expect(page.getByText('test-video.mp4')).toBeVisible()

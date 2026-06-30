@@ -43,6 +43,9 @@ async function renderedCardCount(page: import('@playwright/test').Page): Promise
 
 test.describe('Chromium performance budgets', () => {
   test.describe.configure({ mode: 'serial' })
+  test.beforeEach(({ browserName }) => {
+    test.skip(browserName !== 'chromium', 'Performance budgets are defined for Chromium')
+  })
 
   test('two-photo editor and first ten recipe cards meet readiness budgets', async ({ page, landingPage }) => {
     const startedAt = performance.now()
