@@ -61,9 +61,16 @@ export async function exportVideo(
   )
 
   let encoderError: Error | null = null
+  let videoPacketWrites = Promise.resolve()
   const safariMode = isSafari()
   const videoEncoder = new VideoEncoder({
-    output: (chunk, metadata) => muxer.addVideoChunk(chunk, metadata ?? undefined),
+    output: (chunk, metadata) => {
+      videoPacketWrites = videoPacketWrites
+        .then(() => muxer.addVideoChunk(chunk, metadata ?? undefined))
+        .catch(error => {
+          encoderError = error instanceof Error ? error : new Error(String(error))
+        })
+    },
     error: error => {
       console.error('Video encoder error:', error)
       encoderError = error instanceof Error ? error : new Error(String(error))
@@ -151,12 +158,15 @@ export async function exportVideo(
 
     onProgress(95, 'Finalizing video...')
     await videoEncoder.flush()
+    await videoPacketWrites
+    if (encoderError) throw encoderError
     videoEncoder.close()
-    const blob = muxer.finalize()
+    const blob = await muxer.finalize()
     onProgress(100, 'Done!')
     return blob
   } catch (error) {
     videoEncoder.close()
+    await muxer.cancel().catch(() => {})
     if (error instanceof WebGLContextLostError) {
       throw new Error('Video processing was interrupted due to graphics hardware reset. Please try again.')
     }

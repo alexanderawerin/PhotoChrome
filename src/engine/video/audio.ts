@@ -43,13 +43,21 @@ function createPlanarAudioBuffer(
 
 export async function encodeAudio(
   audioBuffer: AudioBuffer,
-  onChunk: (chunk: EncodedAudioChunk, metadata?: EncodedAudioChunkMetadata) => void,
+  onChunk: (chunk: EncodedAudioChunk, metadata?: EncodedAudioChunkMetadata) => void | Promise<void>,
   isCancelled?: () => boolean
 ): Promise<void> {
   const numberOfChannels = Math.min(audioBuffer.numberOfChannels, 2)
   const sampleRate = audioBuffer.sampleRate
+  let packetWrites = Promise.resolve()
+  let packetWriteError: Error | null = null
   const encoder = new AudioEncoder({
-    output: (chunk, metadata) => onChunk(chunk, metadata ?? undefined),
+    output: (chunk, metadata) => {
+      packetWrites = packetWrites
+        .then(() => onChunk(chunk, metadata ?? undefined))
+        .catch(error => {
+          packetWriteError = error instanceof Error ? error : new Error(String(error))
+        })
+    },
     error: error => console.error('Audio encoder error:', error),
   })
   encoder.configure({
@@ -85,7 +93,9 @@ export async function encodeAudio(
     if (frame % 100 === 0) await new Promise(resolve => setTimeout(resolve, 0))
   }
   await encoder.flush()
+  await packetWrites
   encoder.close()
+  if (packetWriteError) throw packetWriteError
 }
 
 export async function supportsAudioEncoding(): Promise<boolean> {
