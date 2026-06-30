@@ -12,7 +12,7 @@ import { HelpDialog } from './HelpDialog'
 import { ThumbnailStrip } from './ThumbnailStrip'
 import { ImageCounter } from './ImageCounter'
 import { Recipe, RecipeSettings, ImageItem } from '../engine/types'
-import { ImageProcessor, ExifInfo } from '../engine/processor'
+import { ImageProcessor } from '../engine/processor'
 import { loadSimulationLUT } from '../presets/simulations'
 import { createProcessingPlan } from '../engine/processing-plan'
 import { getAllRecipes } from '../presets/recipes'
@@ -25,6 +25,7 @@ import { useTuning } from '../hooks/useTuning'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useViewportHeight, getViewportHeightStyle } from '../hooks/useViewportHeight'
 import { useRecipeRecommendations } from '../hooks/useRecipeRecommendations'
+import { exportPhoto, type PhotoExportResult } from '../engine/photo-export'
 
 interface EditorProps {
   images: ImageItem[]
@@ -69,6 +70,8 @@ export function Editor({
   const [showOriginal, setShowOriginal] = useState(false)
   const [isPanelOpen, setIsPanelOpen] = useState(true)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
+  const [exportError, setExportError] = useState<Extract<PhotoExportResult, { status: 'error' }>['error'] | null>(null)
+  const exportAbortControllerRef = useRef<AbortController | null>(null)
 
   // ============================================================================
   // Custom Hooks
@@ -271,6 +274,10 @@ export function Editor({
   const handleExport = useCallback(async () => {
     if (!currentImage.recipe) return
 
+    exportAbortControllerRef.current?.abort()
+    const controller = new AbortController()
+    exportAbortControllerRef.current = controller
+    setExportError(null)
     setIsExporting(true)
     try {
       const mergedSettings = tuning.getMergedSettings(currentImage.recipe)
@@ -280,37 +287,29 @@ export function Editor({
         mergedSettings
       )
 
-      // Используем async Worker для полноразмерного экспорта (не блокирует UI)
-      const processed = await ImageProcessor.processAsync(
-        transform.transformedOriginal,
-        plan
-      )
-
-      const withWatermark = ImageProcessor.addWatermark(processed, APP_URL)
-
-      const exifInfo: ExifInfo = {
-        recipeName: currentImage.recipe.name,
-        recipeId: currentImage.recipe.id,
-        settings: mergedSettings,
-      }
-
-      const blob = await ImageProcessor.imageDataToBlob(withWatermark, 0.95, exifInfo)
-      const url = URL.createObjectURL(blob)
-
-      const a = document.createElement('a')
-      a.href = url
       const baseName = currentImage.fileName.replace(/\.[^.]+$/, '')
-      a.download = `photochrome_${currentImage.recipe.id}_${baseName}.jpg`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    } catch (err) {
-      console.error('Failed to export:', err)
+      const result = await exportPhoto({
+        imageData: transform.transformedOriginal,
+        plan,
+        fileName: `photochrome_${currentImage.recipe.id}_${baseName}.jpg`,
+        watermarkText: APP_URL,
+        exifInfo: {
+          recipeName: currentImage.recipe.name,
+          recipeId: currentImage.recipe.id,
+          settings: mergedSettings,
+        },
+        signal: controller.signal,
+      })
+      if (result.status === 'error') setExportError(result.error)
     } finally {
+      if (exportAbortControllerRef.current === controller) {
+        exportAbortControllerRef.current = null
+      }
       setIsExporting(false)
     }
   }, [currentImage, transform.transformedOriginal, tuning])
+
+  useEffect(() => () => exportAbortControllerRef.current?.abort(), [])
 
   // ============================================================================
   // Compare (before/after)
@@ -369,6 +368,23 @@ export function Editor({
           onBack={onBack}
           onPanelToggle={handlePanelToggle}
         />
+
+        {exportError && (
+          <div
+            role="alert"
+            className="mx-3 md:mx-6 mb-2 flex items-center gap-3 rounded-lg border border-rose-900/70 bg-rose-950/80 px-3 py-2 text-sm text-rose-100"
+          >
+            <p className="min-w-0 flex-1">
+              Export failed: {exportError.message}
+            </p>
+            <Button size="sm" variant="outline" onClick={handleExport} disabled={isExporting}>
+              Retry
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setExportError(null)}>
+              Dismiss
+            </Button>
+          </div>
+        )}
 
         {/* Preview area */}
         <div className={`flex-1 min-h-0 px-3 md:px-6 relative overflow-hidden transition-[padding] duration-300 ${transform.isCropping ? 'pb-48 md:pb-0' : ''}`}>
