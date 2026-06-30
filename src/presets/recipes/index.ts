@@ -265,10 +265,19 @@ const RAW_RECIPES: Record<string, unknown> = {
  */
 function loadRecipes(): Record<string, Recipe> {
   const parsed: Record<string, Recipe> = {}
+  const ids = new Set<string>()
   
   for (const [key, data] of Object.entries(RAW_RECIPES)) {
     try {
-      parsed[key] = parseRecipe(data)
+      const recipe = parseRecipe(data)
+      if (recipe.id !== key) {
+        throw new Error(`recipe id "${recipe.id}" does not match registry key "${key}"`)
+      }
+      if (ids.has(recipe.id)) {
+        throw new Error(`duplicate recipe id "${recipe.id}"`)
+      }
+      ids.add(recipe.id)
+      parsed[key] = recipe
     } catch (err) {
       console.error(`Failed to parse recipe "${key}":`, err)
       throw new Error(`Invalid recipe data for "${key}": ${err instanceof Error ? err.message : 'unknown error'}`)

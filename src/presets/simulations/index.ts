@@ -57,10 +57,19 @@ function loadSimulations(): Record<string, FilmSimulation> {
   }
 
   const parsed: Record<string, FilmSimulation> = {}
+  const ids = new Set<string>()
 
   for (const [key, data] of Object.entries(rawSimulations)) {
     try {
-      parsed[key] = parseFilmSimulation(data)
+      const simulation = parseFilmSimulation(data)
+      if (simulation.id !== key) {
+        throw new Error(`simulation id "${simulation.id}" does not match registry key "${key}"`)
+      }
+      if (ids.has(simulation.id)) {
+        throw new Error(`duplicate simulation id "${simulation.id}"`)
+      }
+      ids.add(simulation.id)
+      parsed[key] = simulation
     } catch (err) {
       console.error(`Failed to parse simulation "${key}":`, err)
       throw new Error(`Invalid simulation data for "${key}": ${err instanceof Error ? err.message : 'unknown error'}`)
@@ -86,6 +95,11 @@ export const getSimulation = (id: string): FilmSimulation | undefined => {
  */
 export const getAllSimulations = (): FilmSimulation[] => {
   return Object.values(SIMULATIONS)
+}
+
+/** Whether a LUT-backed simulation has a bundled asset resolvable by Vite. */
+export const hasSimulationLUTAsset = (simulationId: string): boolean => {
+  return Boolean(lutUrls[simulationId])
 }
 
 // ============================================================================

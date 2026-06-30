@@ -105,8 +105,19 @@ const VALID_GRAIN_SIZES: GrainSize[] = ['small', 'large']
 const VALID_DYNAMIC_RANGE = ['DR100', 'DR200', 'DR400']
 const VALID_WHITE_BALANCE = ['auto', 'daylight', 'shade', 'cloudy', 'tungsten', 'fluorescent']
 
-function checkOptionalNumber(obj: Record<string, unknown>, field: string): boolean {
-  return obj[field] === undefined || typeof obj[field] === 'number'
+function checkOptionalNumber(
+  obj: Record<string, unknown>,
+  field: string,
+  min: number,
+  max: number
+): boolean {
+  const value = obj[field]
+  return value === undefined || (
+    typeof value === 'number' &&
+    Number.isFinite(value) &&
+    value >= min &&
+    value <= max
+  )
 }
 
 function checkOptionalOneOf(obj: Record<string, unknown>, field: string, valid: string[]): boolean {
@@ -121,22 +132,23 @@ function isValidRecipeSettings(value: unknown): value is RecipeSettings {
   const obj = value as Record<string, unknown>
 
   if (!checkOptionalOneOf(obj, 'dynamicRange', VALID_DYNAMIC_RANGE)) return false
-  if (!checkOptionalNumber(obj, 'highlight')) return false
-  if (!checkOptionalNumber(obj, 'shadow')) return false
-  if (!checkOptionalNumber(obj, 'color')) return false
-  if (!checkOptionalNumber(obj, 'sharpness')) return false
-  if (!checkOptionalNumber(obj, 'clarity')) return false
+  if (!checkOptionalNumber(obj, 'highlight', -2, 4)) return false
+  if (!checkOptionalNumber(obj, 'shadow', -2, 4)) return false
+  if (!checkOptionalNumber(obj, 'color', -4, 4)) return false
+  if (!checkOptionalNumber(obj, 'sharpness', -4, 4)) return false
+  if (!checkOptionalNumber(obj, 'clarity', -5, 5)) return false
   if (!checkOptionalOneOf(obj, 'grainEffect', VALID_EFFECT_STRENGTHS)) return false
   if (!checkOptionalOneOf(obj, 'grainSize', VALID_GRAIN_SIZES)) return false
   if (!checkOptionalOneOf(obj, 'colorChromeEffect', VALID_EFFECT_STRENGTHS)) return false
   if (!checkOptionalOneOf(obj, 'colorChromeFXBlue', VALID_EFFECT_STRENGTHS)) return false
   if (!checkOptionalOneOf(obj, 'whiteBalance', VALID_WHITE_BALANCE)) return false
-  if (!checkOptionalNumber(obj, 'wbShiftRed')) return false
-  if (!checkOptionalNumber(obj, 'wbShiftBlue')) return false
+  if (!checkOptionalNumber(obj, 'wbShiftRed', -9, 9)) return false
+  if (!checkOptionalNumber(obj, 'wbShiftBlue', -9, 9)) return false
 
   // Validate whiteBalanceKelvin range
   if (obj.whiteBalanceKelvin !== undefined) {
     if (typeof obj.whiteBalanceKelvin !== 'number' ||
+        !Number.isFinite(obj.whiteBalanceKelvin) ||
         obj.whiteBalanceKelvin < 2500 || obj.whiteBalanceKelvin > 10000) {
       return false
     }
@@ -201,4 +213,3 @@ export function parseRecipe(data: unknown): Recipe {
 
   return recipe
 }
-
