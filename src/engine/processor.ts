@@ -7,7 +7,7 @@ import {
   applyWhiteBalanceShift,
   applyToneAdjustment,
 } from './color'
-import { applyPreprocessSettings, needsPreprocess } from './preprocess'
+import { applyPreprocessSettings } from './preprocess'
 import { applyGrain, grainEffectToStrength, grainSizeToNumber } from './grain'
 import {
   applyClarity,
@@ -58,31 +58,17 @@ export class ImageProcessor {
     plan: ProcessingPlan
   ): ImageData {
     assertProcessingTarget(plan, imageData.width, imageData.height)
-    const { settings } = plan
-
-    // 1. Pre-process: Dynamic Range и White Balance Preset
-    //    Эти эффекты не реализованы в GL shader, применяем на CPU перед основным pipeline.
-    let inputData = imageData
-    if (needsPreprocess(settings)) {
-      inputData = new ImageData(
-        new Uint8ClampedArray(imageData.data),
-        imageData.width,
-        imageData.height
-      )
-      applyPreprocessSettings(inputData, settings)
-    }
-
-    // 2. HaldCLUT simulations use CPU (reliable trilinear interpolation).
+    // 1. HaldCLUT simulations use CPU (reliable trilinear interpolation).
     //    WebGL sampler3D is unstable across browsers — CPU LUT is ~50ms for 1600px thumbnails.
     const { lut } = plan
     if (!lut) {
       // Curve-based simulations can use WebGL (no 3D texture needed)
-      const webglResult = this.processWithWebGL(inputData, plan)
+      const webglResult = this.processWithWebGL(imageData, plan)
       if (webglResult) return webglResult
     }
 
-    // 3. CPU path (HaldCLUT lookup or curve-based fallback)
-    return this.processCPU(inputData, plan)
+    // 2. CPU path (HaldCLUT lookup or curve-based fallback)
+    return this.processOnCPU(imageData, plan)
   }
 
   /**
@@ -116,10 +102,11 @@ export class ImageProcessor {
   /**
    * Полный CPU pipeline (fallback когда WebGL недоступен)
    */
-  private static processCPU(
+  static processOnCPU(
     imageData: ImageData,
     plan: ProcessingPlan
   ): ImageData {
+    assertProcessingTarget(plan, imageData.width, imageData.height)
     const processed = new ImageData(
       new Uint8ClampedArray(imageData.data),
       imageData.width,
@@ -127,6 +114,8 @@ export class ImageProcessor {
     )
 
     const { simulation, settings, lut } = plan
+
+    applyPreprocessSettings(processed, settings)
 
     // HaldCLUT path: single 3D LUT lookup replaces curve + colorBalance + saturation
     if (lut) {

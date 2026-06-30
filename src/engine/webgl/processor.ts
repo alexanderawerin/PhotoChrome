@@ -359,6 +359,7 @@ export class WebGLProcessor {
       antialias: false,
       preserveDrawingBuffer: true,
       alpha: true,
+      premultipliedAlpha: false,
       powerPreference: 'high-performance',
     })
 
@@ -531,10 +532,14 @@ export class WebGLProcessor {
       gl.deleteTexture(renderTarget.texture)
     }
 
-    // Copy WebGL canvas to output canvas
-    // Note: UNPACK_FLIP_Y_WEBGL=1 was used for Canvas sources, so texture is already
-    // in correct orientation. No additional flip needed.
-    outputCtx.drawImage(canvas, 0, 0)
+    // ImageData may contain meaningful RGB values under partial transparency.
+    // A drawImage copy premultiplies those channels, so use an explicit readback
+    // for photo processing. Opaque video/canvas frames keep the faster copy path.
+    if (source instanceof ImageData) {
+      outputCtx.putImageData(this.getImageData(), 0, 0)
+    } else {
+      outputCtx.drawImage(canvas, 0, 0)
+    }
 
     return outputCanvas
   }
