@@ -5,7 +5,10 @@ test.describe('Landing Screen', () => {
   test('displays the landing screen with title and upload button', async ({ page, landingPage }) => {
     await expect(page.locator('h1')).toHaveText('Photochrome')
     await expect(page.getByRole('button', { name: 'Upload Photos or Video' })).toBeVisible()
-    await expect(page.locator('footer')).toContainText('Alexander Awerin')
+    await expect(page.getByRole('link', { name: 'Alexander Awerin' })).toHaveAttribute(
+      'href',
+      'https://netdesigner.ru'
+    )
   })
 
   test('uploads a single image and transitions to editor', async ({ page, landingPage }) => {

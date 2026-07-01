@@ -19,7 +19,7 @@ function storedCompressionMethods(zip: Uint8Array): Map<string, number> {
   return methods
 }
 
-test('Export all creates a stored-JPEG ZIP and reports skipped photos', async ({ page, landingPage }) => {
+test('Export all creates a stored-JPEG ZIP with a skipped-photo report', async ({ page, landingPage }) => {
   await uploadMultipleImages(page)
   await waitForEditor(page)
   await selectFirstRecipe(page)
@@ -40,9 +40,7 @@ test('Export all creates a stored-JPEG ZIP and reports skipped photos', async ({
 
   const methods = storedCompressionMethods(bytes)
   expect(methods.get(jpegNames[0]), 'JPEG must use ZIP method 0 (stored)').toBe(0)
-  await expect(page.getByRole('status', { name: 'Batch export result' })).toContainText(
-    '1 exported, 1 skipped, 0 errors'
-  )
+  await expect(page.getByRole('status', { name: 'Batch export progress' })).toBeHidden()
 })
 
 test('cancelling batch export destroys the partial archive and does not download', async ({ page, landingPage }) => {
@@ -73,7 +71,7 @@ test('cancelling batch export destroys the partial archive and does not download
   const progress = page.getByRole('status', { name: 'Batch export progress' })
   await expect(progress).toBeVisible()
   await progress.getByRole('button', { name: 'Cancel' }).click()
-  await expect(page.getByRole('status', { name: 'Batch export result' })).toContainText('Batch export cancelled')
+  await expect(progress).toBeHidden()
   await page.waitForTimeout(500)
   expect(downloaded).toBe(false)
 

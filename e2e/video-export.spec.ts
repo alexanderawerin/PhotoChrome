@@ -64,13 +64,28 @@ test.describe('Video import and export', () => {
     expect(frequency).toBeLessThan(442)
   })
 
-  test('imports, applies a recipe, recovers from unsupported WebCodecs, and exports video with audio', async ({ page, landingPage, browserName }) => {
-    test.skip(browserName !== 'chromium', 'AAC WebCodecs export is verified in Chromium')
+  test('imports, applies a recipe, recovers from unsupported WebCodecs, and exports video', async ({ page, landingPage, browserName }) => {
+    test.skip(browserName !== 'chromium', 'WebCodecs export is verified in Chromium')
     test.setTimeout(90_000)
     await uploadVideo(page)
     await expect(page.getByText('test-video.mp4')).toBeVisible()
     await selectFirstRecipe(page)
     await expect(page.getByRole('button', { name: 'Export video' })).toBeEnabled()
+
+    const audioEncodingSupported = await page.evaluate(async () => {
+      if (typeof AudioEncoder === 'undefined') return false
+      try {
+        const support = await AudioEncoder.isConfigSupported({
+          codec: 'mp4a.40.2',
+          sampleRate: 48_000,
+          numberOfChannels: 2,
+          bitrate: 128_000,
+        })
+        return support.supported === true
+      } catch {
+        return false
+      }
+    })
 
     await page.evaluate(() => {
       // @ts-expect-error Test-only capability toggle.
@@ -100,7 +115,7 @@ test.describe('Video import and export', () => {
     expect(output.width).toBe(640)
     expect(output.height).toBe(360)
     expect(output.videoPackets).toBe(90)
-    expect(output.audioCodec).toBe('aac')
+    expect(output.audioCodec).toBe(audioEncodingSupported ? 'aac' : null)
     expect(output.duration).toBeGreaterThanOrEqual(2.9)
     expect(output.duration).toBeLessThanOrEqual(3.1)
     await expect(alert).toHaveCount(0)

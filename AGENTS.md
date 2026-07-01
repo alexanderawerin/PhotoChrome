@@ -15,3 +15,10 @@ These rules are mandatory whenever translating Photochrome pages or states from 
 - Preserve unrelated user changes in the working tree.
 
 For the current Photochrome deliverable, the target Figma file is `ZDr3uLhnJP768aKz1MelGA`, page `2:2` (`ui`). Requested states are start, preset selection, and preset settings at widths 1600, 1200, and 393.
+
+## Test maintenance
+
+- Whenever product behavior or UI structure changes intentionally, update the affected automated tests in the same task and run the narrow relevant E2E suite before reporting completion.
+- Before a push or release-facing handoff, run the CI-equivalent Chromium suite (`npm run test:e2e:chromium`) in addition to lint, unit tests, and the production build.
+- Do not leave tests asserting UI elements, copy, or accessibility roles that were intentionally removed or relocated.
+- Browser codec assertions must reflect runtime capability checks. Require optional codecs such as AAC only when the browser reports that encoder configuration as supported.
