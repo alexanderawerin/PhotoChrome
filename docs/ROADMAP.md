@@ -4,10 +4,10 @@
 
 Photochrome 2.0 формируется как последовательный редизайн основного пользовательского опыта, а не как один изолированный релиз.
 
-1. **Desktop redesign — текущий этап.** Завершить и проверить новый интерфейс desktop-версии.
-2. **Mobile redesign — следующий этап.** После завершения desktop-redesign провести research, подготовить и утвердить Figma-макеты для viewport 393 px, затем составить отдельный технический план и реализовать новый mobile-интерфейс. Продуктовые и UX-требования зафиксированы в [Mobile Redesign Photochrome](./Mobile%20Redesign%20Photochrome-PLAN.md).
+1. **Mobile redesign — текущий этап.** Провести research, подготовить и утвердить Figma-макеты для viewport 393 px, затем составить отдельный технический план и реализовать новый mobile-интерфейс. Продуктовые и UX-требования зафиксированы в [Mobile Redesign Photochrome](./Mobile%20Redesign%20Photochrome-PLAN.md).
+2. **Desktop redesign — следующий этап.** После завершения mobile-redesign обновить и проверить интерфейс desktop-версии.
 3. **Стабилизация Photochrome 2.0.** Свести desktop и mobile в согласованный продукт, обновить затронутые тесты и пройти полную release-проверку.
 
 ## Правило перехода между этапами
 
-Mobile redesign не начинается до завершения desktop-redesign. Кодовая реализация mobile-этапа не начинается до окончания research, утверждения Figma-макетов и подготовки отдельного технического implementation plan.
+Desktop redesign начинается после завершения mobile-redesign. Кодовая реализация mobile-этапа не начинается до окончания research, утверждения Figma-макетов и подготовки отдельного технического implementation plan.
