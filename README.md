@@ -2,6 +2,8 @@
 
 Apply legendary Fujifilm film simulations to your photos and videos right in the browser. No uploads, no servers — everything runs locally on your device.
 
+Development toward Photochrome 2.0 is tracked in the [project roadmap](docs/ROADMAP.md).
+
 ## Features
 
 - **10 film simulations**: Provia, Velvia, Classic Chrome, Classic Neg, Astia, Eterna, Acros, Superia, Pro 400H, Neopan
