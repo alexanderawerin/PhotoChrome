@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { ArrowLeft, PanelRightClose, PanelRightOpen, Layers, Share, Plus, HelpCircle } from 'lucide-react'
+import { Crop, FlipHorizontal2, Layers, Plus, RotateCw, Settings2, Share, HelpCircle } from 'lucide-react'
 import { APP_VERSION, APP_URL } from '../constants'
 import { Button } from './ui/button'
 import { Spinner } from './ui/spinner'
@@ -8,7 +8,6 @@ import { RecipePanel } from './RecipePanel'
 import { MobileAdjustControls } from './MobileAdjustControls'
 import { TuningPanel } from './TuningPanel'
 import { CropPanel } from './CropPanel'
-import { Toolbar } from './Toolbar'
 import { HelpDialog } from './HelpDialog'
 import { ThumbnailStrip } from './ThumbnailStrip'
 import { ImageCounter } from './ImageCounter'
@@ -21,6 +20,7 @@ import { AspectRatio, type ImageTransformState } from '../engine/transform'
 import { useFavorites } from '../hooks/useFavorites'
 import { useTransform } from '../hooks/useTransform'
 import { useIsMdUp } from '../hooks/useIsMdUp'
+import { useIsWideDesktop } from '../hooks/useIsWideDesktop'
 import { useTuning } from '../hooks/useTuning'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useViewportHeight, getViewportHeightStyle } from '../hooks/useViewportHeight'
@@ -85,7 +85,7 @@ export function Editor({
   const [isExporting, setIsExporting] = useState(false)
   const [isApplyingToAll, setIsApplyingToAll] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
-  const [isPanelOpen, setIsPanelOpen] = useState(true)
+  const [isPanelOpen, setIsPanelOpen] = useState(false)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [hasUnreadHelp, setHasUnreadHelp] = useState(() => {
     try {
@@ -115,6 +115,8 @@ export function Editor({
 
   const viewportHeight = useViewportHeight()
   const isMdUp = useIsMdUp()
+  const isWideDesktop = useIsWideDesktop()
+  const isAdjustPanelVisible = isWideDesktop || isPanelOpen
   const { getFavoriteIds, toggleFavorite } = useFavorites()
 
   const { recipeIds: smartPicksIds } = useRecipeRecommendations(
@@ -280,25 +282,28 @@ export function Editor({
    * Переключение видимости панели
    */
   const handlePanelToggle = useCallback(() => {
+    if (isWideDesktop) return
     setIsPanelOpen(prev => !prev)
     if (tuning.isTuning) {
       tuning.applyTuning()
     }
-  }, [tuning])
+  }, [isWideDesktop, tuning])
 
   /**
    * Открытие тюнинга с проверкой панели
    */
   const handleTuningOpen = useCallback(() => {
-    if (tuning.isTuning) {
-      tuning.applyTuning()
+    if (isWideDesktop) return
+    if (isPanelOpen) {
+      if (tuning.isTuning) tuning.applyTuning()
+      setIsPanelOpen(false)
     } else {
+      if (!tuning.isTuning) {
       tuning.toggleTuning()
-      if (!isPanelOpen) {
-        setIsPanelOpen(true)
       }
+      setIsPanelOpen(true)
     }
-  }, [tuning, isPanelOpen])
+  }, [isWideDesktop, tuning, isPanelOpen])
 
   /**
    * Открытие crop с закрытием tuning
@@ -472,6 +477,7 @@ export function Editor({
     {
       onRotateClockwise: transform.rotateClockwise,
       onRotateCounterClockwise: transform.rotateCounterClockwise,
+      onFlipHorizontal: transform.flipHorizontal,
       onCropOpen: handleCropClick,
       onCropCancel: transform.cancelCrop,
       onCropApply: transform.applyCrop,
@@ -498,6 +504,16 @@ export function Editor({
       className="flex flex-col md:flex-row overflow-hidden"
       style={{ height: getViewportHeightStyle(viewportHeight) }}
     >
+      <DesktopPresetPanel
+        activeRecipe={currentImage.recipe}
+        transformedThumbnail={transform.transformedThumbnail}
+        favoriteIds={getFavoriteIds()}
+        onRecipeSelect={handleRecipeSelect}
+        onRandomRecipe={handleRandomRecipe}
+        onFavoriteToggle={toggleFavorite}
+        smartPicksIds={smartPicksIds}
+      />
+
       {/* Главный блок: фото + toolbar */}
       <div className="flex-1 flex flex-col bg-zinc-950 min-w-0 min-h-0 overflow-hidden">
         {/* Header */}
@@ -505,13 +521,11 @@ export function Editor({
           fileName={currentImage.fileName}
           currentIndex={currentIndex}
           totalImages={totalImages}
-          isPanelOpen={isPanelOpen}
-          onBack={onBack}
-          onPanelToggle={handlePanelToggle}
           onAddImages={onAddImages}
           onHelp={() => setIsHelpOpen(true)}
           hasUnreadHelp={hasUnreadHelp}
           demoMode={demoMode}
+          onDemoUpload={() => demoUploadRef.current?.click()}
         />
 
         {exportError && (
@@ -532,7 +546,8 @@ export function Editor({
         )}
 
         {/* Preview area */}
-        <div className={`flex-1 min-h-0 px-3 md:px-6 relative overflow-hidden transition-[padding] duration-300 motion-reduce:transition-none ${transform.isCropping ? 'pb-72 md:pb-0' : ''}`}>
+        <div className={`flex flex-1 min-h-0 flex-col px-3 md:px-6 overflow-hidden transition-[padding] duration-300 motion-reduce:transition-none ${transform.isCropping ? 'pb-72 md:pb-0' : ''}`}>
+          <div className="relative min-h-0 flex-1">
           {isProcessing && (
             <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
               <p className="text-sm text-zinc-400 bg-zinc-900/80 px-3 py-1 rounded">Processing...</p>
@@ -558,9 +573,10 @@ export function Editor({
             onSwipeLeft={onNextImage}
             onSwipeRight={onPreviousImage}
           />
+          </div>
 
           {/* Desktop: Thumbnail Strip below preview */}
-          {totalImages > 1 && (
+          {totalImages > 1 && !demoMode && (
             <div className="hidden md:block">
               <ThumbnailStrip
                 images={images}
@@ -571,35 +587,53 @@ export function Editor({
           )}
         </div>
 
-        {/* Desktop Toolbar */}
-        <div className="flex-shrink-0 p-3 md:p-4 hidden md:block">
-          {demoMode ? (
-            <Button onClick={() => demoUploadRef.current?.click()} className="w-full" aria-label="Upload photos">
-              Upload photos
+        {!demoMode && (
+          <div className={`flex-shrink-0 items-center justify-center gap-3 border-t border-zinc-800 bg-black px-4 py-3 ${transform.isCropping ? 'hidden' : 'hidden md:flex'}`} role="toolbar" aria-label="Desktop editor actions">
+            {!isWideDesktop && (
+              <Button variant="outline" onClick={handleTuningOpen} disabled={!currentImage.recipe} aria-label={isPanelOpen ? 'Close Adjust inspector' : 'Open Adjust inspector'} aria-expanded={isPanelOpen}>
+                <Settings2 className="size-4" aria-hidden="true" /> Adjust
+              </Button>
+            )}
+            <Button variant="outline" onClick={handleCropClick} aria-label="Open Crop inspector">
+              <Crop className="size-4" aria-hidden="true" /> Crop
             </Button>
-          ) : <Toolbar
-            onRotateClockwise={transform.rotateClockwise}
-            onRotateCounterClockwise={transform.rotateCounterClockwise}
-            onCropClick={handleCropClick}
-            onFlipHorizontal={transform.flipHorizontal}
-            onExport={handleExport}
-            canExport={!!currentImage.recipe}
-            isExporting={isExporting}
-            onExportAll={handleExportAll}
-            canExportAll={canExportAll}
-            isBatchExporting={isBatchExporting}
-            cropMode={transform.isCropping}
+            {totalImages > 1 && currentImage.recipe && (
+              <Button variant="outline" onClick={handleApplyToAll} aria-label={`Apply current preset to all ${totalImages} images`}>
+                <Layers className="size-4" aria-hidden="true" /> Apply to all
+              </Button>
+            )}
+            {totalImages > 1 && (
+              <Button variant="outline" onClick={handleExportAll} disabled={!canExportAll || isBatchExporting || isExporting} aria-label="Export all photos">
+                <Layers className="size-4" aria-hidden="true" /> Export all
+              </Button>
+            )}
+            <Button onClick={handleExport} disabled={!currentImage.recipe || isExporting || isBatchExporting} aria-label="Export processed image (Ctrl+S)">
+              {isExporting ? <Spinner className="size-4" randomColor /> : <Share className="size-4" aria-hidden="true" />}
+              {isExporting ? 'Exporting…' : 'Export'}
+            </Button>
+          </div>
+        )}
+
+        <div className={`hidden flex-shrink-0 border-t border-zinc-800 bg-black md:block ${transform.isCropping ? '' : 'md:hidden'}`}>
+          <div className="flex justify-center gap-2 border-b border-zinc-800 px-4 py-2">
+            <Button variant="outline" size="sm" onClick={transform.rotateClockwise} aria-label="Rotate 90 degrees clockwise">
+              <RotateCw className="size-4" aria-hidden="true" /> Rotate
+            </Button>
+            <Button variant="outline" size="sm" onClick={transform.flipHorizontal} aria-label="Flip horizontally">
+              <FlipHorizontal2 className="size-4" aria-hidden="true" /> Flip
+            </Button>
+          </div>
+          <CropPanel
             cropRatio={transform.cropRatio}
+            fineAngle={transform.transformState.fineAngle}
+            cropScale={transform.transformState.cropScale}
             onCropRatioChange={transform.setCropRatio}
-            onCropApply={transform.applyCrop}
-            onCropCancel={transform.cancelCrop}
-            activeRecipe={currentImage.recipe}
-            tuningMode={tuning.isTuning}
-            onTuningOpen={handleTuningOpen}
-            totalImages={totalImages}
-            onApplyToAll={handleApplyToAll}
-            onHelpClick={() => setIsHelpOpen(true)}
-          />}
+            onFineAngleChange={transform.setFineAngle}
+            onCropScaleChange={transform.setCropScale}
+            onInteractionChange={setIsCropControlActive}
+            onApply={transform.applyCrop}
+            onCancel={transform.cancelCrop}
+          />
         </div>
 
         {/* Mobile: contextual controls */}
@@ -726,21 +760,13 @@ export function Editor({
 
       {/* Desktop: Recipe panel */}
       <DesktopSidePanel
-        isOpen={isPanelOpen}
-        isTuning={tuning.isTuning}
+        isOpen={isAdjustPanelVisible}
+        enabled={!demoMode}
         activeRecipe={currentImage.recipe}
-        transformedThumbnail={transform.transformedThumbnail}
         customSettings={tuning.customSettings}
-        favoriteIds={getFavoriteIds()}
-        totalImages={totalImages}
-        onRecipeSelect={handleRecipeSelect}
-        onRandomRecipe={handleRandomRecipe}
-        onFavoriteToggle={toggleFavorite}
-        onApplyToAll={handleApplyToAll}
         onSettingsChange={tuning.updateSettings}
         onTuningApply={tuning.applyTuning}
         onTuningCancel={tuning.cancelTuning}
-        smartPicksIds={smartPicksIds}
       />
 
       {/* Mobile: CropPanel */}
@@ -867,26 +893,22 @@ interface HeaderProps {
   fileName: string
   currentIndex: number
   totalImages: number
-  isPanelOpen: boolean
-  onBack: () => void
-  onPanelToggle: () => void
   onAddImages: (files: File[]) => Promise<void>
   onHelp: () => void
   hasUnreadHelp: boolean
   demoMode: boolean
+  onDemoUpload: () => void
 }
 
 function Header({
   fileName,
   currentIndex,
   totalImages,
-  isPanelOpen,
-  onBack,
-  onPanelToggle,
   onAddImages,
   onHelp,
   hasUnreadHelp,
   demoMode,
+  onDemoUpload,
 }: HeaderProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -936,32 +958,26 @@ function Header({
           )}
         </Button>
       </div>
-      <div className="relative flex items-center justify-between">
-        {demoMode ? <div className="hidden size-8 md:block" /> : (
-          <Button variant="ghost" size="sm" onClick={onBack} className="hidden md:flex text-zinc-400 hover:text-white h-8 w-8 p-0" aria-label="Back">
-            <ArrowLeft className="w-4 h-4" />
+      <div className="hidden min-h-12 items-center gap-3 md:flex">
+        {!demoMode && (
+          <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()} className="gap-2" aria-label="Add photos">
+            <Plus className="size-4" aria-hidden="true" /> Add
           </Button>
         )}
-        
-        <div className="hidden md:block absolute left-1/2 -translate-x-1/2 text-center">
-          <h1 className="text-sm md:text-lg font-semibold text-white">
-            Photochrome<sup className="text-[8px] md:text-[10px] text-zinc-500 ml-0.5">{APP_VERSION}</sup>
-          </h1>
-          <p className="text-[10px] md:text-xs text-zinc-500 truncate max-w-[140px] md:max-w-none">{fileName}</p>
+        <div className="min-w-0 flex-1 text-center">
+          <p className="truncate text-sm font-medium text-zinc-100">{fileName}</p>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-600">
+            Photochrome {APP_VERSION}{totalImages > 1 ? ` · ${currentIndex + 1} of ${totalImages}` : ''}
+          </p>
         </div>
-        
-        {/* Desktop: Panel toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onPanelToggle}
-          className="text-zinc-500 hover:text-white hidden md:flex"
-          aria-label={isPanelOpen ? 'Hide panel' : 'Show panel'}
-          aria-expanded={isPanelOpen}
-        >
-          {isPanelOpen ? <PanelRightClose className="w-5 h-5" /> : <PanelRightOpen className="w-5 h-5" />}
-        </Button>
-        {/* Spacer for mobile */}
+        {demoMode ? (
+          <Button onClick={onDemoUpload} aria-label="Upload photos">Upload photos</Button>
+        ) : (
+          <Button variant="ghost" size="sm" onClick={onHelp} className="relative text-zinc-400" aria-label="Help">
+            <HelpCircle className="size-4" aria-hidden="true" /> Help
+            {hasUnreadHelp && <span className="absolute right-1 top-1 size-1.5 rounded-full bg-white" aria-hidden="true" />}
+          </Button>
+        )}
       </div>
     </header>
   )
@@ -969,38 +985,22 @@ function Header({
 
 interface DesktopSidePanelProps {
   isOpen: boolean
-  isTuning: boolean
+  enabled: boolean
   activeRecipe: Recipe | null
-  transformedThumbnail: ImageData
   customSettings: RecipeSettings
-  favoriteIds: string[]
-  totalImages: number
-  onRecipeSelect: (recipe: Recipe) => void
-  onRandomRecipe: () => void
-  onFavoriteToggle: (id: string) => void
-  onApplyToAll: () => void
   onSettingsChange: (settings: RecipeSettings) => void
   onTuningApply: () => void
   onTuningCancel: () => void
-  smartPicksIds: string[]
 }
 
 function DesktopSidePanel({
   isOpen,
-  isTuning,
+  enabled,
   activeRecipe,
-  transformedThumbnail,
   customSettings,
-  favoriteIds,
-  totalImages,
-  onRecipeSelect,
-  onRandomRecipe,
-  onFavoriteToggle,
-  onApplyToAll,
   onSettingsChange,
   onTuningApply,
   onTuningCancel,
-  smartPicksIds,
 }: DesktopSidePanelProps) {
   return (
     <aside
@@ -1008,24 +1008,13 @@ function DesktopSidePanel({
         hidden md:block flex-shrink-0 h-full overflow-hidden
         bg-black border-l border-zinc-800
         transition-[width] duration-300 ease-out
-        ${isOpen ? 'w-72' : 'w-0 border-l-0'}
+        ${isOpen && enabled ? 'w-60 xl:w-64' : 'w-0 border-l-0'}
       `}
+      aria-label="Editing inspector"
     >
-      <div className="w-72 h-full relative">
-        <RecipePanel
-          sourceImage={transformedThumbnail}
-          activeRecipeId={activeRecipe?.id ?? null}
-          favoriteIds={favoriteIds}
-          totalImages={totalImages}
-          onRecipeSelect={onRecipeSelect}
-          onRandomRecipe={onRandomRecipe}
-          onFavoriteToggle={onFavoriteToggle}
-          onApplyToAll={onApplyToAll}
-          smartPicksIds={smartPicksIds}
-        />
-        
-        <div className={`tuning-panel-overlay ${isTuning && activeRecipe ? 'tuning-panel-open' : 'tuning-panel-closed'}`}>
-          {activeRecipe && (
+      <div className="flex h-full w-60 flex-col xl:w-64">
+        <div className="min-h-0 flex-1 overflow-hidden">
+          {activeRecipe ? (
             <TuningPanel
               recipe={activeRecipe}
               customSettings={customSettings}
@@ -1033,8 +1022,34 @@ function DesktopSidePanel({
               onApply={onTuningApply}
               onCancel={onTuningCancel}
             />
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+              <Settings2 className="mb-4 size-8 text-zinc-700" aria-hidden="true" />
+              <h2 className="text-sm font-medium text-zinc-200">Choose a film first</h2>
+              <p className="mt-2 text-xs leading-5 text-zinc-500">Adjustments inherit their starting values from the selected preset.</p>
+            </div>
           )}
         </div>
+      </div>
+    </aside>
+  )
+}
+
+interface DesktopPresetPanelProps {
+  activeRecipe: Recipe | null
+  transformedThumbnail: ImageData
+  favoriteIds: string[]
+  onRecipeSelect: (recipe: Recipe) => void
+  onRandomRecipe: () => void
+  onFavoriteToggle: (id: string) => void
+  smartPicksIds: string[]
+}
+
+function DesktopPresetPanel({ activeRecipe, transformedThumbnail, favoriteIds, onRecipeSelect, onRandomRecipe, onFavoriteToggle, smartPicksIds }: DesktopPresetPanelProps) {
+  return (
+    <aside className="hidden h-full w-52 flex-shrink-0 overflow-hidden border-r border-zinc-800 bg-black md:block xl:w-56" aria-label="Preset browser">
+      <div className="h-full w-52 xl:w-56">
+        <RecipePanel sourceImage={transformedThumbnail} activeRecipeId={activeRecipe?.id ?? null} favoriteIds={favoriteIds} onRecipeSelect={onRecipeSelect} onRandomRecipe={onRandomRecipe} onFavoriteToggle={onFavoriteToggle} smartPicksIds={smartPicksIds} />
       </div>
     </aside>
   )

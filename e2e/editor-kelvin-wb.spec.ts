@@ -3,23 +3,22 @@ import { selectFirstRecipe } from './helpers/upload'
 
 test.describe('Editor — Kelvin White Balance', () => {
   const tuningOverlay = (page: import('@playwright/test').Page) =>
-    page.locator('.tuning-panel-overlay')
+    page.getByRole('complementary', { name: 'Editing inspector' })
+
+  const selectAndOpen = async (page: import('@playwright/test').Page) => {
+    await selectFirstRecipe(page)
+    await page.getByRole('button', { name: 'Open Adjust inspector' }).click()
+  }
 
   test('WB section shows Preset/Kelvin toggle', async ({ page, editorPage }) => {
-    await selectFirstRecipe(page)
-    await page.locator('[aria-label^="Tune "]').first().click()
-    await expect(tuningOverlay(page)).toHaveClass(/tuning-panel-open/)
-
+    await selectAndOpen(page)
     const panel = tuningOverlay(page)
     await expect(panel.getByRole('button', { name: 'White Balance Preset mode' })).toBeVisible()
     await expect(panel.getByRole('button', { name: 'White Balance Kelvin mode' })).toBeVisible()
   })
 
   test('switching to Kelvin mode shows slider', async ({ page, editorPage }) => {
-    await selectFirstRecipe(page)
-    await page.locator('[aria-label^="Tune "]').first().click()
-    await expect(tuningOverlay(page)).toHaveClass(/tuning-panel-open/)
-
+    await selectAndOpen(page)
     const panel = tuningOverlay(page)
     await panel.getByRole('button', { name: 'White Balance Kelvin mode' }).click()
 
@@ -29,8 +28,7 @@ test.describe('Editor — Kelvin White Balance', () => {
   })
 
   test('switching back to Preset mode hides slider', async ({ page, editorPage }) => {
-    await selectFirstRecipe(page)
-    await page.locator('[aria-label^="Tune "]').first().click()
+    await selectAndOpen(page)
 
     const panel = tuningOverlay(page)
     await panel.getByRole('button', { name: 'White Balance Kelvin mode' }).click()
@@ -48,10 +46,7 @@ test.describe('Editor — Kelvin White Balance', () => {
     const classicColorCard = page.locator('aside [aria-label="Apply preset Classic Color"]').first()
     await classicColorCard.click()
     await page.locator('aside [aria-label="Apply preset Classic Color, selected"]').first().waitFor({ state: 'visible', timeout: 10_000 })
-
-    // Open tuning panel for this recipe
-    await page.locator('[aria-label^="Tune "]').first().click()
-    await expect(tuningOverlay(page)).toHaveClass(/tuning-panel-open/)
+    await page.getByRole('button', { name: 'Open Adjust inspector' }).click()
 
     const panel = tuningOverlay(page)
 

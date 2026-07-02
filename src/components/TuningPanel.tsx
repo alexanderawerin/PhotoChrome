@@ -1,4 +1,4 @@
-import { Check, Shuffle } from 'lucide-react'
+import { Check, RotateCcw, Shuffle } from 'lucide-react'
 import { Button } from './ui/button'
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group'
 import { Slider } from './ui/slider'
@@ -215,6 +215,12 @@ export function TuningPanel({
 
   const grainEffect = getToggleValue('grainEffect')
 
+  const resetSetting = (key: keyof RecipeSettings) => {
+    const next = { ...customSettings }
+    delete next[key]
+    onSettingsChange(next)
+  }
+
   return (
     <div className="h-full flex flex-col bg-black safe-area-inset">
       {/* Header */}
@@ -250,13 +256,16 @@ export function TuningPanel({
             const sliderId = `slider-${param.key}`
             return (
               <div key={param.key} className="space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <label htmlFor={sliderId} className="text-sm text-zinc-300">
                     {param.label}
                   </label>
-                  <span className="text-sm text-zinc-500 tabular-nums w-8 text-right" aria-hidden="true">
-                    {value > 0 ? `+${value}` : value}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="w-8 text-right text-sm tabular-nums text-zinc-500" aria-hidden="true">{value > 0 ? `+${value}` : value}</span>
+                    <button type="button" onClick={() => resetSetting(param.key)} className="grid size-7 place-items-center rounded text-zinc-600 hover:bg-zinc-800 hover:text-zinc-200" aria-label={`Reset ${param.label} to preset`}>
+                      <RotateCcw className="size-3" aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
                 <Slider
                   id={sliderId}

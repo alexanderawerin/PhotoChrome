@@ -20,6 +20,8 @@ interface KeyboardShortcutsHandlers {
   onRotateClockwise: () => void
   /** Поворот против часовой */
   onRotateCounterClockwise: () => void
+  /** Отразить изображение горизонтально */
+  onFlipHorizontal: () => void
   /** Открыть обрезку */
   onCropOpen: () => void
   /** Отменить обрезку */
@@ -68,7 +70,6 @@ export function useKeyboardShortcuts(
   const {
     isCropping,
     isTuning,
-    cropRatio,
     activeRecipe,
     totalImages = 1,
   } = config
@@ -76,6 +77,7 @@ export function useKeyboardShortcuts(
   const {
     onRotateClockwise,
     onRotateCounterClockwise,
+    onFlipHorizontal,
     onCropOpen,
     onCropCancel,
     onCropApply,
@@ -112,6 +114,12 @@ export function useKeyboardShortcuts(
       case 'c':
         if (!e.metaKey && !e.ctrlKey && !isCropping && !isTuning) {
           onCropOpen()
+        }
+        break
+
+      case 'f':
+        if (!e.metaKey && !e.ctrlKey && !isCropping && !isTuning) {
+          onFlipHorizontal()
         }
         break
 
@@ -152,7 +160,7 @@ export function useKeyboardShortcuts(
         break
 
       case 'enter':
-        if (isCropping && cropRatio !== 'free') {
+        if (isCropping) {
           onCropApply()
         } else if (isTuning) {
           onTuningApply()
@@ -176,10 +184,10 @@ export function useKeyboardShortcuts(
   }, [
     isCropping,
     isTuning,
-    cropRatio,
     activeRecipe,
     onRotateClockwise,
     onRotateCounterClockwise,
+    onFlipHorizontal,
     onCropOpen,
     onCropCancel,
     onCropApply,

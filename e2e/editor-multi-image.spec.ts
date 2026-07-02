@@ -10,6 +10,16 @@ test.describe('Editor — Multi-Image Navigation', () => {
 
     // First thumbnail should be selected
     await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
+
+    const actions = page.getByRole('toolbar', { name: 'Desktop editor actions' })
+    await expect(actions).toBeVisible()
+    const thumbnailsBox = await tablist.boundingBox()
+    const actionsBox = await actions.boundingBox()
+    expect(thumbnailsBox).toBeTruthy()
+    expect(actionsBox).toBeTruthy()
+    if (thumbnailsBox && actionsBox) {
+      expect(actionsBox.y).toBeGreaterThanOrEqual(thumbnailsBox.y + thumbnailsBox.height)
+    }
   })
 
   test('clicking thumbnail switches active image', async ({ page, multiImageEditorPage }) => {

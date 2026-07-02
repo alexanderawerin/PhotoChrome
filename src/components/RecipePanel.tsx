@@ -1,7 +1,6 @@
 import { useMemo, Fragment, useRef, useEffect, useState } from 'react'
 import { Shuffle, Heart, Film, Layers, Star, Sparkles } from 'lucide-react'
 import { Button } from './ui/button'
-import { ButtonGroup } from './ui/button-group'
 import { Recipe } from '../engine/types'
 import { RecipeCard } from './RecipeCard'
 import { getAllRecipes, getRecipesGroupedBySimulation, getRecipesGroupedByUseCase, getEditorsChoiceRecipes, RECIPES } from '../presets/recipes'
@@ -45,7 +44,7 @@ export function RecipePanel({
   smartPicksIds = []
 }: RecipePanelProps) {
   const recipes = getAllRecipes()
-  const [groupingMode, setGroupingMode] = useState<GroupingMode>('film')
+  const [groupingMode] = useState<GroupingMode>('film')
   const groupedByFilm = getRecipesGroupedBySimulation()
   const groupedByUseCase = getRecipesGroupedByUseCase()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -362,29 +361,9 @@ export function RecipePanel({
           </Button>
         </div>
         
-        {/* Grouping toggle */}
-        <ButtonGroup className="w-full" role="group" aria-label="Group presets by">
-          <Button
-            variant={groupingMode === 'film' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setGroupingMode('film')}
-            className="flex-1 text-xs"
-            aria-pressed={groupingMode === 'film'}
-          >
-            <Film className="w-3 h-3" aria-hidden="true" />
-            Film
-          </Button>
-          <Button
-            variant={groupingMode === 'useCase' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setGroupingMode('useCase')}
-            className="flex-1 text-xs"
-            aria-pressed={groupingMode === 'useCase'}
-          >
-            <Layers className="w-3 h-3" aria-hidden="true" />
-            Use
-          </Button>
-        </ButtonGroup>
+        <div className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+          <Film className="size-3" aria-hidden="true" /> Film library
+        </div>
       </div>
       
       {/* Scrollable content with sections */}
@@ -416,7 +395,7 @@ export function RecipePanel({
             
             {favoriteRecipes.length > 0 ? (
               <div 
-                className="grid grid-cols-2 gap-2"
+                className="grid grid-cols-1 gap-2"
                 role="list"
                 aria-labelledby="group-favorites"
               >
@@ -464,7 +443,7 @@ export function RecipePanel({
                 </span>
               </div>
               <div
-                className="grid grid-cols-2 gap-2"
+                className="grid grid-cols-1 gap-2"
                 role="list"
                 aria-labelledby="group-smart-picks"
               >
@@ -504,7 +483,7 @@ export function RecipePanel({
                 </span>
               </div>
               <div
-                className="grid grid-cols-2 gap-2"
+                className="grid grid-cols-1 gap-2"
                 role="list"
                 aria-labelledby="group-editors-choice"
               >
@@ -550,7 +529,7 @@ export function RecipePanel({
                 
                 {/* Recipe grid */}
                 <div 
-                  className="grid grid-cols-2 gap-2"
+                  className="grid grid-cols-1 gap-2"
                   role="list"
                   aria-labelledby={`group-${group.simulationId}`}
                 >
@@ -594,7 +573,7 @@ export function RecipePanel({
                 
                 {/* Recipe grid */}
                 <div 
-                  className="grid grid-cols-2 gap-2"
+                  className="grid grid-cols-1 gap-2"
                   role="list"
                   aria-labelledby={`group-${group.useCaseId}`}
                 >

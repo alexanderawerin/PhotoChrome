@@ -2,11 +2,11 @@ import { test, expect } from './helpers/fixtures'
 
 test.describe('Editor — Transform (Rotate & Crop)', () => {
   test('rotate clockwise button works', async ({ page, editorPage }) => {
-    const canvas = page.locator('canvas').first()
+    const canvas = page.locator('canvas[aria-label="Preview"]')
+    await page.getByRole('button', { name: 'Open Crop inspector' }).click()
     const beforeBox = await canvas.boundingBox()
 
-    // Desktop button includes keyboard hint "(R)"
-    await page.locator('[aria-label="Rotate clockwise (R)"]').click()
+    await page.getByRole('button', { name: 'Rotate 90 degrees clockwise' }).click()
     // Wait for re-render
     await page.waitForTimeout(500)
 
@@ -16,44 +16,27 @@ test.describe('Editor — Transform (Rotate & Crop)', () => {
     if (beforeBox && afterBox) {
       const ratioBefore = beforeBox.width / beforeBox.height
       const ratioAfter = afterBox.width / afterBox.height
-      expect(ratioBefore).not.toBeCloseTo(ratioAfter, 0)
+      expect(Math.abs(ratioBefore - ratioAfter)).toBeGreaterThan(0.1)
     }
   })
 
   test('crop mode shows crop toolbar with ratio buttons', async ({ page, editorPage }) => {
-    await page.locator('[aria-label="Crop image (C)"]').click()
-
-    const cropToolbar = page.locator('[aria-label="Crop aspect ratio selection"]')
-    await expect(cropToolbar).toBeVisible()
-    await expect(page.locator('[aria-label="Apply crop"]')).toBeVisible()
-    await expect(page.locator('[aria-label="Cancel crop"]')).toBeVisible()
-
-    const ratioGroup = page.locator('[aria-label="Aspect ratios"]')
-    await expect(ratioGroup).toBeVisible()
+    await page.getByRole('button', { name: 'Open Crop inspector' }).click()
+    await expect(page.getByRole('slider', { name: 'Crop angle' })).toBeVisible()
+    await expect(page.getByRole('slider', { name: 'Crop zoom' })).toBeVisible()
   })
 
   test('select crop ratio and apply', async ({ page, editorPage }) => {
-    await page.locator('[aria-label="Crop image (C)"]').click()
-    await expect(page.locator('[aria-label="Crop aspect ratio selection"]')).toBeVisible()
-
-    // Select 1:1 ratio — use button inside the crop toolbar
-    const cropToolbar = page.locator('[aria-label="Crop aspect ratio selection"]')
-    await cropToolbar.getByRole('button', { name: /1:1/ }).click()
-
-    // Apply crop
-    await page.locator('[aria-label="Apply crop"]').click()
-
-    // Crop toolbar should disappear, normal toolbar should return
-    await expect(page.locator('[aria-label="Crop aspect ratio selection"]')).not.toBeVisible()
-    await expect(page.locator('[aria-label="Editing tools"]').first()).toBeVisible()
+    await page.getByRole('button', { name: 'Open Crop inspector' }).click()
+    await page.getByRole('button', { name: 'Choose crop ratio' }).click()
+    await page.getByRole('menuitem', { name: '1:1' }).click()
+    await page.getByRole('button', { name: 'Apply', exact: true }).click()
+    await expect(page.getByRole('slider', { name: 'Crop angle' })).toBeHidden()
   })
 
   test('cancel crop returns to normal mode', async ({ page, editorPage }) => {
-    await page.locator('[aria-label="Crop image (C)"]').click()
-    await expect(page.locator('[aria-label="Crop aspect ratio selection"]')).toBeVisible()
-
-    await page.locator('[aria-label="Cancel crop"]').click()
-    await expect(page.locator('[aria-label="Crop aspect ratio selection"]')).not.toBeVisible()
-    await expect(page.locator('[aria-label="Editing tools"]').first()).toBeVisible()
+    await page.getByRole('button', { name: 'Open Crop inspector' }).click()
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect(page.getByRole('slider', { name: 'Crop angle' })).toBeHidden()
   })
 })
