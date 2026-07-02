@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { ImageOff, Film, RefreshCw } from 'lucide-react'
 import { LandingScreen } from './components/LandingScreen'
 import { Editor } from './components/Editor'
@@ -16,6 +16,9 @@ import {
 } from './components/ui/empty'
 import { useImageProcessor } from './hooks/useImageProcessor'
 import { useVideoProcessor } from './hooks/useVideoProcessor'
+import demoOneUrl from '../img/alexander-awerin-3yqVPhHHsdI-unsplash.jpg'
+import demoTwoUrl from '../img/alexander-awerin-AQI2wTv1SWo-unsplash.jpg'
+import demoThreeUrl from '../img/alexander-awerin-yafEjegDFl4-unsplash.jpg'
 
 /**
  * Loading messages that cycle while waiting.
@@ -36,6 +39,7 @@ const LOADING_MESSAGES = [
 
 /** Interval between message changes (ms) - 1 second */
 const MESSAGE_INTERVAL = 1000
+const DEMO_PHOTOS = [demoOneUrl, demoTwoUrl, demoThreeUrl] as const
 
 /**
  * Loading overlay shown while image is being processed.
@@ -83,12 +87,17 @@ type MediaType = 'image' | 'video' | null
 function AppContent() {
   const [mediaType, setMediaType] = useState<MediaType>(null)
   const [fileName, setFileName] = useState<string>('')
+  const [isDemoInitializing, setIsDemoInitializing] = useState(true)
+  const demoLoadStarted = useRef(false)
+  const lastImageFilesRef = useRef<File[]>([])
+  const errorFileInputRef = useRef<HTMLInputElement>(null)
   const {
     images,
     currentIndex,
     isLoading: isImageLoading,
     error: imageError,
     loadImages,
+    addImages,
     goToImage,
     nextImage,
     previousImage,
@@ -111,9 +120,31 @@ function AppContent() {
   const isLoading = isImageLoading || isVideoLoading
   const error = imageError || videoError
 
+  const loadDemo = useCallback(async () => {
+    setIsDemoInitializing(true)
+    try {
+      const files = await Promise.all(DEMO_PHOTOS.map(async (url, index) => {
+        const response = await fetch(url)
+        if (!response.ok) throw new Error('Failed to load demo photo')
+        const blob = await response.blob()
+        return new File([blob], `Demo ${index + 1}.jpg`, { type: blob.type || 'image/jpeg' })
+      }))
+      await loadImages(files)
+    } finally {
+      setIsDemoInitializing(false)
+    }
+  }, [loadImages])
+
+  useEffect(() => {
+    if (demoLoadStarted.current) return
+    demoLoadStarted.current = true
+    void loadDemo()
+  }, [loadDemo])
+
   const handleFileSelect = useCallback(async (files: File | File[], type: 'image' | 'video') => {
     if (type === 'image') {
       const fileArray = Array.isArray(files) ? files : [files]
+      lastImageFilesRef.current = fileArray
       setFileName(fileArray.length === 1 ? fileArray[0].name : `${fileArray.length} images`)
       setMediaType(type)
       await loadImages(fileArray)
@@ -130,7 +161,8 @@ function AppContent() {
     setFileName('')
     resetImage()
     resetVideo()
-  }, [resetImage, resetVideo])
+    void loadDemo()
+  }, [loadDemo, resetImage, resetVideo])
 
   // Determine error type for contextual icon
   const isVideoError = mediaType === 'video'
@@ -157,14 +189,36 @@ function AppContent() {
           </EmptyHeader>
 
           <EmptyContent>
-            <Button
-              onClick={handleReset}
-              variant="outline"
-              className="gap-2 border-zinc-700 hover:bg-zinc-800 hover:text-white"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Try again
-            </Button>
+            <div className="flex w-full flex-col gap-2">
+              <input
+                ref={errorFileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                multiple
+                className="sr-only"
+                aria-label="Choose another photo"
+                onChange={event => {
+                  const files = Array.from(event.target.files ?? [])
+                  event.target.value = ''
+                  if (files.length > 0) void handleFileSelect(files, 'image')
+                }}
+              />
+              <Button
+                onClick={() => {
+                  if (lastImageFilesRef.current.length > 0) void loadImages(lastImageFilesRef.current)
+                  else handleReset()
+                }}
+                variant="outline"
+                className="gap-2 border-zinc-700 hover:bg-zinc-800 hover:text-white"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Retry
+              </Button>
+              <Button onClick={() => errorFileInputRef.current?.click()}>
+                Choose another
+              </Button>
+              <Button variant="ghost" onClick={handleReset}>Back to demo</Button>
+            </div>
           </EmptyContent>
         </Empty>
       </div>
@@ -172,6 +226,27 @@ function AppContent() {
   }
 
   // Show landing screen if no media loaded
+  if (mediaType === null && images.length > 0) {
+    return (
+      <Editor
+        images={images}
+        currentIndex={currentIndex}
+        onIndexChange={goToImage}
+        onImageUpdate={updateImage}
+        onNextImage={nextImage}
+        onPreviousImage={previousImage}
+        onBack={handleReset}
+        onAddImages={async files => handleFileSelect(files, 'image')}
+        onMediaSelect={handleFileSelect}
+        demoMode
+      />
+    )
+  }
+
+  if (mediaType === null && isDemoInitializing) {
+    return <main className="min-h-screen bg-zinc-950"><LoadingOverlay /></main>
+  }
+
   if (mediaType === null || (mediaType === 'image' && images.length === 0) || (mediaType === 'video' && !videoData)) {
     return (
       <>
@@ -184,16 +259,19 @@ function AppContent() {
   // Show image editor (multi-image support)
   if (mediaType === 'image' && images.length > 0) {
     return (
-      <Editor
-        images={images}
-        currentIndex={currentIndex}
-        onIndexChange={goToImage}
-        onImageUpdate={updateImage}
-        onNextImage={nextImage}
-        onPreviousImage={previousImage}
-        fileName={fileName}
-        onBack={handleReset}
-      />
+      <>
+        <Editor
+          images={images}
+          currentIndex={currentIndex}
+          onIndexChange={goToImage}
+          onImageUpdate={updateImage}
+          onNextImage={nextImage}
+          onPreviousImage={previousImage}
+          onBack={handleReset}
+          onAddImages={addImages}
+        />
+        {isLoading && <LoadingOverlay />}
+      </>
     )
   }
 

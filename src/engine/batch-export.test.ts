@@ -9,6 +9,7 @@ import {
 } from './batch-export'
 import { ImageProcessor } from './processor'
 import { getRecipe } from '../presets/recipes'
+import { createDefaultTransformState } from './transform'
 import type { ImageItem } from './types'
 
 const recipe = getRecipe('classic-neg-cinema')!
@@ -24,6 +25,7 @@ const item = (fileName: string, withRecipe = true): ImageItem => ({
   transformedOriginal: imageData,
   transformedThumbnail: imageData,
   rotation: 0,
+  transform: createDefaultTransformState(),
 })
 
 afterEach(() => vi.restoreAllMocks())

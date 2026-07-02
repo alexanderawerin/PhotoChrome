@@ -1,14 +1,12 @@
 import { test, expect } from './helpers/fixtures'
 import { uploadImage, uploadMultipleImages, waitForEditor } from './helpers/upload'
 
-test.describe('Landing Screen', () => {
-  test('displays the landing screen with title and upload button', async ({ page, landingPage }) => {
-    await expect(page.locator('h1')).toHaveText('Photochrome')
-    await expect(page.getByRole('button', { name: 'Upload Photos or Video' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Alexander Awerin' })).toHaveAttribute(
-      'href',
-      'https://netdesigner.ru'
-    )
+test.describe('Playable demo', () => {
+  test('shows real demo photos, presets, compare surface, and a persistent upload CTA', async ({ page, landingPage }) => {
+    await waitForEditor(page)
+    await expect(page.getByRole('button', { name: 'Upload photos' })).toBeVisible()
+    await expect(page.locator('aside [aria-label^="Apply preset"]').first()).toBeVisible()
+    await expect(page.locator('canvas[aria-label="Preview"]')).toBeVisible()
   })
 
   test('uploads a single image and transitions to editor', async ({ page, landingPage }) => {
@@ -31,9 +29,9 @@ test.describe('Landing Screen', () => {
     await expect(tablist.locator('[role="tab"]')).toHaveCount(2)
   })
 
-  test('back button returns to landing screen', async ({ page, editorPage }) => {
+  test('back button returns to the playable demo', async ({ page, editorPage }) => {
     await page.locator('[aria-label="Back"]').click()
-    await expect(page.locator('[aria-label="Photochrome start screen"]')).toBeVisible()
-    await expect(page.locator('h1')).toHaveText('Photochrome')
+    await expect(page.getByRole('button', { name: 'Upload photos' })).toBeVisible()
+    await expect(page.locator('aside [aria-label^="Apply preset"]').first()).toBeVisible()
   })
 })

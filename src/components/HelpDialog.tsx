@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Bug, Lightbulb, Github } from 'lucide-react'
 import { GITHUB_REPO_URL } from '../constants'
 import {
@@ -14,9 +14,12 @@ interface HelpDialogProps {
   isOpen: boolean
   onClose: () => void
   totalImages?: number
+  mobile?: boolean
+  hasUnreadUpdate?: boolean
+  onUpdateViewed?: () => void
 }
 
-type Tab = 'whats-new' | 'shortcuts' | 'feedback'
+type Tab = 'quick-guide' | 'whats-new' | 'shortcuts' | 'feedback'
 
 const WHATS_NEW = [
   {
@@ -93,15 +96,34 @@ const MULTI_IMAGE_SHORTCUTS = [
   { keys: ['→'], description: 'Next image' },
 ]
 
-export function HelpDialog({ isOpen, onClose, totalImages = 1 }: HelpDialogProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('whats-new')
+export function HelpDialog({
+  isOpen,
+  onClose,
+  totalImages = 1,
+  mobile = false,
+  hasUnreadUpdate = false,
+  onUpdateViewed,
+}: HelpDialogProps) {
+  const [activeTab, setActiveTab] = useState<Tab>(hasUnreadUpdate ? 'whats-new' : 'quick-guide')
+
+  useEffect(() => {
+    if (!isOpen) return
+    setActiveTab(hasUnreadUpdate ? 'whats-new' : 'quick-guide')
+  }, [isOpen, hasUnreadUpdate])
 
   const keyboardShortcuts = totalImages > 1
     ? [...BASE_KEYBOARD_SHORTCUTS, ...MULTI_IMAGE_SHORTCUTS]
     : BASE_KEYBOARD_SHORTCUTS
 
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Sheet
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (open) return
+        if (hasUnreadUpdate) onUpdateViewed?.()
+        onClose()
+      }}
+    >
       <SheetContent className="bg-zinc-900 border-zinc-800 w-[320px] sm:w-[380px] overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="sr-only">Photochrome help</SheetTitle>
@@ -113,8 +135,20 @@ export function HelpDialog({ isOpen, onClose, totalImages = 1 }: HelpDialogProps
         {/* Tab buttons */}
         <div className="flex border-b border-zinc-800 mt-4" role="tablist">
           <button
+            onClick={() => setActiveTab('quick-guide')}
+            className={`flex-1 min-h-11 py-2.5 text-sm font-medium transition-colors ${
+              activeTab === 'quick-guide'
+                ? 'text-white border-b-2 border-white -mb-px'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+            aria-selected={activeTab === 'quick-guide'}
+            role="tab"
+          >
+            Quick Guide
+          </button>
+          <button
             onClick={() => setActiveTab('whats-new')}
-            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+            className={`flex-1 min-h-11 py-2.5 text-sm font-medium transition-colors ${
               activeTab === 'whats-new'
                 ? 'text-white border-b-2 border-white -mb-px'
                 : 'text-zinc-500 hover:text-zinc-300'
@@ -124,9 +158,9 @@ export function HelpDialog({ isOpen, onClose, totalImages = 1 }: HelpDialogProps
           >
             What's New
           </button>
-          <button
+          {!mobile && <button
             onClick={() => setActiveTab('shortcuts')}
-            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+            className={`flex-1 min-h-11 py-2.5 text-sm font-medium transition-colors ${
               activeTab === 'shortcuts'
                 ? 'text-white border-b-2 border-white -mb-px'
                 : 'text-zinc-500 hover:text-zinc-300'
@@ -135,10 +169,10 @@ export function HelpDialog({ isOpen, onClose, totalImages = 1 }: HelpDialogProps
             role="tab"
           >
             Shortcuts
-          </button>
+          </button>}
           <button
             onClick={() => setActiveTab('feedback')}
-            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+            className={`flex-1 min-h-11 py-2.5 text-sm font-medium transition-colors ${
               activeTab === 'feedback'
                 ? 'text-white border-b-2 border-white -mb-px'
                 : 'text-zinc-500 hover:text-zinc-300'
@@ -152,6 +186,7 @@ export function HelpDialog({ isOpen, onClose, totalImages = 1 }: HelpDialogProps
 
         {/* Content */}
         <div className="py-4">
+          {activeTab === 'quick-guide' && <QuickGuideContent />}
           {activeTab === 'whats-new' && <WhatsNewContent />}
           {activeTab === 'shortcuts' && <ShortcutsContent shortcuts={keyboardShortcuts} />}
           {activeTab === 'feedback' && <FeedbackContent />}
@@ -177,6 +212,32 @@ export function HelpDialog({ isOpen, onClose, totalImages = 1 }: HelpDialogProps
         </div>
       </SheetContent>
     </Sheet>
+  )
+}
+
+function QuickGuideContent() {
+  const steps = [
+    ['Add photos', 'Upload one or more photos. Swipe the photo to move through a batch.'],
+    ['Presets', 'Choose a film preset, use Smart Picks, or hold the photo to compare before and after.'],
+    ['Adjust', 'Open a tool, preview changes live, then use Done or Cancel.'],
+    ['Crop', 'Crop, rotate, or flip without changing the other photos in the batch.'],
+    ['Batch', 'Apply preset and Adjust settings to all. Crop, Rotate, and Flip stay per photo.'],
+    ['Export', 'Export the current photo or export every photo that has a preset.'],
+  ]
+  return (
+    <ol className="space-y-3">
+      {steps.map(([title, description], index) => (
+        <li key={title} className="flex gap-3 text-sm">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-xs text-zinc-400">
+            {index + 1}
+          </span>
+          <div>
+            <p className="font-medium text-zinc-200">{title}</p>
+            <p className="mt-0.5 text-zinc-500">{description}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
   )
 }
 

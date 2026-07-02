@@ -49,7 +49,9 @@ test.describe('Chromium performance budgets', () => {
 
   test('two-photo editor and first ten recipe cards meet readiness budgets', async ({ page, landingPage }) => {
     const startedAt = performance.now()
-    await page.locator('input#media-upload').setInputFiles([
+    const input = page.locator('input[aria-label="Choose photos or video to edit"]')
+    await input.waitFor({ state: 'attached', timeout: 15_000 })
+    await input.setInputFiles([
       fixturePath('test-image.jpg'),
       fixturePath('test-image-2.jpg'),
     ])
@@ -99,7 +101,9 @@ test.describe('Chromium performance budgets', () => {
       { length: 20 },
       (_, index) => fixturePath(index % 2 === 0 ? 'test-image.jpg' : 'test-image-2.jpg')
     )
-    await page.locator('input#media-upload').setInputFiles(photos)
+    const input = page.locator('input[aria-label="Choose photos or video to edit"]')
+    await input.waitFor({ state: 'attached', timeout: 15_000 })
+    await input.setInputFiles(photos)
     await waitForEditor(page)
     await expect(page.locator('[role="tablist"][aria-label="Image thumbnails"] [role="tab"]')).toHaveCount(20)
     await selectFirstRecipe(page)

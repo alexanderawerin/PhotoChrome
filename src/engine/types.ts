@@ -2,6 +2,7 @@
 
 import type { ExifSubset } from './exif'
 import type { HaldCLUT } from './haldclut'
+import type { ImageTransformState } from './transform'
 
 export type EffectStrength = 'off' | 'weak' | 'strong'
 export type GrainSize = 'small' | 'large'
@@ -120,6 +121,8 @@ export interface ImageItem {
   transformedThumbnail: ImageData
   /** Текущий угол поворота */
   rotation: Rotation
+  /** Недеструктивное состояние геометрии для mobile editor. */
+  transform: ImageTransformState
 }
 
 /**

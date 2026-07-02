@@ -15,6 +15,10 @@ test.describe('Editor — Export', () => {
     const download = await downloadPromise
     const filename = download.suggestedFilename()
     expect(filename).toMatch(/^photochrome_.*\.jpg$/)
+    const completion = page.getByRole('dialog', { name: 'Export complete' })
+    await expect(completion).toBeVisible()
+    await completion.getByRole('button', { name: 'Back to editor' }).click()
+    await expect(completion).toBeHidden()
   })
 
   test('Ctrl+S triggers export with recipe selected', async ({ page, editorPage }) => {

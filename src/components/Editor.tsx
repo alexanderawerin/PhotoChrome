@@ -1,10 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { ArrowLeft, PanelRightClose, PanelRightOpen, Layers, Share } from 'lucide-react'
+import { ArrowLeft, PanelRightClose, PanelRightOpen, Layers, Share, Plus, HelpCircle } from 'lucide-react'
 import { APP_VERSION, APP_URL } from '../constants'
 import { Button } from './ui/button'
 import { Spinner } from './ui/spinner'
 import { Preview } from './Preview'
 import { RecipePanel } from './RecipePanel'
+import { MobileAdjustControls } from './MobileAdjustControls'
 import { TuningPanel } from './TuningPanel'
 import { CropPanel } from './CropPanel'
 import { Toolbar } from './Toolbar'
@@ -16,15 +17,22 @@ import { ImageProcessor } from '../engine/processor'
 import { loadSimulationLUT } from '../presets/simulations'
 import { createProcessingPlan } from '../engine/processing-plan'
 import { getAllRecipes } from '../presets/recipes'
-import { AspectRatio } from '../engine/transform'
+import { AspectRatio, type ImageTransformState } from '../engine/transform'
 import { useFavorites } from '../hooks/useFavorites'
 import { useTransform } from '../hooks/useTransform'
 import { useIsMdUp } from '../hooks/useIsMdUp'
-import { DEFAULT_CROP_RATIO_DESKTOP, DEFAULT_CROP_RATIO_MOBILE } from '../constants/cropRatios'
 import { useTuning } from '../hooks/useTuning'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useViewportHeight, getViewportHeightStyle } from '../hooks/useViewportHeight'
 import { useRecipeRecommendations } from '../hooks/useRecipeRecommendations'
+import {
+  beginAdjustSession,
+  createRandomRecipeSettings,
+  resetAdjustSession,
+  updateAdjustSession,
+  type AdjustSession,
+  type AdjustTool,
+} from '../engine/editor-sessions'
 import { exportPhoto, type PhotoExportResult } from '../engine/photo-export'
 import {
   exportPhotoBatch,
@@ -39,8 +47,10 @@ interface EditorProps {
   onImageUpdate: (id: string, updates: Partial<ImageItem>) => void
   onNextImage?: () => void
   onPreviousImage?: () => void
-  fileName: string
   onBack: () => void
+  onAddImages: (files: File[]) => Promise<void>
+  demoMode?: boolean
+  onMediaSelect?: (files: File[], type: 'image' | 'video') => Promise<void>
 }
 
 /**
@@ -58,8 +68,10 @@ export function Editor({
   onImageUpdate,
   onNextImage,
   onPreviousImage,
-  fileName,
-  onBack
+  onBack,
+  onAddImages,
+  demoMode = false,
+  onMediaSelect,
 }: EditorProps) {
   // ============================================================================
   // State
@@ -75,16 +87,26 @@ export function Editor({
   const [showOriginal, setShowOriginal] = useState(false)
   const [isPanelOpen, setIsPanelOpen] = useState(true)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
+  const [hasUnreadHelp, setHasUnreadHelp] = useState(() => {
+    try {
+      return localStorage.getItem('photochrome-help-version') !== APP_VERSION
+    } catch {
+      return true
+    }
+  })
+  const [mobileMode, setMobileMode] = useState<'presets' | 'adjust' | 'crop'>('presets')
+  const [adjustSession, setAdjustSession] = useState<AdjustSession | null>(null)
+  const [isCropControlActive, setIsCropControlActive] = useState(false)
   const [exportError, setExportError] = useState<Extract<PhotoExportResult, { status: 'error' }>['error'] | null>(null)
   const exportAbortControllerRef = useRef<AbortController | null>(null)
   const batchAbortControllerRef = useRef<AbortController | null>(null)
+  const demoUploadRef = useRef<HTMLInputElement>(null)
   const [batchProgress, setBatchProgress] = useState<BatchExportProgress | null>(null)
-  const [, setBatchSummary] = useState<{
-    status: BatchExportResult['status']
+  const [completion, setCompletion] = useState<{
+    kind: 'single' | 'batch'
     exported: number
     skipped: number
     errors: number
-    message?: string
   } | null>(null)
 
   // ============================================================================
@@ -93,7 +115,6 @@ export function Editor({
 
   const viewportHeight = useViewportHeight()
   const isMdUp = useIsMdUp()
-  const defaultCropRatio = isMdUp ? DEFAULT_CROP_RATIO_DESKTOP : DEFAULT_CROP_RATIO_MOBILE
   const { getFavoriteIds, toggleFavorite } = useFavorites()
 
   const { recipeIds: smartPicksIds } = useRecipeRecommendations(
@@ -128,12 +149,17 @@ export function Editor({
     thumbnail: currentImage.thumbnail,
     transformedOriginal: currentImage.transformedOriginal,
     transformedThumbnail: currentImage.transformedThumbnail,
-    defaultCropRatio,
-    onTransformChange: useCallback((newOriginal: ImageData, newThumbnail: ImageData) => {
+    externalTransformState: currentImage.transform,
+    onTransformPreview: useCallback((newThumbnail: ImageData) => {
+      transformedThumbnailRef.current = newThumbnail
+      updatePreview(newThumbnail, currentImage.recipe, customSettingsRef.current)
+    }, [currentImage.recipe, updatePreview]),
+    onTransformChange: useCallback((newOriginal: ImageData, newThumbnail: ImageData, transformState: ImageTransformState) => {
       transformedThumbnailRef.current = newThumbnail
       onImageUpdate(currentImage.id, {
         transformedOriginal: newOriginal,
-        transformedThumbnail: newThumbnail
+        transformedThumbnail: newThumbnail,
+        transform: transformState,
       })
       updatePreview(newThumbnail, currentImage.recipe, customSettingsRef.current)
     }, [currentImage, onImageUpdate, updatePreview])
@@ -239,9 +265,12 @@ export function Editor({
 
     if (availableRecipes.length > 0) {
       const randomIndex = Math.floor(Math.random() * availableRecipes.length)
-      handleRecipeSelect(availableRecipes[randomIndex])
+      const recipe = availableRecipes[randomIndex]
+      const customSettings = createRandomRecipeSettings()
+      onImageUpdate(currentImage.id, { recipe, customSettings })
+      tuning.updateSettings(customSettings)
     }
-  }, [currentImage.recipe, handleRecipeSelect])
+  }, [currentImage.id, currentImage.recipe, onImageUpdate, tuning])
 
   // ============================================================================
   // Panel & UI
@@ -281,6 +310,39 @@ export function Editor({
     transform.openCrop()
   }, [tuning, transform])
 
+  const openAdjustTool = useCallback((tool: AdjustTool) => {
+    setAdjustSession(beginAdjustSession(tool, tuning.customSettings))
+  }, [tuning.customSettings])
+
+  const changeAdjustValue = useCallback((value: RecipeSettings[AdjustTool]) => {
+    if (!adjustSession) return
+    const next = updateAdjustSession(adjustSession, value)
+    setAdjustSession(next)
+    tuning.updateSettings(next.draft)
+  }, [adjustSession, tuning])
+
+  const resetAdjustValue = useCallback(() => {
+    if (!currentImage.recipe) return
+    if (!adjustSession) return
+    const next = resetAdjustSession(adjustSession, currentImage.recipe)
+    setAdjustSession(next)
+    tuning.updateSettings(next.draft)
+  }, [adjustSession, currentImage.recipe, tuning])
+
+  const cancelAdjustSession = useCallback(() => {
+    if (adjustSession) tuning.updateSettings(adjustSession.before)
+    setAdjustSession(null)
+  }, [adjustSession, tuning])
+
+  const changeMobileMode = useCallback((mode: 'presets' | 'adjust' | 'crop') => {
+    if (adjustSession) {
+      tuning.updateSettings(adjustSession.before)
+      setAdjustSession(null)
+    }
+    if (transform.isCropping) transform.cancelCrop()
+    setMobileMode(mode)
+  }, [adjustSession, transform, tuning])
+
   // ============================================================================
   // Export
   // ============================================================================
@@ -315,6 +377,7 @@ export function Editor({
         signal: controller.signal,
       })
       if (result.status === 'error') setExportError(result.error)
+      if (result.status === 'success') setCompletion({ kind: 'single', exported: 1, skipped: 0, errors: 0 })
     } finally {
       if (exportAbortControllerRef.current === controller) {
         exportAbortControllerRef.current = null
@@ -327,7 +390,7 @@ export function Editor({
     batchAbortControllerRef.current?.abort()
     const controller = new AbortController()
     batchAbortControllerRef.current = controller
-    setBatchSummary(null)
+    setCompletion(null)
     setBatchProgress({
       current: 0,
       total: images.length,
@@ -369,13 +432,14 @@ export function Editor({
         URL.revokeObjectURL(url)
       }
     }
-    setBatchSummary({
-      status: result.status,
-      exported: result.exported,
-      skipped: result.skipped,
-      errors: result.errors,
-      message: result.status === 'error' ? result.message : undefined,
-    })
+    if (result.status === 'success') {
+      setCompletion({
+        kind: 'batch',
+        exported: result.exported,
+        skipped: result.skipped,
+        errors: result.errors,
+      })
+    }
   }, [images])
 
   const isBatchExporting = batchProgress !== null
@@ -438,10 +502,16 @@ export function Editor({
       <div className="flex-1 flex flex-col bg-zinc-950 min-w-0 min-h-0 overflow-hidden">
         {/* Header */}
         <Header 
-          fileName={fileName}
+          fileName={currentImage.fileName}
+          currentIndex={currentIndex}
+          totalImages={totalImages}
           isPanelOpen={isPanelOpen}
           onBack={onBack}
           onPanelToggle={handlePanelToggle}
+          onAddImages={onAddImages}
+          onHelp={() => setIsHelpOpen(true)}
+          hasUnreadHelp={hasUnreadHelp}
+          demoMode={demoMode}
         />
 
         {exportError && (
@@ -462,7 +532,7 @@ export function Editor({
         )}
 
         {/* Preview area */}
-        <div className={`flex-1 min-h-0 px-3 md:px-6 relative overflow-hidden transition-[padding] duration-300 ${transform.isCropping ? 'pb-48 md:pb-0' : ''}`}>
+        <div className={`flex-1 min-h-0 px-3 md:px-6 relative overflow-hidden transition-[padding] duration-300 motion-reduce:transition-none ${transform.isCropping ? 'pb-72 md:pb-0' : ''}`}>
           {isProcessing && (
             <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
               <p className="text-sm text-zinc-400 bg-zinc-900/80 px-3 py-1 rounded">Processing...</p>
@@ -475,6 +545,12 @@ export function Editor({
             cropRatio={transform.cropRatio}
             cropOffset={transform.cropOffset}
             onCropOffsetChange={transform.setCropOffset}
+            cropRect={transform.transformState.cropRect}
+            onCropRectChange={transform.setFreeCropRect}
+            cropScale={transform.transformState.cropScale}
+            onCropScaleChange={transform.setCropScale}
+            cropGridActive={isCropControlActive}
+            cover={!isMdUp && !transform.isCropping}
             onMouseDown={handleCompareStart}
             onMouseUp={handleCompareEnd}
             onMouseLeave={handleCompareEnd}
@@ -497,10 +573,15 @@ export function Editor({
 
         {/* Desktop Toolbar */}
         <div className="flex-shrink-0 p-3 md:p-4 hidden md:block">
-          <Toolbar
+          {demoMode ? (
+            <Button onClick={() => demoUploadRef.current?.click()} className="w-full" aria-label="Upload photos">
+              Upload photos
+            </Button>
+          ) : <Toolbar
             onRotateClockwise={transform.rotateClockwise}
             onRotateCounterClockwise={transform.rotateCounterClockwise}
             onCropClick={handleCropClick}
+            onFlipHorizontal={transform.flipHorizontal}
             onExport={handleExport}
             canExport={!!currentImage.recipe}
             isExporting={isExporting}
@@ -518,89 +599,127 @@ export function Editor({
             totalImages={totalImages}
             onApplyToAll={handleApplyToAll}
             onHelpClick={() => setIsHelpOpen(true)}
-          />
+          />}
         </div>
 
-        {/* Mobile: Toolbar */}
-        <div className={`flex-shrink-0 p-3 md:hidden ${transform.isCropping ? 'hidden' : ''}`}>
-          <Toolbar
-            onRotateClockwise={transform.rotateClockwise}
-            onRotateCounterClockwise={transform.rotateCounterClockwise}
-            onCropClick={handleCropClick}
-            onExport={handleExport}
-            canExport={!!currentImage.recipe}
-            isExporting={isExporting}
-            activeRecipe={currentImage.recipe}
-            tuningMode={tuning.isTuning}
-            onTuningOpen={handleTuningOpen}
-            onHelpClick={() => setIsHelpOpen(true)}
-            mobileMode
-          />
-        </div>
-
-        {/* Mobile: Horizontal recipe panel */}
+        {/* Mobile: contextual controls */}
         <div className={`flex-shrink-0 md:hidden ${transform.isCropping ? 'hidden' : ''}`}>
-          <RecipePanel
-            sourceImage={transform.transformedThumbnail}
-            activeRecipeId={currentImage.recipe?.id ?? null}
-            favoriteIds={getFavoriteIds()}
-            onRecipeSelect={handleRecipeSelect}
-            onRandomRecipe={handleRandomRecipe}
-            onFavoriteToggle={toggleFavorite}
-            horizontal
-            smartPicksIds={smartPicksIds}
-          />
+          {mobileMode === 'presets' && (
+            <RecipePanel
+              sourceImage={transform.transformedThumbnail}
+              activeRecipeId={currentImage.recipe?.id ?? null}
+              favoriteIds={getFavoriteIds()}
+              onRecipeSelect={handleRecipeSelect}
+              onRandomRecipe={handleRandomRecipe}
+              onFavoriteToggle={toggleFavorite}
+              horizontal
+              smartPicksIds={smartPicksIds}
+            />
+          )}
+          {mobileMode === 'adjust' && (
+            <MobileAdjustControls
+              recipe={currentImage.recipe}
+              settings={tuning.customSettings}
+              session={adjustSession}
+              onOpen={openAdjustTool}
+              onChange={changeAdjustValue}
+              onReset={resetAdjustValue}
+            />
+          )}
+          {mobileMode === 'crop' && (
+            <div className="flex h-28 items-center gap-2 border-t border-zinc-800 bg-black p-3" aria-label="Crop tools">
+              <Button variant="outline" onClick={handleCropClick} className="min-h-20 flex-1" aria-label="Open crop session">Crop</Button>
+              <Button variant="outline" onClick={transform.rotateClockwise} className="min-h-20 flex-1" aria-label="Rotate 90 degrees clockwise">Rotate</Button>
+              <Button variant="outline" onClick={transform.flipHorizontal} className="min-h-20 flex-1" aria-label="Flip horizontally">Flip</Button>
+            </div>
+          )}
         </div>
+
+        <nav className={`grid h-12 flex-shrink-0 ${demoMode ? 'grid-cols-1' : 'grid-cols-3'} border-t border-zinc-800 bg-black md:hidden ${transform.isCropping ? 'hidden' : ''}`} aria-label="Editor modes">
+          {(demoMode ? ['presets'] as const : ['presets', 'adjust', 'crop'] as const).map(mode => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => changeMobileMode(mode)}
+              className={`min-h-11 text-sm capitalize ${mobileMode === mode ? 'text-white' : 'text-zinc-500'}`}
+              aria-current={mobileMode === mode ? 'page' : undefined}
+            >
+              {mode}
+            </button>
+          ))}
+        </nav>
 
         {/* Mobile: Action buttons (Apply to all + Export) */}
         <div className={`flex-shrink-0 p-3 md:hidden ${transform.isCropping ? 'hidden' : ''}`}>
-          <div className="flex gap-2">
-            {/* Apply to all button (multi-image mode) */}
-            {totalImages > 1 && currentImage.recipe && (
-              <Button
-                variant="outline"
-                size="default"
-                onClick={handleApplyToAll}
-                aria-label={`Apply current preset to all ${totalImages} images`}
-                className="flex-1"
-              >
-                <Layers className="w-4 h-4" aria-hidden="true" />
-                Apply to all
-              </Button>
+          <div className="flex h-11 gap-2">
+            {demoMode ? (
+              <>
+                <input
+                  ref={demoUploadRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                  multiple
+                  className="sr-only"
+                  aria-label="Choose photos or video to edit"
+                  onChange={(event) => {
+                    const files = Array.from(event.target.files ?? [])
+                    event.target.value = ''
+                    const type = files.length === 1 && files[0].type.startsWith('video/') ? 'video' : 'image'
+                    if (onMediaSelect) void onMediaSelect(files, type)
+                    else void onAddImages(files)
+                  }}
+                />
+                <Button onClick={() => demoUploadRef.current?.click()} className="w-full" aria-label="Upload photos">
+                  Upload photos
+                </Button>
+              </>
+            ) : adjustSession ? (
+              <>
+                <Button variant="outline" onClick={cancelAdjustSession} className="flex-1">Cancel</Button>
+                <Button onClick={() => setAdjustSession(null)} className="flex-1">Done</Button>
+              </>
+            ) : (
+              <>
+                {!currentImage.recipe ? (
+                  <Button disabled className="w-full" aria-label="Choose a preset to export">
+                    Choose a preset to export
+                  </Button>
+                ) : totalImages > 1 ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={handleApplyToAll}
+                      aria-label={`Apply current preset to all ${totalImages} images`}
+                      className="flex-1"
+                    >
+                      <Layers className="size-4" aria-hidden="true" />
+                      Apply to all
+                    </Button>
+                    <Button
+                      onClick={handleExportAll}
+                      disabled={!canExportAll || isBatchExporting || isExporting}
+                      aria-label="Export all photos"
+                      aria-busy={isBatchExporting}
+                      className="flex-1"
+                    >
+                      <Layers className="size-4" aria-hidden="true" />
+                      Export all
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    onClick={handleExport}
+                    disabled={isExporting || isBatchExporting}
+                    aria-label={isExporting ? 'Exporting...' : 'Export processed image'}
+                    aria-busy={isExporting}
+                    className="w-full"
+                  >
+                    {isExporting ? <Spinner className="size-4" randomColor /> : <Share className="size-4" aria-hidden="true" />}
+                    {isExporting ? 'Exporting...' : 'Export'}
+                  </Button>
+                )}
+              </>
             )}
-
-            {totalImages > 1 && (
-              <Button
-                variant="outline"
-                size="default"
-                onClick={handleExportAll}
-                disabled={!canExportAll || isBatchExporting || isExporting}
-                aria-label="Export all photos"
-                aria-busy={isBatchExporting}
-                className="flex-1"
-              >
-                <Layers className="w-4 h-4" aria-hidden="true" />
-                Export all
-              </Button>
-            )}
-
-            {/* Export button */}
-            <Button
-              variant="default"
-              size="default"
-              onClick={handleExport}
-              disabled={!currentImage.recipe || isExporting || isBatchExporting}
-              aria-label={isExporting ? 'Exporting...' : 'Export processed image'}
-              aria-busy={isExporting}
-              className={totalImages > 1 ? 'flex-1' : 'w-full'}
-            >
-              {isExporting ? (
-                <Spinner className="size-4" randomColor />
-              ) : (
-                <Share className="w-4 h-4" aria-hidden="true" />
-              )}
-              {isExporting ? 'Exporting...' : 'Export'}
-            </Button>
           </div>
         </div>
       </div>
@@ -624,21 +743,16 @@ export function Editor({
         smartPicksIds={smartPicksIds}
       />
 
-      {/* Mobile: TuningPanel */}
-      <MobileTuningPanel
-        isOpen={tuning.isTuning && !!currentImage.recipe}
-        activeRecipe={currentImage.recipe}
-        customSettings={tuning.customSettings}
-        onSettingsChange={tuning.updateSettings}
-        onApply={tuning.applyTuning}
-        onCancel={tuning.cancelTuning}
-      />
-
       {/* Mobile: CropPanel */}
       <MobileCropPanel
         isOpen={transform.isCropping}
         cropRatio={transform.cropRatio}
+        fineAngle={transform.transformState.fineAngle}
+        cropScale={transform.transformState.cropScale}
         onCropRatioChange={transform.setCropRatio}
+        onFineAngleChange={transform.setFineAngle}
+        onCropScaleChange={transform.setCropScale}
+        onInteractionChange={setIsCropControlActive}
         onApply={transform.applyCrop}
         onCancel={transform.cancelCrop}
       />
@@ -648,6 +762,16 @@ export function Editor({
         isOpen={isHelpOpen}
         onClose={() => setIsHelpOpen(false)}
         totalImages={totalImages}
+        mobile={!isMdUp}
+        hasUnreadUpdate={hasUnreadHelp}
+        onUpdateViewed={() => {
+          try {
+            localStorage.setItem('photochrome-help-version', APP_VERSION)
+          } catch {
+            // The read state is optional when storage is unavailable.
+          }
+          setHasUnreadHelp(false)
+        }}
       />
 
       {/* Loading overlay for applying preset to all images */}
@@ -697,6 +821,28 @@ export function Editor({
         </div>
       )}
 
+      {completion && (
+        <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Export complete">
+          <div className="w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-center">
+            <div className="mx-auto mb-4 grid size-24 grid-cols-2 gap-1 overflow-hidden rounded-xl" aria-hidden="true">
+              {images.slice(0, 4).map(image => (
+                <CompletionThumbnail key={image.id} imageData={image.transformedThumbnail} />
+              ))}
+            </div>
+            <h2 className="text-xl font-semibold text-white">Export complete</h2>
+            <p className="mt-2 text-sm text-zinc-400">
+              {completion.kind === 'single'
+                ? 'Your photo has been saved.'
+                : `${completion.exported} exported${completion.skipped ? ` · ${completion.skipped} skipped` : ''}${completion.errors ? ` · ${completion.errors} errors` : ''}`}
+            </p>
+            <div className="mt-6 flex gap-2">
+              <Button variant="outline" onClick={onBack} className="flex-1">New edit</Button>
+              <Button onClick={() => setCompletion(null)} className="flex-1">Back to editor</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
@@ -705,22 +851,99 @@ export function Editor({
 // Sub-components
 // ============================================================================
 
+function CompletionThumbnail({ imageData }: { imageData: ImageData }) {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    const canvas = ref.current
+    if (!canvas) return
+    canvas.width = imageData.width
+    canvas.height = imageData.height
+    canvas.getContext('2d')?.putImageData(imageData, 0, 0)
+  }, [imageData])
+  return <canvas ref={ref} className="size-full object-cover" />
+}
+
 interface HeaderProps {
   fileName: string
+  currentIndex: number
+  totalImages: number
   isPanelOpen: boolean
   onBack: () => void
   onPanelToggle: () => void
+  onAddImages: (files: File[]) => Promise<void>
+  onHelp: () => void
+  hasUnreadHelp: boolean
+  demoMode: boolean
 }
 
-function Header({ fileName, isPanelOpen, onBack, onPanelToggle }: HeaderProps) {
+function Header({
+  fileName,
+  currentIndex,
+  totalImages,
+  isPanelOpen,
+  onBack,
+  onPanelToggle,
+  onAddImages,
+  onHelp,
+  hasUnreadHelp,
+  demoMode,
+}: HeaderProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
   return (
     <header className="flex-shrink-0 px-3 py-2 md:p-4">
-      <div className="relative flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={onBack} className="text-zinc-400 hover:text-white h-8 w-8 p-0" aria-label="Back">
-          <ArrowLeft className="w-4 h-4" />
+      <div className="flex items-center justify-between md:hidden min-h-11">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          multiple
+          className="sr-only"
+          aria-label="Add photos to current batch"
+          onChange={(event) => {
+            const files = Array.from(event.target.files ?? [])
+            event.target.value = ''
+            void onAddImages(files)
+          }}
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => inputRef.current?.click()}
+          className="h-11 min-w-11 gap-1 px-2 text-zinc-300"
+          aria-label="Add photos"
+        >
+          <Plus className="size-4" aria-hidden="true" />
+          Add
         </Button>
+        <div className="min-w-0 flex-1 px-2 text-center">
+          <p className="truncate text-sm font-medium text-white">{fileName}</p>
+          {totalImages > 1 && (
+            <p className="text-[11px] text-zinc-500">{currentIndex + 1} of {totalImages}</p>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onHelp}
+          className="relative h-11 min-w-11 gap-1 px-2 text-zinc-300"
+          aria-label="Help"
+        >
+          <HelpCircle className="size-4" aria-hidden="true" />
+          Help
+          {hasUnreadHelp && (
+            <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-white" aria-hidden="true" />
+          )}
+        </Button>
+      </div>
+      <div className="relative flex items-center justify-between">
+        {demoMode ? <div className="hidden size-8 md:block" /> : (
+          <Button variant="ghost" size="sm" onClick={onBack} className="hidden md:flex text-zinc-400 hover:text-white h-8 w-8 p-0" aria-label="Back">
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+        )}
         
-        <div className="absolute left-1/2 -translate-x-1/2 text-center">
+        <div className="hidden md:block absolute left-1/2 -translate-x-1/2 text-center">
           <h1 className="text-sm md:text-lg font-semibold text-white">
             Photochrome<sup className="text-[8px] md:text-[10px] text-zinc-500 ml-0.5">{APP_VERSION}</sup>
           </h1>
@@ -739,7 +962,6 @@ function Header({ fileName, isPanelOpen, onBack, onPanelToggle }: HeaderProps) {
           {isPanelOpen ? <PanelRightClose className="w-5 h-5" /> : <PanelRightOpen className="w-5 h-5" />}
         </Button>
         {/* Spacer for mobile */}
-        <div className="w-8 h-8 md:hidden" />
       </div>
     </header>
   )
@@ -818,53 +1040,15 @@ function DesktopSidePanel({
   )
 }
 
-interface MobileTuningPanelProps {
-  isOpen: boolean
-  activeRecipe: Recipe | null
-  customSettings: RecipeSettings
-  onSettingsChange: (settings: RecipeSettings) => void
-  onApply: () => void
-  onCancel: () => void
-}
-
-function MobileTuningPanel({
-  isOpen,
-  activeRecipe,
-  customSettings,
-  onSettingsChange,
-  onApply,
-  onCancel,
-}: MobileTuningPanelProps) {
-  return (
-    <div
-      className={`
-        md:hidden fixed inset-0 z-50
-        bg-black
-        transition-transform duration-300 ease-out
-        ${isOpen ? 'translate-y-0' : 'translate-y-full'}
-      `}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Fine-tune settings"
-      aria-hidden={!isOpen}
-    >
-      {activeRecipe && (
-        <TuningPanel
-          recipe={activeRecipe}
-          customSettings={customSettings}
-          onSettingsChange={onSettingsChange}
-          onApply={onApply}
-          onCancel={onCancel}
-        />
-      )}
-    </div>
-  )
-}
-
 interface MobileCropPanelProps {
   isOpen: boolean
   cropRatio: AspectRatio
+  fineAngle: number
+  cropScale: number
   onCropRatioChange: (ratio: AspectRatio) => void
+  onFineAngleChange: (angle: number) => void
+  onCropScaleChange: (scale: number) => void
+  onInteractionChange: (active: boolean) => void
   onApply: () => void
   onCancel: () => void
 }
@@ -872,7 +1056,12 @@ interface MobileCropPanelProps {
 function MobileCropPanel({
   isOpen,
   cropRatio,
+  fineAngle,
+  cropScale,
   onCropRatioChange,
+  onFineAngleChange,
+  onCropScaleChange,
+  onInteractionChange,
   onApply,
   onCancel,
 }: MobileCropPanelProps) {
@@ -891,7 +1080,12 @@ function MobileCropPanel({
     >
       <CropPanel
         cropRatio={cropRatio}
+        fineAngle={fineAngle}
+        cropScale={cropScale}
         onCropRatioChange={onCropRatioChange}
+        onFineAngleChange={onFineAngleChange}
+        onCropScaleChange={onCropScaleChange}
+        onInteractionChange={onInteractionChange}
         onApply={onApply}
         onCancel={onCancel}
       />

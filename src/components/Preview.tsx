@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { CropOverlay } from './CropOverlay'
-import { AspectRatio } from '../engine/transform'
+import { AspectRatio, type NormalizedCropRect } from '../engine/transform'
 import { RESIZE_DEBOUNCE_DELAY } from '../constants'
 
 interface PreviewProps {
@@ -10,6 +10,11 @@ interface PreviewProps {
   cropRatio?: AspectRatio
   cropOffset?: { x: number; y: number }
   onCropOffsetChange?: (offset: { x: number; y: number }) => void
+  cropRect?: NormalizedCropRect
+  onCropRectChange?: (rect: NormalizedCropRect) => void
+  cropScale?: number
+  onCropScaleChange?: (scale: number) => void
+  cropGridActive?: boolean
   onMouseDown?: () => void
   onMouseUp?: () => void
   onMouseLeave?: () => void
@@ -17,6 +22,7 @@ interface PreviewProps {
   onSwipeLeft?: () => void
   onSwipeRight?: () => void
   enableSwipe?: boolean
+  cover?: boolean
 }
 
 export function Preview({
@@ -26,12 +32,18 @@ export function Preview({
   cropRatio = 'free',
   cropOffset,
   onCropOffsetChange,
+  cropRect,
+  onCropRectChange,
+  cropScale = 1,
+  onCropScaleChange,
+  cropGridActive = false,
   onMouseDown,
   onMouseUp,
   onMouseLeave,
   onSwipeLeft,
   onSwipeRight,
-  enableSwipe = false
+  enableSwipe = false,
+  cover = false,
 }: PreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -42,6 +54,7 @@ export function Preview({
   const touchEndX = useRef(0)
   const touchStartY = useRef(0)
   const touchEndY = useRef(0)
+  const pinchStart = useRef<{ distance: number; scale: number } | null>(null)
 
   // Рисуем изображение на canvas
   useEffect(() => {
@@ -75,7 +88,7 @@ export function Preview({
       let displayWidth: number
       let displayHeight: number
 
-      if (imageAspect > containerAspect) {
+      if ((imageAspect > containerAspect) !== cover) {
         // Изображение шире контейнера - ограничиваем по ширине
         displayWidth = wrapperRect.width
         displayHeight = wrapperRect.width / imageAspect
@@ -109,7 +122,7 @@ export function Preview({
       window.removeEventListener('resize', updateSize)
       clearTimeout(timeoutId)
     }
-  }, [imageData])
+  }, [cover, imageData])
 
   if (!imageData) {
     return (
@@ -121,6 +134,14 @@ export function Preview({
 
   // Swipe handlers
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (cropMode && e.touches.length === 2) {
+      const [first, second] = Array.from(e.touches)
+      pinchStart.current = {
+        distance: Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY),
+        scale: cropScale,
+      }
+      return
+    }
     if (!enableSwipe || cropMode) {
       // Fallback к обычным onTouch handlers
       onMouseDown?.()
@@ -132,6 +153,13 @@ export function Preview({
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    if (cropMode && e.touches.length === 2 && pinchStart.current && onCropScaleChange) {
+      e.preventDefault()
+      const [first, second] = Array.from(e.touches)
+      const distance = Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY)
+      onCropScaleChange(Math.max(1, Math.min(3, pinchStart.current.scale * distance / pinchStart.current.distance)))
+      return
+    }
     if (!enableSwipe || cropMode) return
 
     touchEndX.current = e.touches[0].clientX
@@ -139,6 +167,7 @@ export function Preview({
   }
 
   const handleTouchEnd = () => {
+    pinchStart.current = null
     if (!enableSwipe || cropMode) {
       // Fallback к обычным onTouch handlers
       onMouseUp?.()
@@ -179,7 +208,7 @@ export function Preview({
       >
         <canvas
           ref={canvasRef}
-          className="block w-full h-full rounded-lg shadow-2xl"
+          className="block w-full h-full rounded-lg shadow-2xl transition-[width,height] duration-300 motion-reduce:transition-none"
           aria-label={alt}
           draggable={false}
         />
@@ -194,6 +223,9 @@ export function Preview({
               offsetX={cropOffset?.x ?? 0.5}
               offsetY={cropOffset?.y ?? 0.5}
               onOffsetChange={onCropOffsetChange}
+              cropRect={cropRect}
+              onCropRectChange={onCropRectChange}
+              gridActive={cropGridActive}
             />
           </div>
         )}

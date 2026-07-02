@@ -1,4 +1,4 @@
-import { RotateCw, RotateCcw, Crop, Check, Share, Settings2, Film, HelpCircle, Layers, Archive } from 'lucide-react'
+import { RotateCw, RotateCcw, Crop, Check, Share, Settings2, Film, HelpCircle, Layers, Archive, FlipHorizontal2 } from 'lucide-react'
 import { Spinner } from './ui/spinner'
 import { Button } from './ui/button'
 import { ButtonGroup } from './ui/button-group'
@@ -10,6 +10,7 @@ interface ToolbarProps {
   onRotateClockwise: () => void
   onRotateCounterClockwise: () => void
   onCropClick: () => void
+  onFlipHorizontal?: () => void
   onExport: () => void
   canExport: boolean
   isExporting?: boolean
@@ -42,6 +43,7 @@ export function Toolbar({
   onRotateClockwise,
   onRotateCounterClockwise,
   onCropClick,
+  onFlipHorizontal,
   onExport,
   canExport,
   isExporting = false,
@@ -187,6 +189,16 @@ export function Toolbar({
           >
             <Crop className="w-4 h-4" aria-hidden="true" />
           </Button>
+          {onFlipHorizontal && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={onFlipHorizontal}
+              aria-label="Flip horizontally"
+            >
+              <FlipHorizontal2 className="w-4 h-4" aria-hidden="true" />
+            </Button>
+          )}
         </ButtonGroup>
 
         {/* Recipe chip — toggle tuning panel */}

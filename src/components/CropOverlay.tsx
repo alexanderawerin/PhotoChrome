@@ -1,5 +1,5 @@
-import { useRef, useMemo } from 'react'
-import { AspectRatio } from '../engine/transform'
+import { useRef, useMemo, useState } from 'react'
+import { AspectRatio, type NormalizedCropRect } from '../engine/transform'
 
 interface CropOverlayProps {
   imageWidth: number
@@ -10,6 +10,9 @@ interface CropOverlayProps {
   /** Вертикальное смещение рамки: 0 = верхний край, 0.5 = центр, 1 = нижний край */
   offsetY?: number
   onOffsetChange?: (offset: { x: number; y: number }) => void
+  cropRect?: NormalizedCropRect
+  onCropRectChange?: (rect: NormalizedCropRect) => void
+  gridActive?: boolean
 }
 
 export function CropOverlay({
@@ -19,16 +22,23 @@ export function CropOverlay({
   offsetX = 0.5,
   offsetY = 0.5,
   onOffsetChange,
+  cropRect = { x: 0, y: 0, width: 1, height: 1 },
+  onCropRectChange,
+  gridActive = false,
 }: CropOverlayProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const isDraggingRef = useRef(false)
   const dragStartRef = useRef({ x: 0, y: 0, ox: 0.5, oy: 0.5 })
+  const freeStartRef = useRef({ x: 0, y: 0, rect: cropRect, corner: '' })
+  const [isDragging, setIsDragging] = useState(false)
 
   // Вычисляем долю (0..1) размеров кропа от всего изображения
   const cropFraction = useMemo(() => {
-    if (aspectRatio === 'free') return null
+    if (aspectRatio === 'free') return { w: cropRect.width, h: cropRect.height }
+    if (aspectRatio === 'original') return null
 
     const ratios: Record<AspectRatio, number> = {
+      'original': imageWidth / imageHeight,
       '1:1': 1,
       '4:3': 4 / 3,
       '3:4': 3 / 4,
@@ -49,9 +59,9 @@ export function CropOverlay({
       hFrac = (imageWidth / targetRatio) / imageHeight
     }
     return { w: wFrac, h: hFrac }
-  }, [imageWidth, imageHeight, aspectRatio])
+  }, [imageWidth, imageHeight, aspectRatio, cropRect.height, cropRect.width])
 
-  if (aspectRatio === 'free' || !cropFraction) return null
+  if (aspectRatio === 'original' || !cropFraction) return null
 
   // Позиция рамки в процентах от контейнера
   const cropWidthPct  = cropFraction.w * 100
@@ -59,8 +69,8 @@ export function CropOverlay({
   const availW = 100 - cropWidthPct   // % от контейнера
   const availH = 100 - cropHeightPct
 
-  const leftPct   = availW * offsetX
-  const topPct    = availH * offsetY
+  const leftPct   = aspectRatio === 'free' ? cropRect.x * 100 : availW * offsetX
+  const topPct    = aspectRatio === 'free' ? cropRect.y * 100 : availH * offsetY
   const rightPct  = 100 - leftPct - cropWidthPct
   const bottomPct = 100 - topPct - cropHeightPct
 
@@ -68,11 +78,13 @@ export function CropOverlay({
     e.stopPropagation()
     e.currentTarget.setPointerCapture(e.pointerId)
     isDraggingRef.current = true
+    setIsDragging(true)
     dragStartRef.current = { x: e.clientX, y: e.clientY, ox: offsetX, oy: offsetY }
+    freeStartRef.current = { x: e.clientX, y: e.clientY, rect: { ...cropRect }, corner: 'move' }
   }
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDraggingRef.current || !onOffsetChange) return
+    if (!isDraggingRef.current) return
     const container = containerRef.current
     if (!container) return
 
@@ -80,6 +92,33 @@ export function CropOverlay({
     const availPxW = rect.width  * (availW / 100)
     const availPxH = rect.height * (availH / 100)
 
+    if (aspectRatio === 'free' && onCropRectChange) {
+      const start = freeStartRef.current
+      const dx = (e.clientX - start.x) / rect.width
+      const dy = (e.clientY - start.y) / rect.height
+      const minimum = 0.1
+      const next = { ...start.rect }
+      if (start.corner === 'move') {
+        next.x = Math.max(0, Math.min(1 - next.width, start.rect.x + dx))
+        next.y = Math.max(0, Math.min(1 - next.height, start.rect.y + dy))
+      } else {
+        if (start.corner.includes('l')) {
+          const right = start.rect.x + start.rect.width
+          next.x = Math.max(0, Math.min(right - minimum, start.rect.x + dx))
+          next.width = right - next.x
+        }
+        if (start.corner.includes('r')) next.width = Math.max(minimum, Math.min(1 - start.rect.x, start.rect.width + dx))
+        if (start.corner.includes('t')) {
+          const bottom = start.rect.y + start.rect.height
+          next.y = Math.max(0, Math.min(bottom - minimum, start.rect.y + dy))
+          next.height = bottom - next.y
+        }
+        if (start.corner.includes('b')) next.height = Math.max(minimum, Math.min(1 - start.rect.y, start.rect.height + dy))
+      }
+      onCropRectChange(next)
+      return
+    }
+    if (!onOffsetChange) return
     const newX = availPxW > 0
       ? Math.max(0, Math.min(1, dragStartRef.current.ox + (e.clientX - dragStartRef.current.x) / availPxW))
       : dragStartRef.current.ox
@@ -93,6 +132,15 @@ export function CropOverlay({
 
   const handlePointerUp = () => {
     isDraggingRef.current = false
+    setIsDragging(false)
+  }
+
+  const handleResizeStart = (corner: string) => (e: React.PointerEvent) => {
+    e.stopPropagation()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    isDraggingRef.current = true
+    setIsDragging(true)
+    freeStartRef.current = { x: e.clientX, y: e.clientY, rect: { ...cropRect }, corner }
   }
 
   return (
@@ -146,15 +194,22 @@ export function CropOverlay({
         {/* Сетка 3×3 (правило третей) */}
         <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none">
           {[...Array(9)].map((_, i) => (
-            <div key={i} className="border border-white/20" />
+            <div key={i} className={`border ${gridActive || isDragging ? 'border-white/50' : 'border-white/20'}`} />
           ))}
         </div>
 
         {/* Угловые маркеры */}
-        <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-white pointer-events-none" />
-        <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-white pointer-events-none" />
-        <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-white pointer-events-none" />
-        <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-white pointer-events-none" />
+        {(['lt', 'rt', 'lb', 'rb'] as const).map(corner => (
+          <button
+            key={corner}
+            type="button"
+            aria-label={`Resize crop ${corner}`}
+            className={`absolute size-11 ${corner.includes('l') ? '-left-5' : '-right-5'} ${corner.includes('t') ? '-top-5' : '-bottom-5'} ${aspectRatio === 'free' ? 'pointer-events-auto' : 'pointer-events-none'}`}
+            onPointerDown={aspectRatio === 'free' ? handleResizeStart(corner) : undefined}
+          >
+            <span className={`absolute size-4 ${corner.includes('l') ? 'left-5' : 'right-5'} ${corner.includes('t') ? 'top-5' : 'bottom-5'} ${corner.includes('l') ? 'border-l-2' : 'border-r-2'} ${corner.includes('t') ? 'border-t-2' : 'border-b-2'} border-white`} />
+          </button>
+        ))}
       </div>
     </div>
   )

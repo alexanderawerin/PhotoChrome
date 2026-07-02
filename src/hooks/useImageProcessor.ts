@@ -8,6 +8,7 @@ import {
   validateMediaSelection,
   type MediaSelectionItem,
 } from '../engine/media-selection'
+import { createDefaultTransformState } from '../engine/transform'
 
 const MAX_CONCURRENT_DECODES = 2
 
@@ -25,6 +26,66 @@ export interface ProcessedImage {
  */
 function generateImageId(): string {
   return `img_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+}
+
+async function decodeImages(
+  files: File[],
+  existingItems: MediaSelectionItem[] = [],
+): Promise<ImageItem[]> {
+  const decodedItems: MediaSelectionItem[] = [
+    ...existingItems,
+    ...files.map(file => ({ file })),
+  ]
+  const initialValidation = validateMediaSelection(decodedItems)
+  if (!initialValidation.valid) throw new Error(initialValidation.error.message)
+
+  const loadedImages = new Array<ImageItem>(files.length)
+  let nextIndex = 0
+  let failure: unknown
+  const existingCount = existingItems.length
+
+  const decodeNext = async () => {
+    while (failure === undefined) {
+      const index = nextIndex++
+      if (index >= files.length) return
+      const file = files[index]
+
+      try {
+        const [{ original, thumbnail }, exif] = await Promise.all([
+          ImageProcessor.decodeImagePair(file, THUMBNAIL_MAX_SIZE, (width, height) => {
+            decodedItems[existingCount + index] = { file, width, height }
+            const validation = validateMediaSelection(decodedItems)
+            if (!validation.valid) throw new Error(validation.error.message)
+          }),
+          extractExif(file),
+        ])
+
+        loadedImages[index] = {
+          id: generateImageId(),
+          file,
+          fileName: file.name,
+          original,
+          thumbnail,
+          exif,
+          recipe: null,
+          customSettings: {},
+          transformedOriginal: original,
+          transformedThumbnail: thumbnail,
+          rotation: 0,
+          transform: createDefaultTransformState(),
+        }
+      } catch (error) {
+        failure = error
+      }
+    }
+  }
+
+  await Promise.all(Array.from(
+    { length: Math.min(MAX_CONCURRENT_DECODES, files.length) },
+    decodeNext,
+  ))
+  if (failure !== undefined) throw failure
+  return loadedImages
 }
 
 /**
@@ -46,56 +107,7 @@ export function useImageProcessor() {
     setError(null)
 
     try {
-      const initialValidation = validateMediaSelection(files.map(file => ({ file })))
-      if (!initialValidation.valid) throw new Error(initialValidation.error.message)
-
-      const decodedItems: MediaSelectionItem[] = files.map(file => ({ file }))
-      const loadedImages = new Array<ImageItem>(files.length)
-      let nextIndex = 0
-      let failure: unknown
-
-      const decodeNext = async () => {
-        while (failure === undefined) {
-          const index = nextIndex++
-          if (index >= files.length) return
-          const file = files[index]
-
-          try {
-            const [{ original, thumbnail }, exif] = await Promise.all([
-              ImageProcessor.decodeImagePair(file, THUMBNAIL_MAX_SIZE, (width, height) => {
-                // Validate dimensions before allocating full-size canvas pixels.
-                decodedItems[index] = { file, width, height }
-                const validation = validateMediaSelection(decodedItems)
-                if (!validation.valid) throw new Error(validation.error.message)
-              }),
-              extractExif(file),
-            ])
-
-            loadedImages[index] = {
-              id: generateImageId(),
-              file,
-              fileName: file.name,
-              original,
-              thumbnail,
-              exif,
-              recipe: null,
-              customSettings: {},
-              transformedOriginal: original,
-              transformedThumbnail: thumbnail,
-              rotation: 0,
-            }
-          } catch (error) {
-            failure = error
-          }
-        }
-      }
-
-      await Promise.all(Array.from(
-        { length: Math.min(MAX_CONCURRENT_DECODES, files.length) },
-        decodeNext
-      ))
-      if (failure !== undefined) throw failure
-
+      const loadedImages = await decodeImages(files)
       setImages(loadedImages)
       setCurrentIndex(0)
     } catch (err) {
@@ -106,6 +118,28 @@ export function useImageProcessor() {
       setIsLoading(false)
     }
   }, [])
+
+  /** Atomically appends files to the current batch without replacing edits. */
+  const addImages = useCallback(async (files: File[]) => {
+    if (files.length === 0) return
+    setIsLoading(true)
+    setError(null)
+    try {
+      const existingItems = images.map(image => ({
+        file: image.file,
+        width: image.original.width,
+        height: image.original.height,
+      }))
+      const added = await decodeImages(files, existingItems)
+      setImages(previous => [...previous, ...added])
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Не удалось добавить изображения'
+      setError(message)
+      console.error('Adding images failed:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [images])
 
   /**
    * Получить текущее активное изображение
@@ -241,6 +275,8 @@ export function useImageProcessor() {
 
     /** Загрузить массив изображений */
     loadImages,
+    /** Добавить изображения в текущий набор. */
+    addImages,
     /** Перейти к изображению по индексу */
     goToImage,
     /** Следующее изображение */

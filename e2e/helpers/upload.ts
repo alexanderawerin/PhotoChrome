@@ -10,9 +10,14 @@ export function fixturePath(filename: string): string {
   return path.join(FIXTURES_DIR, filename)
 }
 
-/** Upload a single image via the hidden file input on LandingScreen. */
+function mediaInput(page: Page) {
+  return page.locator('input[aria-label="Choose photos or video to edit"], input#media-upload').first()
+}
+
+/** Upload a single image via the playable demo CTA. */
 export async function uploadImage(page: Page, filename = 'test-image.jpg') {
-  const fileInput = page.locator('input#media-upload')
+  const fileInput = mediaInput(page)
+  await fileInput.waitFor({ state: 'attached', timeout: 15_000 })
   await fileInput.setInputFiles(fixturePath(filename))
 }
 
@@ -21,13 +26,16 @@ export async function uploadMultipleImages(
   page: Page,
   filenames: string[] = ['test-image.jpg', 'test-image-2.jpg']
 ) {
-  const fileInput = page.locator('input#media-upload')
+  const fileInput = mediaInput(page)
+  await fileInput.waitFor({ state: 'attached', timeout: 15_000 })
   await fileInput.setInputFiles(filenames.map(f => fixturePath(f)))
 }
 
 /** Upload the deterministic three-second H.264/AAC fixture. */
 export async function uploadVideo(page: Page, filename = 'test-video.mp4') {
-  await page.locator('input#media-upload').setInputFiles(fixturePath(filename))
+  const input = mediaInput(page)
+  await input.waitFor({ state: 'attached', timeout: 15_000 })
+  await input.setInputFiles(fixturePath(filename))
   await page.getByText('3s • 640×360').waitFor({ state: 'visible', timeout: 15_000 })
 }
 

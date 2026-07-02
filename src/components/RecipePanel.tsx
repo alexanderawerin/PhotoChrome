@@ -110,6 +110,16 @@ export function RecipePanel({
           className="flex gap-2 p-3 overflow-x-auto scrollbar-hide"
           role="list"
         >
+          <button
+            type="button"
+            onClick={onRandomRecipe}
+            className="flex h-32 w-24 flex-shrink-0 flex-col items-center justify-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 text-zinc-300"
+            role="listitem"
+            aria-label="Random preset"
+          >
+            <Shuffle className="size-5" aria-hidden="true" />
+            <span className="text-[10px] font-medium">Random</span>
+          </button>
           {/* Favorites Section - header or empty state */}
           {favoriteRecipes.length > 0 ? (
             <>

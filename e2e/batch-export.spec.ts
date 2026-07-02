@@ -41,6 +41,7 @@ test('Export all creates a stored-JPEG ZIP with a skipped-photo report', async (
   const methods = storedCompressionMethods(bytes)
   expect(methods.get(jpegNames[0]), 'JPEG must use ZIP method 0 (stored)').toBe(0)
   await expect(page.getByRole('status', { name: 'Batch export progress' })).toBeHidden()
+  await expect(page.getByRole('dialog', { name: 'Export complete' })).toContainText('1 exported · 1 skipped')
 })
 
 test('cancelling batch export destroys the partial archive and does not download', async ({ page, landingPage }) => {
