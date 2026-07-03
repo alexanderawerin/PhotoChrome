@@ -19,6 +19,8 @@ For the current Photochrome deliverable, the target Figma file is `ZDr3uLhnJP768
 ## Test maintenance
 
 - Whenever product behavior or UI structure changes intentionally, update the affected automated tests in the same task and run the narrow relevant E2E suite before reporting completion.
+- After any UI/layout refactor, audit shared E2E helpers and repository-wide selectors for assumptions about DOM order, visibility, copy, and accessibility roles; use semantic, uniquely scoped locators instead of positional selectors such as `.first()` when multiple responsive copies can exist.
 - Before a push or release-facing handoff, run the CI-equivalent Chromium suite (`npm run test:e2e:chromium`) in addition to lint, unit tests, and the production build.
+- Do not push a UI/layout change until that full Chromium suite passes locally; a narrow suite is necessary for iteration but does not replace the CI-equivalent run.
 - Do not leave tests asserting UI elements, copy, or accessibility roles that were intentionally removed or relocated.
 - Browser codec assertions must reflect runtime capability checks. Require optional codecs such as AAC only when the browser reports that encoder configuration as supported.

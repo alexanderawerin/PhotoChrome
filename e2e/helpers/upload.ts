@@ -46,8 +46,9 @@ export async function waitForEditor(page: Page) {
   await loadingOverlay.waitFor({ state: 'hidden', timeout: 15_000 }).catch(() => {
     // May already be gone if load was fast
   })
-  // Wait for canvas to appear
-  await page.locator('canvas').first().waitFor({ state: 'visible', timeout: 15_000 })
+  // Wait for the editor preview, not recipe/thumbnail canvases whose DOM order
+  // and visibility change across responsive layouts.
+  await page.locator('canvas[aria-label="Preview"]').waitFor({ state: 'visible', timeout: 15_000 })
 }
 
 /** Select a recipe by clicking the first visible recipe card in the desktop side panel. */

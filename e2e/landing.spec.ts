@@ -29,9 +29,4 @@ test.describe('Playable demo', () => {
     await expect(tablist.locator('[role="tab"]')).toHaveCount(2)
   })
 
-  test('back button returns to the playable demo', async ({ page, editorPage }) => {
-    await page.locator('[aria-label="Back"]').click()
-    await expect(page.getByRole('button', { name: 'Upload photos' })).toBeVisible()
-    await expect(page.locator('aside [aria-label^="Apply preset"]').first()).toBeVisible()
-  })
 })

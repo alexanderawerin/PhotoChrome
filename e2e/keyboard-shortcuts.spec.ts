@@ -4,19 +4,17 @@ import { selectFirstRecipe } from './helpers/upload'
 test.describe('Keyboard Shortcuts', () => {
   test('R rotates the image', async ({ page, editorPage }) => {
     const canvas = page.locator('canvas[aria-label="Preview"]')
-    const beforeBox = await canvas.boundingBox()
+    const before = await canvas.evaluate(element => ({
+      width: element.width,
+      height: element.height,
+    }))
 
     await page.keyboard.press('r')
-    await page.waitForTimeout(500)
 
-    const afterBox = await canvas.boundingBox()
-    expect(beforeBox).toBeTruthy()
-    expect(afterBox).toBeTruthy()
-    if (beforeBox && afterBox) {
-      const ratioBefore = beforeBox.width / beforeBox.height
-      const ratioAfter = afterBox.width / afterBox.height
-      expect(Math.abs(ratioBefore - ratioAfter)).toBeGreaterThan(0.1)
-    }
+    await expect.poll(() => canvas.evaluate(element => ({
+      width: element.width,
+      height: element.height,
+    }))).toEqual({ width: before.height, height: before.width })
   })
 
   test('C opens crop mode', async ({ page, editorPage }) => {

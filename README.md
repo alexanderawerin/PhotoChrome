@@ -2,7 +2,7 @@
 
 Apply legendary Fujifilm film simulations to your photos and videos right in the browser. No uploads, no servers — everything runs locally on your device.
 
-Development toward Photochrome 2.0 is tracked in the [project roadmap](docs/ROADMAP.md).
+Development toward Photochrome 2.0 is tracked in the [project roadmap](docs/ROADMAP.md). Technical health work is tracked in the [audit fix plan](docs/audit-2026-07-02-fix-plan-ru.md).
 
 ## Features
 
