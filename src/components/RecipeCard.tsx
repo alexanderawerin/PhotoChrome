@@ -227,21 +227,18 @@ function RecipeCardComponent({
 
   return (
     <Card
-      className={`cursor-pointer transition-all hover:ring-2 hover:ring-primary overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+      data-recipe-card
+      className={`relative cursor-pointer overflow-hidden transition-all hover:ring-2 hover:ring-primary focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 ${
         isActive ? 'ring-2 ring-primary' : ''
       }`}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onClick()
-        }
-      }}
-      tabIndex={0}
-      role="button"
-      aria-pressed={isActive}
-      aria-label={`Apply preset ${recipe.name}${isActive ? ', selected' : ''}`}
     >
+      <button
+        type="button"
+        className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none"
+        onClick={onClick}
+        aria-pressed={isActive}
+        aria-label={`Apply preset ${recipe.name}${isActive ? ', selected' : ''}`}
+      />
       <div className="aspect-square bg-black relative">
         {previewData ? (
           <canvas
@@ -274,7 +271,7 @@ function RecipeCardComponent({
             type="button"
             onClick={handleFavoriteClick}
             className={`
-              absolute rounded-full transition-all duration-200
+              absolute z-20 rounded-full transition-all duration-200
               ${largeTouchTargets 
                 ? 'top-1 right-1 p-1.5' 
                 : 'top-1.5 right-1.5 p-1'

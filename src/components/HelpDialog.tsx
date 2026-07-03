@@ -140,7 +140,7 @@ export function HelpDialog({
             className={`flex-1 min-h-11 py-2.5 text-sm font-medium transition-colors ${
               activeTab === 'quick-guide'
                 ? 'text-white border-b-2 border-white -mb-px'
-                : 'text-zinc-500 hover:text-zinc-300'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
             aria-selected={activeTab === 'quick-guide'}
             role="tab"
@@ -152,7 +152,7 @@ export function HelpDialog({
             className={`flex-1 min-h-11 py-2.5 text-sm font-medium transition-colors ${
               activeTab === 'whats-new'
                 ? 'text-white border-b-2 border-white -mb-px'
-                : 'text-zinc-500 hover:text-zinc-300'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
             aria-selected={activeTab === 'whats-new'}
             role="tab"
@@ -164,7 +164,7 @@ export function HelpDialog({
             className={`flex-1 min-h-11 py-2.5 text-sm font-medium transition-colors ${
               activeTab === 'shortcuts'
                 ? 'text-white border-b-2 border-white -mb-px'
-                : 'text-zinc-500 hover:text-zinc-300'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
             aria-selected={activeTab === 'shortcuts'}
             role="tab"
@@ -176,7 +176,7 @@ export function HelpDialog({
             className={`flex-1 min-h-11 py-2.5 text-sm font-medium transition-colors ${
               activeTab === 'feedback'
                 ? 'text-white border-b-2 border-white -mb-px'
-                : 'text-zinc-500 hover:text-zinc-300'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
             aria-selected={activeTab === 'feedback'}
             role="tab"
@@ -195,17 +195,17 @@ export function HelpDialog({
 
         {/* Disclaimer */}
         <div className="pt-4 mt-4 border-t border-zinc-800">
-          <p className="text-[11px] text-zinc-600 leading-relaxed">
+          <p className="text-[11px] text-zinc-400 leading-relaxed">
             This app is not affiliated with, endorsed by, or connected to FUJIFILM Corporation. 
             Film simulation names are used for reference purposes only.
           </p>
-          <p className="text-[11px] text-zinc-600 mt-2">
+          <p className="text-[11px] text-zinc-400 mt-2">
             Made by{' '}
             <a 
               href="https://netdesigner.ru" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-zinc-500 hover:text-zinc-400 transition-colors"
+              className="text-zinc-300 hover:text-white transition-colors"
             >
               Alexander Awerin
             </a>
@@ -234,7 +234,7 @@ function QuickGuideContent() {
           </span>
           <div>
             <p className="font-medium text-zinc-200">{title}</p>
-            <p className="mt-0.5 text-zinc-500">{description}</p>
+            <p className="mt-0.5 text-zinc-400">{description}</p>
           </div>
         </li>
       ))}
@@ -247,13 +247,13 @@ function WhatsNewContent() {
     <div className="space-y-5">
       {WHATS_NEW.map((release) => (
         <div key={release.version}>
-          <h3 className="text-xs font-semibold text-zinc-500 mb-2">
+          <h3 className="text-xs font-semibold text-zinc-400 mb-2">
             Version {release.version}
           </h3>
           <ul className="space-y-1.5">
             {release.items.map((item, index) => (
               <li key={index} className="flex items-start gap-2 text-sm text-zinc-300">
-                <span className="text-zinc-600 mt-0.5">•</span>
+                <span className="text-zinc-400 mt-0.5">•</span>
                 {item}
               </li>
             ))}
@@ -318,7 +318,7 @@ function FeedbackContent() {
         href={GITHUB_REPO_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-2 text-xs text-zinc-600 hover:text-zinc-500 transition-colors"
+        className="flex items-center gap-2 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
       >
         <Github className="w-3.5 h-3.5" />
         View on GitHub

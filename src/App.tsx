@@ -16,9 +16,9 @@ import {
 } from './components/ui/empty'
 import { useImageProcessor } from './hooks/useImageProcessor'
 import { useVideoProcessor } from './hooks/useVideoProcessor'
-import demoOneUrl from '../img/alexander-awerin-3yqVPhHHsdI-unsplash.jpg'
-import demoTwoUrl from '../img/alexander-awerin-AQI2wTv1SWo-unsplash.jpg'
-import demoThreeUrl from '../img/alexander-awerin-yafEjegDFl4-unsplash.jpg'
+import demoOneUrl from '../img/alexander-awerin-3yqVPhHHsdI-unsplash.webp'
+import demoTwoUrl from '../img/alexander-awerin-AQI2wTv1SWo-unsplash.webp'
+import demoThreeUrl from '../img/alexander-awerin-yafEjegDFl4-unsplash.webp'
 
 /**
  * Loading messages that cycle while waiting.
@@ -127,7 +127,7 @@ function AppContent() {
         const response = await fetch(url)
         if (!response.ok) throw new Error('Failed to load demo photo')
         const blob = await response.blob()
-        return new File([blob], `Demo ${index + 1}.jpg`, { type: blob.type || 'image/jpeg' })
+        return new File([blob], `Demo ${index + 1}.webp`, { type: blob.type || 'image/webp' })
       }))
       await loadImages(files)
     } finally {

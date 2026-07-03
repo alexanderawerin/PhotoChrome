@@ -129,7 +129,7 @@ export function RecipePanel({
                   <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider">
                     Favorites
                   </span>
-                  <span className="text-[10px] text-zinc-600 mt-0.5">
+                  <span className="text-[10px] text-zinc-400 mt-0.5">
                     {favoriteRecipes.length}
                   </span>
                 </div>
@@ -158,7 +158,7 @@ export function RecipePanel({
             <div className="flex-shrink-0 w-32" role="listitem">
               <div className="w-32 h-32 rounded-lg bg-zinc-900/30 border border-dashed border-zinc-700 flex flex-col items-center justify-center p-2">
                 <Heart className="w-5 h-5 text-zinc-600 mb-1.5" />
-                <p className="text-[9px] text-zinc-500 text-center leading-tight">
+                <p className="text-[9px] text-zinc-400 text-center leading-tight">
                   Tap heart to<br />add favorite
                 </p>
               </div>
@@ -191,7 +191,7 @@ export function RecipePanel({
                   <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider text-center leading-tight">
                     Smart<br />Picks
                   </span>
-                  <span className="text-[10px] text-zinc-600 mt-0.5">
+                  <span className="text-[10px] text-zinc-400 mt-0.5">
                     {smartPicksRecipes.length}
                   </span>
                 </div>
@@ -225,7 +225,7 @@ export function RecipePanel({
                   <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider text-center leading-tight">
                     Editor's<br />Choice
                   </span>
-                  <span className="text-[10px] text-zinc-600 mt-0.5">
+                  <span className="text-[10px] text-zinc-400 mt-0.5">
                     {editorsChoiceRecipes.length}
                   </span>
                 </div>
@@ -263,7 +263,7 @@ export function RecipePanel({
                     <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider text-center leading-tight">
                       {group.simulationName}
                     </span>
-                    <span className="text-[10px] text-zinc-600 mt-1">
+                    <span className="text-[10px] text-zinc-400 mt-1">
                       {group.recipes.length}
                     </span>
                   </div>
@@ -301,7 +301,7 @@ export function RecipePanel({
                     <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider text-center leading-tight">
                       {group.useCaseName}
                     </span>
-                    <span className="text-[10px] text-zinc-600 mt-1">
+                    <span className="text-[10px] text-zinc-400 mt-1">
                       {group.recipes.length}
                     </span>
                   </div>
@@ -346,7 +346,7 @@ export function RecipePanel({
             <h2 className="text-base font-semibold text-white" id="recipes-heading">
               Films
             </h2>
-            <p className="text-xs text-zinc-500" aria-live="polite">
+            <p className="text-xs text-zinc-400" aria-live="polite">
               {recipes.length} presets
             </p>
           </div>
@@ -361,7 +361,7 @@ export function RecipePanel({
           </Button>
         </div>
         
-        <div className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+        <div className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-zinc-400">
           <Film className="size-3" aria-hidden="true" /> Film library
         </div>
       </div>
@@ -386,7 +386,7 @@ export function RecipePanel({
               </h3>
               <div className="flex-1 h-px bg-zinc-800" aria-hidden="true" />
               <span 
-                className="text-[10px] text-zinc-600"
+                className="text-[10px] text-zinc-400"
                 aria-label={`${favoriteRecipes.length} presets`}
               >
                 {favoriteRecipes.length}
@@ -415,7 +415,7 @@ export function RecipePanel({
             ) : (
               <div className="text-center py-4 px-2">
                 <Heart className="w-6 h-6 text-zinc-700 mx-auto mb-2" />
-                <p className="text-xs text-zinc-600">
+                <p className="text-xs text-zinc-400">
                   Click the heart on a card<br />
                   to add to favorites
                 </p>
@@ -436,7 +436,7 @@ export function RecipePanel({
                 </h3>
                 <div className="flex-1 h-px bg-zinc-800" aria-hidden="true" />
                 <span
-                  className="text-[10px] text-zinc-600"
+                  className="text-[10px] text-zinc-400"
                   aria-label={`${smartPicksRecipes.length} presets`}
                 >
                   {smartPicksRecipes.length}
@@ -476,7 +476,7 @@ export function RecipePanel({
                 </h3>
                 <div className="flex-1 h-px bg-zinc-800" aria-hidden="true" />
                 <span
-                  className="text-[10px] text-zinc-600"
+                  className="text-[10px] text-zinc-400"
                   aria-label={`${editorsChoiceRecipes.length} presets`}
                 >
                   {editorsChoiceRecipes.length}
@@ -520,7 +520,7 @@ export function RecipePanel({
                   </h3>
                   <div className="flex-1 h-px bg-zinc-800" aria-hidden="true" />
                   <span 
-                    className="text-[10px] text-zinc-600"
+                    className="text-[10px] text-zinc-400"
                     aria-label={`${group.recipes.length} presets`}
                   >
                     {group.recipes.length}
@@ -564,7 +564,7 @@ export function RecipePanel({
                   </h3>
                   <div className="flex-1 h-px bg-zinc-800" aria-hidden="true" />
                   <span 
-                    className="text-[10px] text-zinc-600"
+                    className="text-[10px] text-zinc-400"
                     aria-label={`${group.recipes.length} presets`}
                   >
                     {group.recipes.length}

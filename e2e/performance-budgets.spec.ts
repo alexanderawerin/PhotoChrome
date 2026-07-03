@@ -28,7 +28,7 @@ async function mainPreviewSignature(page: import('@playwright/test').Page): Prom
 
 async function renderedCardCount(page: import('@playwright/test').Page): Promise<number> {
   return page.evaluate(() => {
-    const canvases = document.querySelectorAll<HTMLCanvasElement>('aside [aria-label^="Apply preset"] canvas')
+    const canvases = document.querySelectorAll<HTMLCanvasElement>('aside [data-recipe-card] canvas')
     let rendered = 0
     for (const canvas of canvases) {
       if (canvas.width === 0 || canvas.height === 0) continue

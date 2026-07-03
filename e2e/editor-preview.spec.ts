@@ -152,7 +152,7 @@ test.describe('Editor — Preview Rendering', () => {
   })
 
   test('recipe card previews are not black', async ({ page, editorPage }) => {
-    const cardCanvases = page.locator('aside [aria-label^="Apply preset"] canvas')
+    const cardCanvases = page.locator('aside [data-recipe-card] canvas')
     await expect.poll(() => cardCanvases.count(), {
       timeout: 5_000,
       message: 'Recipe card previews should finish rendering',
@@ -166,7 +166,7 @@ test.describe('Editor — Preview Rendering', () => {
 
     for (let i = 0; i < sampled; i++) {
       const isRendered = await page.evaluate((index) => {
-        const canvases = document.querySelectorAll('aside [aria-label^="Apply preset"] canvas')
+        const canvases = document.querySelectorAll('aside [data-recipe-card] canvas')
         const canvas = canvases[index] as HTMLCanvasElement
         if (!canvas || canvas.width === 0 || canvas.height === 0) return false
         const ctx = canvas.getContext('2d')

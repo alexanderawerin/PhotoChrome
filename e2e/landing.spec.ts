@@ -5,7 +5,7 @@ test.describe('Playable demo', () => {
   test('shows real demo photos, presets, compare surface, and a persistent upload CTA', async ({ page, landingPage }) => {
     await waitForEditor(page)
     await expect(page.getByRole('button', { name: 'Upload photos' })).toBeVisible()
-    await expect(page.locator('aside [aria-label^="Apply preset"]').first()).toBeVisible()
+    await expect(page.locator('[aria-label^="Apply preset"]:visible').first()).toBeVisible()
     await expect(page.locator('canvas[aria-label="Preview"]')).toBeVisible()
   })
 

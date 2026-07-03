@@ -675,7 +675,7 @@ export function Editor({
               key={mode}
               type="button"
               onClick={() => changeMobileMode(mode)}
-              className={`min-h-11 text-sm capitalize ${mobileMode === mode ? 'text-white' : 'text-zinc-500'}`}
+              className={`min-h-11 text-sm capitalize ${mobileMode === mode ? 'text-white' : 'text-zinc-400'}`}
               aria-current={mobileMode === mode ? 'page' : undefined}
             >
               {mode}
@@ -941,7 +941,7 @@ function Header({
         <div className="min-w-0 flex-1 px-2 text-center">
           <p className="truncate text-sm font-medium text-white">{fileName}</p>
           {totalImages > 1 && (
-            <p className="text-[11px] text-zinc-500">{currentIndex + 1} of {totalImages}</p>
+            <p className="text-[11px] text-zinc-400">{currentIndex + 1} of {totalImages}</p>
           )}
         </div>
         <Button
@@ -966,7 +966,7 @@ function Header({
         )}
         <div className="min-w-0 flex-1 text-center">
           <p className="truncate text-sm font-medium text-zinc-100">{fileName}</p>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-600">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400">
             Photochrome {APP_VERSION}{totalImages > 1 ? ` · ${currentIndex + 1} of ${totalImages}` : ''}
           </p>
         </div>
@@ -1026,7 +1026,7 @@ function DesktopSidePanel({
             <div className="flex h-full flex-col items-center justify-center px-6 text-center">
               <Settings2 className="mb-4 size-8 text-zinc-700" aria-hidden="true" />
               <h2 className="text-sm font-medium text-zinc-200">Choose a film first</h2>
-              <p className="mt-2 text-xs leading-5 text-zinc-500">Adjustments inherit their starting values from the selected preset.</p>
+              <p className="mt-2 text-xs leading-5 text-zinc-400">Adjustments inherit their starting values from the selected preset.</p>
             </div>
           )}
         </div>
