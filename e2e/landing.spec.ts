@@ -13,8 +13,8 @@ test.describe('Playable demo', () => {
     await uploadImage(page)
     await waitForEditor(page)
 
-    // Editor is visible with canvas (works on both mobile and desktop)
-    await expect(page.locator('canvas').first()).toBeVisible()
+    // Editor is visible with its preview canvas on both mobile and desktop.
+    await expect(page.locator('canvas[aria-label="Preview"]')).toBeVisible()
   })
 
   test('uploads multiple images and shows thumbnail strip', async ({ page, landingPage, viewport }) => {

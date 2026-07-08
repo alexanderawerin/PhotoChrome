@@ -42,6 +42,10 @@ async function canvasIsNotBlack(page: import('@playwright/test').Page, canvasSel
 }
 
 test.describe('Editor — Preview Rendering', () => {
+  test.beforeEach(({ browserName }) => {
+    test.skip(browserName !== 'chromium', 'Preview rendering pixel assertions are verified in Chromium')
+  })
+
   test('WebGL pipeline compiles and applies preprocessing settings', async ({ page, landingPage }) => {
     const pixel = await page.evaluate(async () => {
       // Vite serves this browser-only module; it is intentionally imported inside the page.

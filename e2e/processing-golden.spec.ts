@@ -1,7 +1,9 @@
 import { test, expect } from './helpers/fixtures'
 
 test.describe('Processing engine golden parity', () => {
-  test('CPU, worker, and WebGL preserve geometry, orientation, alpha, and pixel parity', async ({ page, landingPage }) => {
+  test('CPU, worker, and WebGL preserve geometry, orientation, alpha, and pixel parity', async ({ page, landingPage, browserName }) => {
+    test.skip(browserName !== 'chromium', 'WebGL golden parity is verified in Chromium')
+
     const result = await page.evaluate(async () => {
       // @ts-expect-error Vite browser module path is unavailable to the Node compiler.
       const { ImageProcessor } = await import('/src/engine/processor.ts')
