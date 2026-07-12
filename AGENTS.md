@@ -16,6 +16,22 @@ These rules are mandatory whenever translating Photochrome pages or states from 
 
 For the current Photochrome deliverable, the target Figma file is `ZDr3uLhnJP768aKz1MelGA`, page `2:2` (`ui`). Requested states are start, preset selection, and preset settings at widths 1600, 1200, and 393.
 
+## Demo start state
+
+- The current first usable Photochrome screen is the functional `Editor` running with `demoMode`, not the older standalone `LandingScreen`.
+- It preloads three demo photos. Users can switch between them and apply presets.
+- Demo mode must not expose export, tuning/Adjust, Crop, or other full-editor actions.
+- The available progression is adding the user's own photos or video; doing so transitions into the full editor with its complete controls.
+- Any design, Figma, screenshot, or ImageGen work for the `start` state must preserve this behavior and must be derived from the actual `demoMode` code path.
+
+## Visual-reference boundary
+
+- Generated mockups and external references are style references only unless the user explicitly expands scope.
+- The implemented Photochrome UI remains authoritative for its familiar regions, control set, ordering, state-specific availability, interaction flow, and responsive behavior.
+- Small shifts and adjustments to padding, gaps, control dimensions, radii, and local visual density are allowed when applying the reference style, provided the information architecture and interaction flow are not radically changed.
+- Do not add, remove, regroup, or reorder controls solely to match a reference unless the user explicitly expands scope.
+- Try bounded backdrop blur on existing overlay surfaces first. If it harms readability, performance, or browser support, use translucent dimming or localized scrims instead; blur is not a product requirement.
+
 ## Test maintenance
 
 - Whenever product behavior or UI structure changes intentionally, update the affected automated tests in the same task and run the narrow relevant E2E suite before reporting completion.
