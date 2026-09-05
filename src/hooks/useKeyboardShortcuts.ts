@@ -65,7 +65,8 @@ interface KeyboardShortcutsHandlers {
  */
 export function useKeyboardShortcuts(
   config: KeyboardShortcutsConfig,
-  handlers: KeyboardShortcutsHandlers
+  handlers: KeyboardShortcutsHandlers,
+  enabled = true
 ): void {
   const {
     isCropping,
@@ -209,6 +210,12 @@ export function useKeyboardShortcuts(
   }, [onCompareEnd])
 
   useEffect(() => {
+    // Pausing shortcuts must also release a held before/after comparison.
+    if (!enabled) onCompareEnd()
+  }, [enabled, onCompareEnd])
+
+  useEffect(() => {
+    if (!enabled) return
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)
 
@@ -216,5 +223,5 @@ export function useKeyboardShortcuts(
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
     }
-  }, [handleKeyDown, handleKeyUp])
+  }, [enabled, handleKeyDown, handleKeyUp])
 }

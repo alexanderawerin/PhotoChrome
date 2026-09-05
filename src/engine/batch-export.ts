@@ -1,6 +1,7 @@
 import { APP_URL } from '../constants'
 import { createProcessingPlan } from './processing-plan'
 import { ImageProcessor } from './processor'
+import { createExportPreview, type ExportPreview } from './photo-export'
 import type { ImageItem } from './types'
 import { loadSimulationLUT } from '../presets/simulations'
 
@@ -27,6 +28,7 @@ export type BatchExportResult =
       skipped: number
       errors: number
       report: string | null
+      previews: ExportPreview[]
     }
   | {
       status: 'cancelled'
@@ -132,6 +134,7 @@ export async function exportPhotoBatch(
   const skipped: BatchExportIssue[] = []
   const errors: BatchExportIssue[] = []
   const usedNames = new Set<string>()
+  const previews: ExportPreview[] = []
   let exported = 0
 
   const progress = (current: number, fileName: string | null) => options.onProgress?.({
@@ -154,6 +157,7 @@ export async function exportPhotoBatch(
         continue
       }
 
+      progress(index, image.fileName)
       try {
         await loadSimulationLUT(image.recipe.filmSimulation)
         const plan = createProcessingPlan(
@@ -173,6 +177,7 @@ export async function exportPhotoBatch(
           recipeId: image.recipe.id,
           settings: plan.settings,
         })
+        options.signal?.throwIfAborted()
         const name = createUniqueFileName(
           createBatchPhotoName(image.fileName, image.recipe.id),
           usedNames
@@ -181,6 +186,10 @@ export async function exportPhotoBatch(
         zip.add(entry)
         entry.push(new Uint8Array(await blob.arrayBuffer()), true)
         exported++
+        if (previews.length < 4) {
+          const preview = await createExportPreview(blob, name)
+          if (preview) previews.push(preview)
+        }
       } catch (error) {
         if (isAbortError(error, options.signal)) throw error
         errors.push({
@@ -202,7 +211,9 @@ export async function exportPhotoBatch(
     if (options.signal?.aborted) throw new DOMException('Batch export cancelled', 'AbortError')
     zip.end()
     const blob = await zipResult
+    options.signal?.throwIfAborted()
     progress(images.length, null)
+    options.signal?.throwIfAborted()
     return {
       status: 'success',
       archiveName: createBatchArchiveName(options.now ?? new Date()),
@@ -211,6 +222,7 @@ export async function exportPhotoBatch(
       skipped: skipped.length,
       errors: errors.length,
       report,
+      previews,
     }
   } catch (error) {
     zip.terminate()

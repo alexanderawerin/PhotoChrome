@@ -83,6 +83,49 @@ describe('exportPhotoBatch', () => {
     expect(strFromU8(entries['export-report.txt'])).toContain('plain.jpg: No recipe selected')
   })
 
+  it('returns previews from archived outputs, capped at four and excluding failures', async () => {
+    const thumbnail = vi.spyOn(ImageProcessor, 'createThumbnail').mockImplementation(async (file, maxSize) => {
+      expect(maxSize).toBe(480)
+      if (file.name.includes('success-1')) throw new Error('Preview decode failed')
+      return { width: 480, height: 320, data: new Uint8ClampedArray(480 * 320 * 4) } as ImageData
+    })
+    vi.spyOn(ImageProcessor, 'processAsync')
+      .mockRejectedValueOnce(new Error('Worker crashed'))
+      .mockResolvedValue(imageData)
+    vi.spyOn(ImageProcessor, 'addWatermark').mockReturnValue(imageData)
+    vi.spyOn(ImageProcessor, 'imageDataToBlob').mockResolvedValue(new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' }))
+    const progress: Array<{ current: number; fileName: string | null; exported: number }> = []
+
+    const result = await exportPhotoBatch([
+      item('failed.jpg'),
+      item('skipped.jpg', false),
+      item('success-1.jpg'),
+      item('success-2.jpg'),
+      item('success-3.jpg'),
+      item('success-4.jpg'),
+      item('success-5.jpg'),
+    ], {
+      now: new Date(2026, 5, 30, 9, 7),
+      onProgress: ({ current, fileName, exported }) => progress.push({ current, fileName, exported }),
+    })
+
+    expect(result).toMatchObject({ status: 'success', exported: 5, skipped: 1, errors: 1 })
+    if (result.status !== 'success') throw new Error('Expected successful archive')
+    expect(result.previews.map(preview => preview.fileName)).toEqual([
+      'photochrome_classic-neg-cinema_success-2.jpg',
+      'photochrome_classic-neg-cinema_success-3.jpg',
+      'photochrome_classic-neg-cinema_success-4.jpg',
+      'photochrome_classic-neg-cinema_success-5.jpg',
+    ])
+    expect(thumbnail).toHaveBeenCalledTimes(5)
+
+    const firstProcessingUpdate = progress.findIndex(update => update.fileName === 'success-2.jpg' && update.current === 3)
+    const firstFinishedUpdate = progress.findIndex(update => update.fileName === 'success-2.jpg' && update.current === 4)
+    expect(firstProcessingUpdate).toBeGreaterThanOrEqual(0)
+    expect(firstFinishedUpdate).toBeGreaterThan(firstProcessingUpdate)
+    expect(progress[firstFinishedUpdate].exported).toBe(2)
+  })
+
   it('aborts without returning a partial ZIP or starting another file', async () => {
     const controller = new AbortController()
     const process = vi.spyOn(ImageProcessor, 'processAsync').mockResolvedValue(imageData)
@@ -98,6 +141,42 @@ describe('exportPhotoBatch', () => {
 
     expect(result).toEqual({ status: 'cancelled', exported: 1, skipped: 0, errors: 0 })
     expect(process).toHaveBeenCalledOnce()
+    expect('blob' in result).toBe(false)
+  })
+
+  it('cancels before writing an archive entry when encoding aborts', async () => {
+    const controller = new AbortController()
+    const process = vi.spyOn(ImageProcessor, 'processAsync').mockResolvedValue(imageData)
+    vi.spyOn(ImageProcessor, 'addWatermark').mockReturnValue(imageData)
+    vi.spyOn(ImageProcessor, 'imageDataToBlob').mockImplementation(async () => {
+      controller.abort()
+      return new Blob([new Uint8Array([1])], { type: 'image/jpeg' })
+    })
+    const thumbnail = vi.spyOn(ImageProcessor, 'createThumbnail')
+
+    const result = await exportPhotoBatch([item('one.jpg')], { signal: controller.signal })
+
+    expect(result).toEqual({ status: 'cancelled', exported: 0, skipped: 0, errors: 0 })
+    expect(process).toHaveBeenCalledOnce()
+    expect(thumbnail).not.toHaveBeenCalled()
+    expect('blob' in result).toBe(false)
+  })
+
+  it('cancels after the final progress callback instead of returning the ZIP', async () => {
+    const controller = new AbortController()
+    vi.spyOn(ImageProcessor, 'processAsync').mockResolvedValue(imageData)
+    vi.spyOn(ImageProcessor, 'addWatermark').mockReturnValue(imageData)
+    vi.spyOn(ImageProcessor, 'imageDataToBlob').mockResolvedValue(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }))
+    vi.spyOn(ImageProcessor, 'createThumbnail').mockResolvedValue(imageData)
+
+    const result = await exportPhotoBatch([item('one.jpg')], {
+      signal: controller.signal,
+      onProgress: progress => {
+        if (progress.current === progress.total && progress.fileName === null) controller.abort()
+      },
+    })
+
+    expect(result).toEqual({ status: 'cancelled', exported: 1, skipped: 0, errors: 0 })
     expect('blob' in result).toBe(false)
   })
 })

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import { ImageOff, Film, RefreshCw } from 'lucide-react'
 import { LandingScreen } from './components/LandingScreen'
 import { Editor } from './components/Editor'
@@ -20,65 +20,61 @@ import demoOneUrl from '../img/alexander-awerin-3yqVPhHHsdI-unsplash.webp'
 import demoTwoUrl from '../img/alexander-awerin-AQI2wTv1SWo-unsplash.webp'
 import demoThreeUrl from '../img/alexander-awerin-yafEjegDFl4-unsplash.webp'
 
-/**
- * Loading messages that cycle while waiting.
- * Ordered from quick to slow operations.
- */
-const LOADING_MESSAGES = [
-  'Reading file...',
-  'Decoding image...',
-  'Preparing canvas...',
-  'Creating thumbnail...',
-  'Almost ready...',
-  'Just a moment...',
-  'Still working...',
-  'Large image, hang tight...',
-  'Processing pixels...',
-  'Worth the wait...',
-] as const
-
-/** Interval between message changes (ms) - 1 second */
-const MESSAGE_INTERVAL = 1000
 const DEMO_PHOTOS = [demoOneUrl, demoTwoUrl, demoThreeUrl] as const
 
 /**
- * Loading overlay shown while image is being processed.
- * Cycles through helpful messages on slow connections.
- * Styled like shadcn/ui Item component with muted variant.
+ * Loading overlay shown while media is being decoded.
+ * An image preview is supplied only for image selections; the existing editor
+ * or landing surface remains visible behind the scrim whenever possible.
  */
-function LoadingOverlay() {
-  const [messageIndex, setMessageIndex] = useState(0)
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMessageIndex(prev => (prev + 1) % LOADING_MESSAGES.length)
-    }, MESSAGE_INTERVAL)
-
-    return () => clearInterval(interval)
-  }, [])
-
+function LoadingOverlay({
+  mediaType = 'image',
+  previewUrl,
+}: {
+  mediaType?: 'image' | 'video'
+  previewUrl?: string | null
+}) {
   return (
-    <div 
-      className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[200] p-4"
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center overflow-hidden bg-black/60 p-4 backdrop-blur-md"
       role="status"
-      aria-label="Loading image"
+      aria-label={mediaType === 'video' ? 'Loading video' : 'Loading image'}
+      aria-busy="true"
       aria-live="polite"
     >
-      {/* Item-like container with muted background */}
-      <div className="flex items-center gap-3 pl-4 pr-4 py-3 rounded-xl bg-zinc-800/80">
-        <Spinner className="size-5 text-zinc-400 flex-shrink-0" />
-        <p 
-          key={messageIndex}
-          className="text-sm text-zinc-300 animate-fade-in whitespace-nowrap"
+      {previewUrl && (
+        <img
+          src={previewUrl}
+          alt=""
+          aria-hidden="true"
+          className="loading-preview absolute inset-0 size-full scale-105 object-cover blur-2xl opacity-70"
+        />
+      )}
+      <div className="absolute inset-0 bg-black/45" aria-hidden="true" />
+      <div className="relative z-10 flex w-full max-w-sm items-center justify-center gap-3 rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 shadow-2xl backdrop-blur-sm">
+        <Spinner className="size-5 shrink-0 text-zinc-300 motion-reduce:animate-none" aria-hidden="true" />
+        <p
+          className="text-center text-sm leading-5 text-zinc-100"
         >
-          {LOADING_MESSAGES[messageIndex]}
+          {mediaType === 'video' ? 'Loading video…' : 'Loading photo…'}
         </p>
       </div>
     </div>
   )
 }
 
+function LoadingContent({ isLoading, children }: { isLoading: boolean; children: ReactNode }) {
+  return (
+    <div className="contents" {...(isLoading ? { inert: '' } : {})}>
+      {children}
+    </div>
+  )
+}
+
 type MediaType = 'image' | 'video' | null
+type MediaSelection =
+  | { type: 'image'; files: File[] }
+  | { type: 'video'; file: File }
 
 /**
  * Main application component.
@@ -89,7 +85,9 @@ function AppContent() {
   const [fileName, setFileName] = useState<string>('')
   const [isDemoInitializing, setIsDemoInitializing] = useState(true)
   const demoLoadStarted = useRef(false)
-  const lastImageFilesRef = useRef<File[]>([])
+  const lastMediaSelectionRef = useRef<MediaSelection | null>(null)
+  const loadingPreviewUrlRef = useRef<string | null>(null)
+  const [loadingPreviewUrl, setLoadingPreviewUrl] = useState<string | null>(null)
   const errorFileInputRef = useRef<HTMLInputElement>(null)
   const {
     images,
@@ -120,6 +118,31 @@ function AppContent() {
   const isLoading = isImageLoading || isVideoLoading
   const error = imageError || videoError
 
+  const setLoadingPreviewForFile = useCallback((file: File | null) => {
+    if (loadingPreviewUrlRef.current) {
+      URL.revokeObjectURL(loadingPreviewUrlRef.current)
+    }
+
+    const nextUrl = file?.type.startsWith('image/') ? URL.createObjectURL(file) : null
+    loadingPreviewUrlRef.current = nextUrl
+    setLoadingPreviewUrl(nextUrl)
+  }, [])
+
+  const clearLoadingPreview = useCallback(() => {
+    if (loadingPreviewUrlRef.current) {
+      URL.revokeObjectURL(loadingPreviewUrlRef.current)
+      loadingPreviewUrlRef.current = null
+    }
+    setLoadingPreviewUrl(null)
+  }, [])
+
+  useEffect(() => () => {
+    if (loadingPreviewUrlRef.current) {
+      URL.revokeObjectURL(loadingPreviewUrlRef.current)
+      loadingPreviewUrlRef.current = null
+    }
+  }, [])
+
   const loadDemo = useCallback(async () => {
     setIsDemoInitializing(true)
     try {
@@ -144,25 +167,54 @@ function AppContent() {
   const handleFileSelect = useCallback(async (files: File | File[], type: 'image' | 'video') => {
     if (type === 'image') {
       const fileArray = Array.isArray(files) ? files : [files]
-      lastImageFilesRef.current = fileArray
+      if (fileArray.length === 0) return
+      lastMediaSelectionRef.current = { type: 'image', files: fileArray }
+      setLoadingPreviewForFile(fileArray[0])
       setFileName(fileArray.length === 1 ? fileArray[0].name : `${fileArray.length} images`)
       setMediaType(type)
-      await loadImages(fileArray)
+      try {
+        await loadImages(fileArray)
+      } finally {
+        clearLoadingPreview()
+      }
     } else {
       const file = Array.isArray(files) ? files[0] : files
+      if (!file) return
+      lastMediaSelectionRef.current = { type: 'video', file }
+      setLoadingPreviewForFile(null)
       setFileName(file.name)
       setMediaType(type)
-      await loadVideoFile(file)
+      try {
+        await loadVideoFile(file)
+      } finally {
+        clearLoadingPreview()
+      }
     }
-  }, [loadImages, loadVideoFile])
+  }, [clearLoadingPreview, loadImages, loadVideoFile, setLoadingPreviewForFile])
 
   const handleReset = useCallback(() => {
+    lastMediaSelectionRef.current = null
+    clearLoadingPreview()
     setMediaType(null)
     setFileName('')
     resetImage()
     resetVideo()
     void loadDemo()
-  }, [loadDemo, resetImage, resetVideo])
+  }, [clearLoadingPreview, loadDemo, resetImage, resetVideo])
+
+  const handleRetry = useCallback(() => {
+    const selection = lastMediaSelectionRef.current
+    if (!selection) {
+      handleReset()
+      return
+    }
+
+    if (selection.type === 'image') {
+      void handleFileSelect(selection.files, 'image')
+    } else {
+      void handleFileSelect(selection.file, 'video')
+    }
+  }, [handleFileSelect, handleReset])
 
   // Determine error type for contextual icon
   const isVideoError = mediaType === 'video'
@@ -193,21 +245,25 @@ function AppContent() {
               <input
                 ref={errorFileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                multiple
+                accept={isVideoError
+                  ? 'video/mp4,video/webm,video/quicktime,video/mov'
+                  : 'image/jpeg,image/png,image/webp,image/gif'}
+                multiple={!isVideoError}
                 className="sr-only"
-                aria-label="Choose another photo"
+                aria-label={isVideoError ? 'Choose another video' : 'Choose another photo'}
                 onChange={event => {
                   const files = Array.from(event.target.files ?? [])
                   event.target.value = ''
-                  if (files.length > 0) void handleFileSelect(files, 'image')
+                  if (files.length > 0) {
+                    void handleFileSelect(
+                      isVideoError ? files[0] : files,
+                      isVideoError ? 'video' : 'image'
+                    )
+                  }
                 }}
               />
               <Button
-                onClick={() => {
-                  if (lastImageFilesRef.current.length > 0) void loadImages(lastImageFilesRef.current)
-                  else handleReset()
-                }}
+                onClick={handleRetry}
                 variant="outline"
                 className="gap-2 border-zinc-700 hover:bg-zinc-800 hover:text-white"
               >
@@ -244,33 +300,48 @@ function AppContent() {
   }
 
   if (mediaType === null && isDemoInitializing) {
-    return <main className="min-h-screen bg-zinc-950"><LoadingOverlay /></main>
+    return <main className="min-h-screen bg-zinc-950"><LoadingOverlay mediaType="image" /></main>
   }
 
-  if (mediaType === null || (mediaType === 'image' && images.length === 0) || (mediaType === 'video' && !videoData)) {
+  if (mediaType === null || (mediaType === 'image' && images.length === 0) || (mediaType === 'video' && !videoData && images.length === 0)) {
     return (
       <>
-        <LandingScreen onFileSelect={handleFileSelect} />
-        {isLoading && <LoadingOverlay />}
+        <LoadingContent isLoading={isLoading}>
+          <LandingScreen onFileSelect={handleFileSelect} />
+        </LoadingContent>
+        {isLoading && (
+          <LoadingOverlay
+            mediaType={mediaType === 'video' ? 'video' : 'image'}
+            previewUrl={mediaType === 'image' ? loadingPreviewUrl : undefined}
+          />
+        )}
       </>
     )
   }
 
-  // Show image editor (multi-image support)
-  if (mediaType === 'image' && images.length > 0) {
+  // Keep the current image editor visible while a replacement image or video loads.
+  if (images.length > 0 && (mediaType === 'image' || (mediaType === 'video' && !videoData))) {
     return (
       <>
-        <Editor
-          images={images}
-          currentIndex={currentIndex}
-          onIndexChange={goToImage}
-          onImageUpdate={updateImage}
-          onNextImage={nextImage}
-          onPreviousImage={previousImage}
-          onBack={handleReset}
-          onAddImages={addImages}
-        />
-        {isLoading && <LoadingOverlay />}
+        <LoadingContent isLoading={isLoading}>
+          <Editor
+            images={images}
+            currentIndex={currentIndex}
+            onIndexChange={goToImage}
+            onImageUpdate={updateImage}
+            onNextImage={nextImage}
+            onPreviousImage={previousImage}
+            onBack={handleReset}
+            onAddImages={addImages}
+            interactionDisabled={isLoading}
+          />
+        </LoadingContent>
+        {isLoading && (
+          <LoadingOverlay
+            mediaType={mediaType === 'video' ? 'video' : 'image'}
+            previewUrl={mediaType === 'image' ? loadingPreviewUrl : undefined}
+          />
+        )}
       </>
     )
   }
@@ -278,15 +349,20 @@ function AppContent() {
   // Show video editor
   if (mediaType === 'video' && videoData) {
     return (
-      <VideoEditor
-        videoData={videoData}
-        fileName={fileName}
-        onBack={handleReset}
-        onExport={exportVideoWithEffects}
-        exportState={exportState}
-        onCancelExport={cancelExport}
-        onDismissExportError={dismissExportError}
-      />
+      <>
+        <LoadingContent isLoading={isLoading}>
+          <VideoEditor
+            videoData={videoData}
+            fileName={fileName}
+            onBack={handleReset}
+            onExport={exportVideoWithEffects}
+            exportState={exportState}
+            onCancelExport={cancelExport}
+            onDismissExportError={dismissExportError}
+          />
+        </LoadingContent>
+        {isLoading && <LoadingOverlay mediaType="video" />}
+      </>
     )
   }
 

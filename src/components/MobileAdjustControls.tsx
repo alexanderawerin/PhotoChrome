@@ -92,7 +92,7 @@ export function MobileAdjustControls({
 
   if (!recipe) {
     return (
-      <div className="flex h-28 items-center justify-center border-t border-white/10 bg-transparent px-4 text-center text-sm text-white/70">
+      <div className="flex h-28 items-center justify-center bg-transparent px-4 text-center text-sm text-white/80">
         Choose a preset before adjusting it.
       </div>
     )
@@ -100,17 +100,19 @@ export function MobileAdjustControls({
 
   if (!session) {
     return (
-      <div className="flex h-28 gap-2 overflow-x-auto border-t border-white/10 bg-transparent p-3 scrollbar-hide" aria-label="Adjust tools">
+      <div className="mobile-adjust-tools flex min-h-28 gap-2 overflow-x-auto bg-transparent p-3 scrollbar-hide" aria-label="Adjust tools">
         {MOBILE_ADJUST_TOOLS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             type="button"
             onClick={() => onOpen(key)}
-            className="flex min-h-20 w-20 flex-shrink-0 flex-col items-center justify-center gap-2 rounded-lg border border-white/10 bg-zinc-900/60 px-2 text-white/80 transition-[background-color,color,border-color] duration-150 hover:border-white/20 hover:bg-zinc-800/70 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/80"
+            className="mobile-adjust-tool flex min-h-20 w-16 flex-shrink-0 flex-col items-center gap-2 rounded-xl text-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
             aria-label={`Adjust ${label}`}
           >
-            <Icon className="size-5" aria-hidden="true" />
-            <span className="text-center text-[10px] leading-tight">{label}</span>
+            <span className="mobile-adjust-dial flex size-14 shrink-0 items-center justify-center rounded-full" aria-hidden="true">
+              <Icon className="size-6" />
+            </span>
+            <span className="text-center text-xs leading-4">{label}</span>
           </button>
         ))}
       </div>
@@ -124,16 +126,16 @@ export function MobileAdjustControls({
   const showSliderValue = config.kind === 'slider' && isSliderActive
 
   return (
-    <div className="flex h-28 flex-col gap-2 border-t border-white/10 bg-transparent px-3 py-2" aria-label={`${config.label} controls`}>
-      <div className="flex h-4 flex-shrink-0 items-center px-1 text-xs font-medium text-white/80">
+    <div className="mobile-adjust-session flex min-h-28 flex-col gap-2 bg-transparent px-3 py-2" aria-label={`${config.label} controls`}>
+      <div className="mobile-adjust-title mobile-glass-control flex min-h-6 w-fit flex-shrink-0 items-center rounded-lg px-2 text-xs font-medium">
         {config.label}
       </div>
       <div className="flex min-h-11 min-w-0 flex-1 items-center gap-3">
-        <div className="relative flex size-11 flex-shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/80" aria-hidden="true">
+        <div className="mobile-adjust-dial mobile-adjust-dial-active relative flex size-14 flex-shrink-0 items-center justify-center rounded-full text-white/90" aria-hidden="true">
           {config.kind === 'slider' ? (
             <>
               <Icon
-                className={`absolute size-5 transition-[opacity,transform,filter] duration-150 [transition-timing-function:cubic-bezier(0.2,0,0,1)] motion-reduce:scale-100 motion-reduce:blur-0 motion-reduce:transition-none ${showSliderValue ? 'scale-[0.25] opacity-0 blur-sm' : 'scale-100 opacity-100 blur-0'}`}
+                className={`absolute size-6 transition-[opacity,transform,filter] duration-150 [transition-timing-function:cubic-bezier(0.2,0,0,1)] motion-reduce:scale-100 motion-reduce:blur-0 motion-reduce:transition-none ${showSliderValue ? 'scale-[0.25] opacity-0 blur-sm' : 'scale-100 opacity-100 blur-0'}`}
                 aria-hidden="true"
               />
               <span
@@ -143,7 +145,7 @@ export function MobileAdjustControls({
               </span>
             </>
           ) : (
-            <Icon className="size-5" aria-hidden="true" />
+            <Icon className="size-6" aria-hidden="true" />
           )}
         </div>
         {config.kind === 'slider' ? (
@@ -164,7 +166,7 @@ export function MobileAdjustControls({
             }}
             onKeyUp={() => setIsSliderActive(false)}
             onBlur={() => setIsSliderActive(false)}
-            className="min-h-11 min-w-0 flex-1"
+            className="mobile-editor-ruler min-h-11 min-w-0 flex-1"
             aria-label={config.label}
             aria-valuetext={formatSliderValue(config.key, value)}
           />
@@ -177,7 +179,7 @@ export function MobileAdjustControls({
             aria-label={config.label}
           >
             {config.options.map(option => (
-              <ToggleGroupItem key={option.value} value={option.value} className="min-h-11 min-w-11 flex-shrink-0 px-3 text-white/80 data-[state=on]:bg-white/15 data-[state=on]:text-white">
+              <ToggleGroupItem key={option.value} value={option.value} className="mobile-adjust-choice min-h-11 min-w-11 flex-shrink-0 rounded-full px-3 text-white/80 data-[state=on]:bg-white/15 data-[state=on]:text-white">
                 {option.label}
               </ToggleGroupItem>
             ))}
@@ -188,7 +190,7 @@ export function MobileAdjustControls({
             variant="ghost"
             size="sm"
             onClick={onReset}
-            className="min-h-11 min-w-11 flex-shrink-0 px-2 text-white/80 hover:text-white focus-visible:ring-1 focus-visible:ring-white/80"
+            className="mobile-glass-control min-h-11 min-w-11 flex-shrink-0 rounded-xl px-2 text-white/90 hover:text-white focus-visible:ring-1 focus-visible:ring-white/80"
             aria-label={`Reset ${config.label} to preset`}
           >
             Reset

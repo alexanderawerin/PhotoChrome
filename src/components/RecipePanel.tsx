@@ -362,26 +362,33 @@ function MobileRecipePanel({
   const categoryRefs = useRef(new Map<string, HTMLButtonElement>())
   const itemRefs = useRef(new Map<string, HTMLDivElement>())
   const anchorRef = useRef<{ key: string; offset: number } | null>(null)
+  const layoutKey = groups
+    .map(group => `${group.id}:${group.recipes.map(recipe => recipe.id).join(',')}`)
+    .join('|')
+  const layoutKeyRef = useRef(layoutKey)
+  const lastSyncedScrollLeftRef = useRef<number | null>(null)
   const [activeGroup, setActiveGroup] = useState('favorites')
 
   const syncScroll = useCallback(() => {
     const carousel = carouselRef.current
     if (!carousel || carousel.clientWidth === 0) return
+    const scrollLeft = carousel.scrollLeft
+    lastSyncedScrollLeftRef.current = scrollLeft
     let current = groups[0].id
     for (const group of groups) {
       const element = groupRefs.current.get(group.id)
       // Center of the leading 96px card, including the 12px carousel inset.
-      if (element && element.offsetLeft <= carousel.scrollLeft + 60) current = group.id
+      if (element && element.offsetLeft <= scrollLeft + 60) current = group.id
     }
-    if (carousel.scrollLeft + carousel.clientWidth >= carousel.scrollWidth - 1) {
+    if (scrollLeft + carousel.clientWidth >= carousel.scrollWidth - 1) {
       current = groups[groups.length - 1].id
     }
     setActiveGroup(current)
 
     // Keep the first visible item anchored when Favorites or Smart Picks change.
     for (const [key, element] of itemRefs.current) {
-      if (element.offsetLeft + element.offsetWidth > carousel.scrollLeft + 12) {
-        anchorRef.current = { key, offset: element.offsetLeft - carousel.scrollLeft }
+      if (element.offsetLeft + element.offsetWidth > scrollLeft + 12) {
+        anchorRef.current = { key, offset: element.offsetLeft - scrollLeft }
         break
       }
     }
@@ -391,9 +398,16 @@ function MobileRecipePanel({
     const carousel = carouselRef.current
     const anchor = anchorRef.current
     const item = anchor && itemRefs.current.get(anchor.key)
-    if (carousel && item && anchor) carousel.scrollLeft = item.offsetLeft - anchor.offset
+    const layoutChanged = layoutKeyRef.current !== layoutKey
+    const hasPendingScroll = carousel
+      && lastSyncedScrollLeftRef.current !== null
+      && Math.abs(carousel.scrollLeft - lastSyncedScrollLeftRef.current) > 1
+    layoutKeyRef.current = layoutKey
+    if (layoutChanged && !hasPendingScroll && carousel && item && anchor) {
+      carousel.scrollLeft = item.offsetLeft - anchor.offset
+    }
     syncScroll()
-  }, [syncScroll])
+  }, [layoutKey, syncScroll])
 
   useEffect(() => {
     const rail = categoriesRef.current

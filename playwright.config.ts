@@ -38,7 +38,7 @@ export default defineConfig({
     },
     {
       name: 'mobile-chrome',
-      testMatch: /(landing|editor-smart-picks|editor-mobile-header|editor-mobile-presets|editor-mobile-layout)\.spec\.ts/,
+      testMatch: /(landing|editor-smart-picks|editor-mobile-header|editor-mobile-presets|editor-mobile-layout|editor-mobile-crop|editor-completion)\.spec\.ts/,
       use: {
         ...devices['Pixel 7'],
       },

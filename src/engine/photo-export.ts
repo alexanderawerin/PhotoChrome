@@ -3,8 +3,15 @@ import type { ProcessingPlan } from './types'
 
 export type PhotoExportErrorCode = 'processing-failed' | 'encoding-failed' | 'download-failed'
 
+export const EXPORT_PREVIEW_MAX_SIZE = 480
+
+export interface ExportPreview {
+  fileName: string
+  imageData: ImageData
+}
+
 export type PhotoExportResult =
-  | { status: 'success'; fileName: string }
+  | { status: 'success'; fileName: string; preview: ExportPreview | null }
   | { status: 'cancelled' }
   | {
       status: 'error'
@@ -27,6 +34,19 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError'
 }
 
+export async function createExportPreview(blob: Blob, fileName: string): Promise<ExportPreview | null> {
+  try {
+    const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' })
+    return {
+      fileName,
+      imageData: await ImageProcessor.createThumbnail(file, EXPORT_PREVIEW_MAX_SIZE),
+    }
+  } catch {
+    // A preview is a convenience for completion UI; it must not invalidate a saved export.
+    return null
+  }
+}
+
 export async function exportPhoto(request: PhotoExportRequest): Promise<PhotoExportResult> {
   let phase: PhotoExportErrorCode = 'processing-failed'
   try {
@@ -40,6 +60,7 @@ export async function exportPhoto(request: PhotoExportRequest): Promise<PhotoExp
     const withWatermark = ImageProcessor.addWatermark(processed, request.watermarkText)
     const blob = await ImageProcessor.imageDataToBlob(withWatermark, 0.95, request.exifInfo)
 
+    request.signal?.throwIfAborted()
     phase = 'download-failed'
     const url = URL.createObjectURL(blob)
     try {
@@ -47,13 +68,20 @@ export async function exportPhoto(request: PhotoExportRequest): Promise<PhotoExp
       anchor.href = url
       anchor.download = request.fileName
       document.body.appendChild(anchor)
-      anchor.click()
-      anchor.remove()
+      try {
+        anchor.click()
+      } finally {
+        anchor.remove()
+      }
     } finally {
       URL.revokeObjectURL(url)
     }
 
-    return { status: 'success', fileName: request.fileName }
+    return {
+      status: 'success',
+      fileName: request.fileName,
+      preview: await createExportPreview(blob, request.fileName),
+    }
   } catch (error) {
     if (isAbortError(error) || request.signal?.aborted) return { status: 'cancelled' }
     return {

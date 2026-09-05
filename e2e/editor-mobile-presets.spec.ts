@@ -132,6 +132,27 @@ test.describe('Editor — mobile preset categories', () => {
     await expect(targetCategory).toHaveAttribute('aria-current', 'true')
   })
 
+  test('keeps a manually scrolled card visible through an unrelated editor rerender', async ({ page, editorPage }) => {
+    const categoryRow = categories(page)
+    const presetCarousel = carousel(page)
+    const targetCategory = categoryRow.getByRole('button', { name: 'Provia', exact: true })
+    const targetGroup = presetCarousel.getByRole('group', { name: 'Provia presets', exact: true })
+    const targetCard = targetGroup.locator('[data-recipe-card]').first()
+
+    // Trigger the parent rerender in the same browser task as the native scroll.
+    // This reproduces the window before the carousel's scroll event is delivered.
+    await targetCard.evaluate((element: HTMLElement) => {
+      element.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'start' })
+      document.querySelector<HTMLButtonElement>('header button[aria-label="Help"]')?.click()
+    })
+
+    const helpDialog = page.getByRole('dialog', { name: 'Photochrome help' })
+    await expect(helpDialog).toBeVisible()
+    await helpDialog.getByRole('button', { name: 'Close' }).click()
+    await expect.poll(() => cardIsInCarouselViewport(targetCard)).toBe(true)
+    await expect(targetCategory).toHaveAttribute('aria-current', 'true')
+  })
+
   test('keeps the visible film card stable while adding and removing a favorite', async ({ page, editorPage }) => {
     const categoryRow = categories(page)
     const presetCarousel = carousel(page)

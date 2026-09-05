@@ -20,16 +20,23 @@ test.describe('Editor — Transform (Rotate & Crop)', () => {
     }
   })
 
-  test('crop mode shows crop toolbar with ratio buttons', async ({ page, editorPage }) => {
+  test('crop mode shows crop toolbar with ratio chooser', async ({ page, editorPage }) => {
     await page.getByRole('button', { name: 'Open Crop inspector' }).click()
+    await expect(page.getByRole('button', { name: 'Choose crop ratio', exact: true })).toBeVisible()
     await expect(page.getByRole('slider', { name: 'Crop angle' })).toBeVisible()
     await expect(page.getByRole('slider', { name: 'Crop zoom' })).toBeVisible()
   })
 
-  test('select crop ratio and apply', async ({ page, editorPage }) => {
+  test('select crop ratio and apply on desktop', async ({ page, editorPage }) => {
     await page.getByRole('button', { name: 'Open Crop inspector' }).click()
     await page.getByRole('button', { name: 'Choose crop ratio' }).click()
-    await page.getByRole('menuitem', { name: '1:1' }).click()
+    const ratios = page.getByRole('group', { name: 'Crop ratios', exact: true })
+    const square = ratios.getByRole('button', { name: '1:1', exact: true })
+    await expect(square).toHaveAttribute('aria-pressed', 'false')
+    await square.click()
+    await page.getByRole('button', { name: 'Choose crop ratio', exact: true }).click()
+    await expect(square).toHaveAttribute('aria-pressed', 'true')
+    await page.getByRole('button', { name: 'Choose crop ratio', exact: true }).click()
     await page.getByRole('button', { name: 'Apply', exact: true }).click()
     await expect(page.getByRole('slider', { name: 'Crop angle' })).toBeHidden()
   })
