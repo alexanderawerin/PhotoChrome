@@ -146,3 +146,63 @@
   animation: fadeIn 0.35s ease-out forwards;
 }
 
+
+/* Mobile photo editor: media reaches the edges; only the chrome gets a scrim.
+   Opaque fallback keeps controls readable without backdrop-filter support. */
+@media (max-width: 767px) {
+  .mobile-editor-stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .mobile-editor-header { grid-area: 1 / 1; }
+  .mobile-editor-workspace,
+  .mobile-editor-status { grid-area: 2 / 1; }
+  .mobile-editor-status { align-self: start; }
+  .mobile-editor-dock { grid-area: 3 / 1; }
+
+  .mobile-photo-stage {
+    grid-area: 1 / 1 / 4 / 2;
+    padding: 0;
+    transition: padding 280ms ease-out;
+  }
+
+  .mobile-photo-stage[data-preview-fit="contain"] {
+    padding: calc(var(--workspace-top, 60px) + 12px) 12px calc(var(--workspace-bottom, 228px) + 12px);
+  }
+
+  .mobile-editor-surface {
+    background: rgb(9 9 11 / 94%);
+  }
+
+  @supports ((backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px))) {
+    .mobile-editor-surface {
+      background: rgb(9 9 11 / 76%);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+    }
+  }
+
+  .mobile-editor-header-content {
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right));
+  }
+
+  .mobile-editor-actions {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  /* The dock owns one bounded blur; avoid nesting blurred preset surfaces. */
+  .mobile-editor-dock > div > nav[aria-label="Film presets"] {
+    background: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .mobile-editor-surface .text-zinc-400 { color: #d4d4d8; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-photo-stage { transition: none; }
+  }
+}

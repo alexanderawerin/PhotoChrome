@@ -200,7 +200,7 @@ export function Preview({
       onTouchEnd={handleTouchEnd}
     >
       <div 
-        className="relative"
+        className="relative shrink-0 transition-[width,height] [transition-duration:280ms] ease-out motion-reduce:transition-none md:transition-none"
         style={{
           width: canvasDisplaySize.width || 'auto',
           height: canvasDisplaySize.height || 'auto',
@@ -208,7 +208,7 @@ export function Preview({
       >
         <canvas
           ref={canvasRef}
-          className="block w-full h-full rounded-lg shadow-2xl transition-[width,height] duration-300 motion-reduce:transition-none"
+          className={`block w-full h-full ${cover ? '' : 'rounded-lg shadow-2xl'}`}
           aria-label={alt}
           draggable={false}
         />

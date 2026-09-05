@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react'
 import { Crop, FlipHorizontal2, Layers, Plus, RotateCw, Settings2, Share, HelpCircle } from 'lucide-react'
 import { APP_VERSION, APP_URL } from '../constants'
 import { Button } from './ui/button'
@@ -101,6 +101,8 @@ export function Editor({
   const exportAbortControllerRef = useRef<AbortController | null>(null)
   const batchAbortControllerRef = useRef<AbortController | null>(null)
   const demoUploadRef = useRef<HTMLInputElement>(null)
+  const editorStageRef = useRef<HTMLDivElement>(null)
+  const workspaceRef = useRef<HTMLDivElement>(null)
   const [batchProgress, setBatchProgress] = useState<BatchExportProgress | null>(null)
   const [completion, setCompletion] = useState<{
     kind: 'single' | 'batch'
@@ -124,6 +126,26 @@ export function Editor({
     currentImage?.thumbnail ?? null,
     currentImage?.exif
   )
+
+  // Let the grid reserve real header/dock space for Crop while the photo layer
+  // spans the viewport. Cover mode ignores these insets, so tab changes keep it still.
+  useLayoutEffect(() => {
+    if (isMdUp) return
+    const stage = editorStageRef.current
+    const workspace = workspaceRef.current
+    if (!stage || !workspace) return
+    const updateInsets = () => {
+      const stageRect = stage.getBoundingClientRect()
+      const workspaceRect = workspace.getBoundingClientRect()
+      stage.style.setProperty('--workspace-top', `${workspaceRect.top - stageRect.top}px`)
+      stage.style.setProperty('--workspace-bottom', `${stageRect.bottom - workspaceRect.bottom}px`)
+    }
+    updateInsets()
+    const observer = new ResizeObserver(updateInsets)
+    observer.observe(stage)
+    observer.observe(workspace)
+    return () => observer.disconnect()
+  }, [isMdUp])
 
   // Refs для доступа к актуальным значениям из callbacks (избегаем stale closures)
   const customSettingsRef = useRef<RecipeSettings>(currentImage.customSettings)
@@ -498,6 +520,7 @@ export function Editor({
   // ============================================================================
 
   const displayImage = showOriginal ? transform.transformedThumbnail : previewImage
+  const mobileCover = !isMdUp && mobileMode !== 'crop' && !transform.isCropping
 
   return (
     <div 
@@ -515,7 +538,8 @@ export function Editor({
       />
 
       {/* Главный блок: фото + toolbar */}
-      <div className="flex-1 flex flex-col bg-zinc-950 min-w-0 min-h-0 overflow-hidden">
+      <div ref={editorStageRef} className="mobile-editor-stage relative isolate flex-1 bg-zinc-950 min-w-0 min-h-0 overflow-hidden md:flex md:flex-col">
+        <div className="mobile-editor-header mobile-editor-surface relative z-20 flex-shrink-0">
         {/* Header */}
         <Header 
           fileName={currentImage.fileName}
@@ -545,15 +569,26 @@ export function Editor({
           </div>
         )}
 
-        {/* Preview area */}
-        <div className={`flex flex-1 min-h-0 flex-col px-3 md:px-6 overflow-hidden transition-[padding] duration-300 motion-reduce:transition-none ${transform.isCropping ? 'pb-72 md:pb-0' : ''}`}>
+        </div>
+
+        <div ref={workspaceRef} className="mobile-editor-workspace pointer-events-none min-h-0 md:hidden" aria-hidden="true" />
+        <div className="mobile-editor-status pointer-events-none relative z-10 h-0 md:hidden">
+          <ImageCounter currentIndex={currentIndex} totalImages={totalImages} />
+          {isProcessing && (
+            <div className={`absolute left-1/2 -translate-x-1/2 ${totalImages > 1 ? 'top-11' : 'top-2'}`}>
+              <p className="rounded-full bg-black/70 px-3 py-1 text-xs text-white">Processing...</p>
+            </div>
+          )}
+        </div>
+
+        {/* A single photo layer stays behind the mobile chrome. */}
+        <div className="mobile-photo-stage flex flex-1 min-h-0 flex-col overflow-hidden md:px-6" data-preview-fit={mobileCover ? 'cover' : 'contain'}>
           <div className="relative min-h-0 flex-1">
           {isProcessing && (
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 hidden md:block">
               <p className="text-sm text-zinc-400 bg-zinc-900/80 px-3 py-1 rounded">Processing...</p>
             </div>
           )}
-          <ImageCounter currentIndex={currentIndex} totalImages={totalImages} />
           <Preview
             imageData={displayImage}
             cropMode={transform.isCropping}
@@ -565,7 +600,7 @@ export function Editor({
             cropScale={transform.transformState.cropScale}
             onCropScaleChange={transform.setCropScale}
             cropGridActive={isCropControlActive}
-            cover={!isMdUp && !transform.isCropping}
+            cover={mobileCover}
             onMouseDown={handleCompareStart}
             onMouseUp={handleCompareEnd}
             onMouseLeave={handleCompareEnd}
@@ -636,6 +671,7 @@ export function Editor({
           />
         </div>
 
+        <div className="mobile-editor-dock mobile-editor-surface relative z-20 min-w-0 md:hidden">
         {/* Mobile: contextual controls */}
         <div className={`flex-shrink-0 md:hidden ${transform.isCropping ? 'hidden' : ''}`}>
           {mobileMode === 'presets' && (
@@ -661,7 +697,7 @@ export function Editor({
             />
           )}
           {mobileMode === 'crop' && (
-            <div className="flex h-28 items-center gap-2 border-t border-zinc-800 bg-black p-3" aria-label="Crop tools">
+            <div className="flex h-28 items-center gap-2 border-t border-white/10 bg-transparent p-3" aria-label="Crop tools">
               <Button variant="outline" onClick={handleCropClick} className="min-h-20 flex-1" aria-label="Open crop session">Crop</Button>
               <Button variant="outline" onClick={transform.rotateClockwise} className="min-h-20 flex-1" aria-label="Rotate 90 degrees clockwise">Rotate</Button>
               <Button variant="outline" onClick={transform.flipHorizontal} className="min-h-20 flex-1" aria-label="Flip horizontally">Flip</Button>
@@ -669,7 +705,7 @@ export function Editor({
           )}
         </div>
 
-        <nav className={`grid h-12 flex-shrink-0 ${demoMode ? 'grid-cols-1' : 'grid-cols-3'} border-t border-zinc-800 bg-black md:hidden ${transform.isCropping ? 'hidden' : ''}`} aria-label="Editor modes">
+        <nav className={`grid h-12 flex-shrink-0 ${demoMode ? 'grid-cols-1' : 'grid-cols-3'} border-t border-white/10 bg-transparent md:hidden ${transform.isCropping ? 'hidden' : ''}`} aria-label="Editor modes">
           {(demoMode ? ['presets'] as const : ['presets', 'adjust', 'crop'] as const).map(mode => (
             <button
               key={mode}
@@ -684,7 +720,7 @@ export function Editor({
         </nav>
 
         {/* Mobile: Action buttons (Apply to all + Export) */}
-        <div className={`flex-shrink-0 p-3 md:hidden ${transform.isCropping ? 'hidden' : ''}`}>
+        <div className={`mobile-editor-actions flex-shrink-0 p-3 md:hidden ${transform.isCropping ? 'hidden' : ''}`}>
           <div className="flex h-11 gap-2">
             {demoMode ? (
               <>
@@ -756,19 +792,6 @@ export function Editor({
             )}
           </div>
         </div>
-      </div>
-
-      {/* Desktop: Recipe panel */}
-      <DesktopSidePanel
-        isOpen={isAdjustPanelVisible}
-        enabled={!demoMode}
-        activeRecipe={currentImage.recipe}
-        customSettings={tuning.customSettings}
-        onSettingsChange={tuning.updateSettings}
-        onTuningApply={tuning.applyTuning}
-        onTuningCancel={tuning.cancelTuning}
-      />
-
       {/* Mobile: CropPanel */}
       <MobileCropPanel
         isOpen={transform.isCropping}
@@ -781,6 +804,20 @@ export function Editor({
         onInteractionChange={setIsCropControlActive}
         onApply={transform.applyCrop}
         onCancel={transform.cancelCrop}
+      />
+
+        </div>
+      </div>
+
+      {/* Desktop: Recipe panel */}
+      <DesktopSidePanel
+        isOpen={isAdjustPanelVisible}
+        enabled={!demoMode}
+        activeRecipe={currentImage.recipe}
+        customSettings={tuning.customSettings}
+        onSettingsChange={tuning.updateSettings}
+        onTuningApply={tuning.applyTuning}
+        onTuningCancel={tuning.cancelTuning}
       />
 
       {/* Help dialog */}
@@ -913,7 +950,7 @@ function Header({
   const inputRef = useRef<HTMLInputElement>(null)
 
   return (
-    <header className="flex-shrink-0 px-3 py-2 md:p-4">
+    <header className="mobile-editor-header-content flex-shrink-0 px-3 py-2 md:p-4">
       <div className="flex items-center justify-between md:hidden min-h-11">
         <input
           ref={inputRef}
@@ -1083,15 +1120,14 @@ function MobileCropPanel({
   return (
     <div
       className={`
-        md:hidden fixed inset-x-0 bottom-0 z-50
-        bg-black border-t border-zinc-800
-        transition-transform duration-300 ease-out
-        ${isOpen ? 'translate-y-0' : 'translate-y-full'}
+        md:hidden bg-black border-t border-zinc-800
+        ${isOpen ? 'block' : 'hidden'}
       `}
       role="dialog"
       aria-modal="true"
       aria-label="Crop image"
       aria-hidden={!isOpen}
+      {...(!isOpen ? { inert: '' } : {})}
     >
       <CropPanel
         cropRatio={cropRatio}

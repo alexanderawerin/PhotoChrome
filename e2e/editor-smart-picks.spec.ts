@@ -53,18 +53,16 @@ test.describe('Editor — Smart Picks', () => {
   test('Smart Picks visible in horizontal mobile scroll', async ({ page, editorPage }, testInfo) => {
     test.skip(testInfo.project.name !== 'mobile-chrome', 'mobile-only test')
 
-    const mobilePanel = page.locator('nav[aria-label="Film presets"]')
-    await expect(mobilePanel).toBeVisible({ timeout: 5_000 })
-
-    await expect(mobilePanel.getByText('Smart', { exact: false })).toBeVisible({ timeout: 5_000 })
+    const mobilePanel = page.getByRole('navigation', { name: 'Film presets' })
+    const categoryRow = mobilePanel.getByRole('group', { name: 'Preset categories' })
+    await expect(categoryRow.getByRole('button', { name: 'Smart Picks', exact: true })).toBeVisible({ timeout: 5_000 })
   })
 
   test("Editor's Choice visible in horizontal mobile scroll (bug fix)", async ({ page, editorPage }, testInfo) => {
     test.skip(testInfo.project.name !== 'mobile-chrome', 'mobile-only test')
 
-    const mobilePanel = page.locator('nav[aria-label="Film presets"]')
-    await expect(mobilePanel).toBeVisible({ timeout: 5_000 })
-
-    await expect(mobilePanel.getByText("Editor's", { exact: false })).toBeVisible({ timeout: 5_000 })
+    const mobilePanel = page.getByRole('navigation', { name: 'Film presets' })
+    const categoryRow = mobilePanel.getByRole('group', { name: 'Preset categories' })
+    await expect(categoryRow.getByRole('button', { name: "Editor's Choice", exact: true })).toBeVisible({ timeout: 5_000 })
   })
 })

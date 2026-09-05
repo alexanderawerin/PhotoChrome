@@ -239,7 +239,7 @@ function RecipeCardComponent({
         aria-pressed={isActive}
         aria-label={`Apply preset ${recipe.name}${isActive ? ', selected' : ''}`}
       />
-      <div className="aspect-square bg-black relative">
+      <div className={`bg-black relative ${largeTouchTargets ? 'aspect-[4/3]' : 'aspect-square'}`}>
         {previewData ? (
           <canvas
             ref={canvasRef}
@@ -273,21 +273,23 @@ function RecipeCardComponent({
             className={`
               absolute z-20 rounded-full transition-all duration-200
               ${largeTouchTargets 
-                ? 'top-1 right-1 p-1.5' 
+                ? 'top-0 right-0 size-11 flex items-center justify-center bg-transparent'
                 : 'top-1.5 right-1.5 p-1'
               }
-              ${isFavorite 
-                ? 'bg-zinc-700 text-white shadow-lg' 
+              ${largeTouchTargets ? 'text-white/80 hover:text-white' : isFavorite
+                ? 'bg-zinc-700 text-white shadow-lg'
                 : 'bg-black/40 text-white/70 hover:bg-black/60 hover:text-white'
               }
             `}
             aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
             aria-pressed={isFavorite}
           >
-            <Heart
-              className={`${largeTouchTargets ? 'w-4 h-4' : 'w-3 h-3'} ${isFavorite ? 'fill-current' : ''}`}
-              aria-hidden="true"
-            />
+            <span className={largeTouchTargets ? `flex size-7 items-center justify-center rounded-full ${isFavorite ? 'bg-zinc-700 text-white' : 'bg-black/50'}` : undefined}>
+              <Heart
+                className={`${largeTouchTargets ? 'w-4 h-4' : 'w-3 h-3'} ${isFavorite ? 'fill-current' : ''}`}
+                aria-hidden="true"
+              />
+            </span>
           </button>
         )}
       </div>

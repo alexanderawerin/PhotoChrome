@@ -1,4 +1,11 @@
-# Photochrome: code-to-Figma rules
+# Photochrome
+
+## Redesign workflow
+
+- Continue the redesign in the existing code, starting from the implemented interface and the remaining work in `docs/ROADMAP.md`.
+- Early Figma frames are optional visual references. A finished or approved Figma mockup is not a prerequisite for code iteration.
+
+## Code-to-Figma rules
 
 These rules are mandatory whenever translating Photochrome pages or states from code into Figma.
 
@@ -14,7 +21,7 @@ These rules are mandatory whenever translating Photochrome pages or states from 
 - Do not claim completion until every requested state and viewport exists in Figma and has been verified.
 - Preserve unrelated user changes in the working tree.
 
-For the current Photochrome deliverable, the target Figma file is `ZDr3uLhnJP768aKz1MelGA`, page `2:2` (`ui`). Requested states are start, preset selection, and preset settings at widths 1600, 1200, and 393.
+For code-to-Figma work, the existing target is file `ZDr3uLhnJP768aKz1MelGA`, page `2:2` (`ui`), with start, preset selection, and preset settings at widths 1600, 1200, and 393. This is context for an explicitly requested Figma transfer, not a requirement for code redesign.
 
 ## Demo start state
 

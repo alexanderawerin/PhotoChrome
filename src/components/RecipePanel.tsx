@@ -1,18 +1,11 @@
-import { useMemo, Fragment, useRef, useEffect, useState } from 'react'
-import { Shuffle, Heart, Film, Layers, Star, Sparkles } from 'lucide-react'
+import { useMemo, useRef, useEffect, useLayoutEffect, useState, useCallback, useId } from 'react'
+import { Shuffle, Heart, Film, Star, Sparkles } from 'lucide-react'
 import { Button } from './ui/button'
 import { Recipe } from '../engine/types'
 import { RecipeCard } from './RecipeCard'
 import { getAllRecipes, getRecipesGroupedBySimulation, getRecipesGroupedByUseCase, getEditorsChoiceRecipes, RECIPES } from '../presets/recipes'
 
 type GroupingMode = 'film' | 'useCase'
-
-/** Width of a recipe card including gap (w-24 = 96px + gap-2 = 8px) */
-const CARD_WIDTH_WITH_GAP = 104
-/** Width of favorites header (w-20 = 80px + gap-2 = 8px) */
-const HEADER_WIDTH_WITH_GAP = 88
-/** Width of empty state (w-32 = 128px + gap) */
-const EMPTY_STATE_WIDTH = 136
 
 interface RecipePanelProps {
   sourceImage: ImageData
@@ -23,10 +16,6 @@ interface RecipePanelProps {
   onFavoriteToggle: (recipeId: string) => void
   /** Horizontal mode for mobile - shows presets in a horizontal scroll */
   horizontal?: boolean
-  /** Total number of images (for multi-image mode) */
-  totalImages?: number
-  /** Apply current recipe to all images */
-  onApplyToAll?: () => void
   /** Recipe IDs рекомендованные для текущего фото (Smart Picks) */
   smartPicksIds?: string[]
 }
@@ -39,16 +28,12 @@ export function RecipePanel({
   onRandomRecipe,
   onFavoriteToggle,
   horizontal = false,
-  totalImages = 1,
-  onApplyToAll,
   smartPicksIds = []
 }: RecipePanelProps) {
   const recipes = getAllRecipes()
   const [groupingMode] = useState<GroupingMode>('film')
-  const groupedByFilm = getRecipesGroupedBySimulation()
+  const groupedByFilm = useMemo(() => getRecipesGroupedBySimulation(), [])
   const groupedByUseCase = getRecipesGroupedByUseCase()
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const prevFavoritesCountRef = useRef(favoriteIds.length)
   
   // Create favorites set for quick lookup
   const favoritesSet = useMemo(() => new Set(favoriteIds), [favoriteIds])
@@ -68,268 +53,24 @@ export function RecipePanel({
       .filter((r): r is Recipe => r !== undefined)
   }, [smartPicksIds])
 
-  // Compensate scroll position when favorites are added (horizontal mode only)
-  useEffect(() => {
-    if (!horizontal || !scrollContainerRef.current) return
-    
-    const prevCount = prevFavoritesCountRef.current
-    const newCount = favoriteIds.length
-    
-    if (newCount > prevCount) {
-      // Favorite added - scroll right to compensate
-      const addedCount = newCount - prevCount
-      
-      let scrollAdjustment: number
-      if (prevCount === 0) {
-        // Going from empty state to having favorites
-        // Before: empty state (128px)
-        // After: header (80px) + gap (8px) + card (96px) = 184px
-        // Difference: 184 - 128 = 56px
-        scrollAdjustment = HEADER_WIDTH_WITH_GAP + CARD_WIDTH_WITH_GAP - EMPTY_STATE_WIDTH
-      } else {
-        // Just adding more favorites
-        scrollAdjustment = CARD_WIDTH_WITH_GAP * addedCount
-      }
-      
-      scrollContainerRef.current.scrollLeft += scrollAdjustment
-    }
-    
-    prevFavoritesCountRef.current = newCount
-  }, [favoriteIds.length, horizontal])
+  const mobileGroups = useMemo(() => [
+    { id: 'favorites', label: 'Favorites', recipes: favoriteRecipes },
+    ...(smartPicksRecipes.length ? [{ id: 'smart-picks', label: 'Smart Picks', recipes: smartPicksRecipes }] : []),
+    { id: 'editors-choice', label: "Editor's Choice", recipes: editorsChoiceRecipes },
+    ...groupedByFilm.map(group => ({ id: group.simulationId, label: group.simulationName, recipes: group.recipes })),
+  ], [favoriteRecipes, smartPicksRecipes, editorsChoiceRecipes, groupedByFilm])
 
-  // Horizontal mode for mobile - with favorites and sections
   if (horizontal) {
     return (
-      <nav 
-        className="w-full bg-black/80 backdrop-blur-sm border-t border-zinc-800"
-        aria-label="Film presets"
-      >
-        <div 
-          ref={scrollContainerRef}
-          className="flex gap-2 p-3 overflow-x-auto scrollbar-hide"
-          role="list"
-        >
-          <button
-            type="button"
-            onClick={onRandomRecipe}
-            className="flex h-32 w-24 flex-shrink-0 flex-col items-center justify-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 text-zinc-300"
-            role="listitem"
-            aria-label="Random preset"
-          >
-            <Shuffle className="size-5" aria-hidden="true" />
-            <span className="text-[10px] font-medium">Random</span>
-          </button>
-          {/* Favorites Section - header or empty state */}
-          {favoriteRecipes.length > 0 ? (
-            <>
-              {/* Favorites header */}
-              <div className="flex-shrink-0 flex items-center" role="listitem">
-                <div className="w-20 h-full flex flex-col items-center justify-center px-2 py-3 rounded-xl bg-zinc-900/50 border border-zinc-800">
-                  <Heart className="w-4 h-4 text-white fill-white mb-1" aria-hidden="true" />
-                  <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider">
-                    Favorites
-                  </span>
-                  <span className="text-[10px] text-zinc-400 mt-0.5">
-                    {favoriteRecipes.length}
-                  </span>
-                </div>
-              </div>
-              {/* Favorite recipes */}
-              {favoriteRecipes.map((recipe) => (
-                <div 
-                  key={`fav-${recipe.id}`} 
-                  role="listitem"
-                  className="flex-shrink-0 w-24"
-                >
-                  <RecipeCard
-                    recipe={recipe}
-                    sourceImage={sourceImage}
-                    isActive={activeRecipeId === recipe.id}
-                    isFavorite={true}
-                    onFavoriteToggle={onFavoriteToggle}
-                    onClick={() => onRecipeSelect(recipe)}
-                    largeTouchTargets
-                  />
-                </div>
-              ))}
-            </>
-          ) : (
-            /* Empty state - square */
-            <div className="flex-shrink-0 w-32" role="listitem">
-              <div className="w-32 h-32 rounded-lg bg-zinc-900/30 border border-dashed border-zinc-700 flex flex-col items-center justify-center p-2">
-                <Heart className="w-5 h-5 text-zinc-600 mb-1.5" />
-                <p className="text-[9px] text-zinc-400 text-center leading-tight">
-                  Tap heart to<br />add favorite
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Apply to all card */}
-          {totalImages > 1 && activeRecipeId && onApplyToAll && (
-            <button
-              onClick={onApplyToAll}
-              className="flex-shrink-0 w-24"
-              role="listitem"
-              aria-label={`Apply current preset to all ${totalImages} images`}
-            >
-              <div className="w-24 h-32 rounded-lg bg-zinc-900/30 border-2 border-dashed border-zinc-600 hover:border-zinc-400 active:border-white flex flex-col items-center justify-center p-2 transition-colors">
-                <Layers className="w-5 h-5 text-zinc-400 mb-1.5" />
-                <p className="text-[9px] text-zinc-400 text-center leading-tight font-medium">
-                  Apply to<br />all {totalImages}
-                </p>
-              </div>
-            </button>
-          )}
-
-          {/* Smart Picks section */}
-          {smartPicksRecipes.length > 0 && (
-            <>
-              <div className="flex-shrink-0 flex items-center" role="listitem">
-                <div className="w-20 h-full flex flex-col items-center justify-center px-2 py-3 rounded-xl bg-zinc-900/50 border border-zinc-800">
-                  <Sparkles className="w-4 h-4 text-zinc-400 mb-1" aria-hidden="true" />
-                  <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider text-center leading-tight">
-                    Smart<br />Picks
-                  </span>
-                  <span className="text-[10px] text-zinc-400 mt-0.5">
-                    {smartPicksRecipes.length}
-                  </span>
-                </div>
-              </div>
-              {smartPicksRecipes.map((recipe) => (
-                <div
-                  key={`sp-${recipe.id}`}
-                  role="listitem"
-                  className="flex-shrink-0 w-24"
-                >
-                  <RecipeCard
-                    recipe={recipe}
-                    sourceImage={sourceImage}
-                    isActive={activeRecipeId === recipe.id}
-                    isFavorite={favoritesSet.has(recipe.id)}
-                    onFavoriteToggle={onFavoriteToggle}
-                    onClick={() => onRecipeSelect(recipe)}
-                    largeTouchTargets
-                  />
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* Editor's Choice section (mobile bug fix) */}
-          {editorsChoiceRecipes.length > 0 && (
-            <>
-              <div className="flex-shrink-0 flex items-center" role="listitem">
-                <div className="w-20 h-full flex flex-col items-center justify-center px-2 py-3 rounded-xl bg-zinc-900/50 border border-zinc-800">
-                  <Star className="w-4 h-4 text-zinc-400 mb-1" aria-hidden="true" />
-                  <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider text-center leading-tight">
-                    Editor's<br />Choice
-                  </span>
-                  <span className="text-[10px] text-zinc-400 mt-0.5">
-                    {editorsChoiceRecipes.length}
-                  </span>
-                </div>
-              </div>
-              {editorsChoiceRecipes.map((recipe) => (
-                <div
-                  key={`ec-${recipe.id}`}
-                  role="listitem"
-                  className="flex-shrink-0 w-24"
-                >
-                  <RecipeCard
-                    recipe={recipe}
-                    sourceImage={sourceImage}
-                    isActive={activeRecipeId === recipe.id}
-                    isFavorite={favoritesSet.has(recipe.id)}
-                    onFavoriteToggle={onFavoriteToggle}
-                    onClick={() => onRecipeSelect(recipe)}
-                    largeTouchTargets
-                  />
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* Section groups - by film or use case */}
-          {groupingMode === 'film' ? (
-            groupedByFilm.map((group) => (
-              <Fragment key={group.simulationId}>
-                {/* Section header card */}
-                <div 
-                  className="flex-shrink-0 flex items-center"
-                  role="listitem"
-                >
-                  <div className="w-20 h-full flex flex-col items-center justify-center px-2 py-3 rounded-xl bg-zinc-900/50 border border-zinc-800">
-                    <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider text-center leading-tight">
-                      {group.simulationName}
-                    </span>
-                    <span className="text-[10px] text-zinc-400 mt-1">
-                      {group.recipes.length}
-                    </span>
-                  </div>
-                </div>
-                
-                {/* Section recipes */}
-                {group.recipes.map((recipe) => (
-                  <div 
-                    key={recipe.id} 
-                    role="listitem"
-                    className="flex-shrink-0 w-24"
-                  >
-                    <RecipeCard
-                      recipe={recipe}
-                      sourceImage={sourceImage}
-                      isActive={activeRecipeId === recipe.id}
-                      isFavorite={favoritesSet.has(recipe.id)}
-                      onFavoriteToggle={onFavoriteToggle}
-                      onClick={() => onRecipeSelect(recipe)}
-                      largeTouchTargets
-                    />
-                  </div>
-                ))}
-              </Fragment>
-            ))
-          ) : (
-            groupedByUseCase.map((group) => (
-              <Fragment key={group.useCaseId}>
-                {/* Section header card */}
-                <div 
-                  className="flex-shrink-0 flex items-center"
-                  role="listitem"
-                >
-                  <div className="w-20 h-full flex flex-col items-center justify-center px-2 py-3 rounded-xl bg-zinc-900/50 border border-zinc-800">
-                    <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider text-center leading-tight">
-                      {group.useCaseName}
-                    </span>
-                    <span className="text-[10px] text-zinc-400 mt-1">
-                      {group.recipes.length}
-                    </span>
-                  </div>
-                </div>
-                
-                {/* Section recipes */}
-                {group.recipes.map((recipe) => (
-                  <div 
-                    key={recipe.id} 
-                    role="listitem"
-                    className="flex-shrink-0 w-24"
-                  >
-                    <RecipeCard
-                      recipe={recipe}
-                      sourceImage={sourceImage}
-                      isActive={activeRecipeId === recipe.id}
-                      isFavorite={favoritesSet.has(recipe.id)}
-                      onFavoriteToggle={onFavoriteToggle}
-                      onClick={() => onRecipeSelect(recipe)}
-                      largeTouchTargets
-                    />
-                  </div>
-                ))}
-              </Fragment>
-            ))
-          )}
-        </div>
-      </nav>
+      <MobileRecipePanel
+        groups={mobileGroups}
+        sourceImage={sourceImage}
+        activeRecipeId={activeRecipeId}
+        favoritesSet={favoritesSet}
+        onRecipeSelect={onRecipeSelect}
+        onRandomRecipe={onRandomRecipe}
+        onFavoriteToggle={onFavoriteToggle}
+      />
     )
   }
 
@@ -594,6 +335,164 @@ export function RecipePanel({
             ))
           )}
         </div>
+      </div>
+    </nav>
+  )
+}
+
+interface PresetGroup {
+  id: string
+  label: string
+  recipes: Recipe[]
+}
+
+function MobileRecipePanel({
+  groups,
+  sourceImage,
+  activeRecipeId,
+  favoritesSet,
+  onRecipeSelect,
+  onRandomRecipe,
+  onFavoriteToggle,
+}: Omit<RecipePanelProps, 'favoriteIds'> & { groups: PresetGroup[]; favoritesSet: Set<string> }) {
+  const id = useId()
+  const carouselRef = useRef<HTMLDivElement>(null)
+  const categoriesRef = useRef<HTMLDivElement>(null)
+  const groupRefs = useRef(new Map<string, HTMLDivElement>())
+  const categoryRefs = useRef(new Map<string, HTMLButtonElement>())
+  const itemRefs = useRef(new Map<string, HTMLDivElement>())
+  const anchorRef = useRef<{ key: string; offset: number } | null>(null)
+  const [activeGroup, setActiveGroup] = useState('favorites')
+
+  const syncScroll = useCallback(() => {
+    const carousel = carouselRef.current
+    if (!carousel || carousel.clientWidth === 0) return
+    let current = groups[0].id
+    for (const group of groups) {
+      const element = groupRefs.current.get(group.id)
+      // Center of the leading 96px card, including the 12px carousel inset.
+      if (element && element.offsetLeft <= carousel.scrollLeft + 60) current = group.id
+    }
+    if (carousel.scrollLeft + carousel.clientWidth >= carousel.scrollWidth - 1) {
+      current = groups[groups.length - 1].id
+    }
+    setActiveGroup(current)
+
+    // Keep the first visible item anchored when Favorites or Smart Picks change.
+    for (const [key, element] of itemRefs.current) {
+      if (element.offsetLeft + element.offsetWidth > carousel.scrollLeft + 12) {
+        anchorRef.current = { key, offset: element.offsetLeft - carousel.scrollLeft }
+        break
+      }
+    }
+  }, [groups])
+
+  useLayoutEffect(() => {
+    const carousel = carouselRef.current
+    const anchor = anchorRef.current
+    const item = anchor && itemRefs.current.get(anchor.key)
+    if (carousel && item && anchor) carousel.scrollLeft = item.offsetLeft - anchor.offset
+    syncScroll()
+  }, [syncScroll])
+
+  useEffect(() => {
+    const rail = categoriesRef.current
+    const button = categoryRefs.current.get(activeGroup)
+    if (!rail || !button) return
+    const left = button.offsetLeft - 12
+    const right = button.offsetLeft + button.offsetWidth + 12
+    if (left < rail.scrollLeft) rail.scrollLeft = left
+    else if (right > rail.scrollLeft + rail.clientWidth) rail.scrollLeft = right - rail.clientWidth
+  }, [activeGroup])
+
+  const jumpToGroup = (groupId: string) => {
+    const carousel = carouselRef.current
+    const group = groupRefs.current.get(groupId)
+    if (!carousel || !group) return
+    carousel.scrollLeft = groupId === 'favorites' ? 0 : group.offsetLeft - 12
+    syncScroll()
+  }
+
+  return (
+    <nav className="w-full border-t border-zinc-800 bg-black/80 backdrop-blur-sm" aria-label="Film presets">
+      <div
+        ref={categoriesRef}
+        role="group"
+        aria-label="Preset categories"
+        className="relative flex h-11 gap-4 overflow-x-auto px-3 scrollbar-hide"
+      >
+        {groups.map(group => (
+          <button
+            key={group.id}
+            ref={element => { if (element) categoryRefs.current.set(group.id, element); else categoryRefs.current.delete(group.id) }}
+            type="button"
+            onClick={() => jumpToGroup(group.id)}
+            aria-current={activeGroup === group.id ? 'true' : undefined}
+            aria-controls={`${id}-${group.id}`}
+            className={`min-h-11 min-w-11 shrink-0 border-b-2 px-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white ${activeGroup === group.id ? 'border-white text-white' : 'border-transparent text-zinc-400 hover:text-white'}`}
+          >
+            {group.label}
+          </button>
+        ))}
+      </div>
+      <div
+        ref={carouselRef}
+        onScroll={syncScroll}
+        role="region"
+        aria-label="Preset carousel"
+        className="relative flex gap-2 overflow-x-auto overscroll-x-contain px-3 pb-3 pt-2 scrollbar-hide [overflow-anchor:none]"
+      >
+        <div ref={element => { if (element) itemRefs.current.set('random', element); else itemRefs.current.delete('random') }} className="w-24 shrink-0">
+          <button
+            type="button"
+            onClick={onRandomRecipe}
+            className="flex h-full min-h-[104px] w-full flex-col items-center justify-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 text-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            aria-label="Random preset"
+          >
+            <Shuffle className="size-5" aria-hidden="true" />
+            <span className="text-xs font-medium">Random</span>
+          </button>
+        </div>
+        {groups.map(group => (
+          <div
+            key={group.id}
+            id={`${id}-${group.id}`}
+            ref={element => { if (element) groupRefs.current.set(group.id, element); else groupRefs.current.delete(group.id) }}
+            role="group"
+            aria-label={`${group.label} presets`}
+            className="flex shrink-0 gap-2"
+          >
+            {group.recipes.length ? group.recipes.map(recipe => (
+              <div
+                key={recipe.id}
+                ref={element => {
+                  const key = `${group.id}-${recipe.id}`
+                  if (element) itemRefs.current.set(key, element)
+                  else itemRefs.current.delete(key)
+                }}
+                className="w-24 shrink-0"
+              >
+                <RecipeCard
+                  recipe={recipe}
+                  sourceImage={sourceImage}
+                  isActive={activeRecipeId === recipe.id}
+                  isFavorite={favoritesSet.has(recipe.id)}
+                  onFavoriteToggle={onFavoriteToggle}
+                  onClick={() => onRecipeSelect(recipe)}
+                  largeTouchTargets
+                />
+              </div>
+            )) : (
+              <div
+                ref={element => { if (element) itemRefs.current.set('empty-favorites', element); else itemRefs.current.delete('empty-favorites') }}
+                className="flex min-h-[104px] w-24 shrink-0 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-700 px-2 text-center text-zinc-400"
+              >
+                <Heart className="size-4" aria-hidden="true" />
+                <p className="text-[10px] leading-tight">Tap a heart to<br />save a favorite</p>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </nav>
   )

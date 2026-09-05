@@ -18,7 +18,7 @@ test.describe('Editor — mobile header', () => {
   })
 
   test('opens unread updates first, then remembers them and opens Quick Guide', async ({ page, editorPage }) => {
-    const help = page.getByRole('button', { name: 'Help', exact: true }).first()
+    const help = page.locator('header button[aria-label="Help"]:visible')
     await help.click()
     await expect(page.getByRole('tab', { name: "What's New" })).toHaveAttribute('aria-selected', 'true')
 
@@ -32,7 +32,7 @@ test.describe('Editor — mobile header', () => {
     const modes = page.getByRole('navigation', { name: 'Editor modes' })
     await expect(modes.getByRole('button', { name: 'Presets' })).toHaveAttribute('aria-current', 'page')
 
-    await page.locator('nav[aria-label="Film presets"] [aria-label^="Apply preset"]').first().click()
+    await page.getByRole('region', { name: 'Preset carousel' }).locator('[aria-label^="Apply preset"]').first().click()
     await modes.getByRole('button', { name: 'Adjust' }).click()
     await page.getByRole('button', { name: 'Adjust Highlight' }).click()
 
