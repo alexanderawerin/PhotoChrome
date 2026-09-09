@@ -1,5 +1,7 @@
 # Code Review Fixes Implementation Plan
 
+> Архивный документ: описывает исходный план мая 2026, а не текущий список задач. Реализацию проверяйте по коду и [актуальному roadmap](../../ROADMAP.md); незакрытые чекбоксы ниже сохранены как история планирования.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Устранить 5 замечаний из code review обновления v1.2.0 (100 рецептов + Kelvin WB).

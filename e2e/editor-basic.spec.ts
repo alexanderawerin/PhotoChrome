@@ -12,10 +12,10 @@ test.describe('Editor — Basic Flow', () => {
     // Count only in desktop side panel
     const cards = page.locator('aside [aria-label^="Apply preset"]')
     const count = await cards.count()
-    expect(count).toBeGreaterThan(10) // We have ~52 recipes
+    expect(count).toBeGreaterThan(10)
   })
 
-  test('selects a recipe and shows tune button', async ({ page, editorPage }) => {
+  test('selecting a recipe enables the Adjust inspector button', async ({ page, editorPage }) => {
     await expect(page.getByRole('button', { name: 'Open Adjust inspector' })).toBeDisabled()
 
     // Click first recipe in desktop panel
@@ -43,9 +43,9 @@ test.describe('Editor — Basic Flow', () => {
     await expect(page.getByRole('complementary', { name: 'Editing inspector' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Close Adjust inspector' }).click()
-    await page.waitForTimeout(400)
+    await expect(page.getByRole('complementary', { name: 'Editing inspector' })).toBeHidden()
     await show.click()
-    await page.waitForTimeout(400)
+    await expect(page.getByRole('complementary', { name: 'Editing inspector' })).toBeVisible()
     await expect(page.getByRole('complementary', { name: 'Preset browser' })).toBeVisible()
   })
 })

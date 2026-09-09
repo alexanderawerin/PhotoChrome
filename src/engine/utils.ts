@@ -17,13 +17,6 @@ export function clampRange(value: number, min: number, max: number): number {
 }
 
 /**
- * Линейная интерполяция
- */
-export function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t
-}
-
-/**
  * Вычисление яркости пикселя (ITU-R BT.601)
  */
 export function luminance(r: number, g: number, b: number): number {

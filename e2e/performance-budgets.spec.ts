@@ -107,12 +107,12 @@ test.describe('Chromium performance budgets', () => {
     await waitForEditor(page)
     await expect(page.locator('[role="tablist"][aria-label="Image thumbnails"] [role="tab"]')).toHaveCount(20)
     await selectFirstRecipe(page)
-    await page.getByRole('button', { name: 'Apply current preset to all 20 images' }).first().click()
+    await page.getByRole('button', { name: 'Apply current preset to all 20 images' }).click()
     await page.waitForTimeout(500)
 
     const downloadPromise = page.waitForEvent('download')
     const startedAt = performance.now()
-    await page.getByRole('button', { name: 'Export all photos' }).first().click()
+    await page.getByRole('button', { name: 'Export all photos' }).click()
     const download = await downloadPromise
     const elapsed = performance.now() - startedAt
     expect(elapsed).toBeLessThanOrEqual(BUDGETS_MS.twentyPhotoBatch)

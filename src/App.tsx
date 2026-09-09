@@ -78,7 +78,7 @@ type MediaSelection =
 
 /**
  * Main application component.
- * Handles routing between landing screen and editor based on loaded media state.
+ * Starts in the demo editor and switches to user media; retains an upload fallback.
  */
 function AppContent() {
   const [mediaType, setMediaType] = useState<MediaType>(null)
@@ -281,7 +281,7 @@ function AppContent() {
     )
   }
 
-  // Show landing screen if no media loaded
+  // Demo photos use the editor with restricted controls.
   if (mediaType === null && images.length > 0) {
     return (
       <Editor

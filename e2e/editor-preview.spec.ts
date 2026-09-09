@@ -82,7 +82,7 @@ test.describe('Editor — Preview Rendering', () => {
           })
         )
 
-        const context = output.getContext('2d')
+        const context = (output as HTMLCanvasElement).getContext('2d')
         if (!context) throw new Error('2D output context unavailable')
         return Array.from(context.getImageData(2, 2, 1, 1).data)
       } finally {
@@ -128,7 +128,7 @@ test.describe('Editor — Preview Rendering', () => {
             lut: getCachedLUT(simulation.id),
             targetSize: { width: 4, height: 4 },
           }))
-          const context = output.getContext('2d')
+          const context = (output as HTMLCanvasElement).getContext('2d')
           if (!context) throw new Error('2D output context unavailable')
           const pixel = context.getImageData(2, 2, 1, 1).data
           return Math.max(pixel[0], pixel[1], pixel[2]) - Math.min(pixel[0], pixel[1], pixel[2])

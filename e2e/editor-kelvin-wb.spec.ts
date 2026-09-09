@@ -42,10 +42,12 @@ test.describe('Editor — Kelvin White Balance', () => {
 
   test('recipe with kelvin WB: switching to preset mode disables kelvin', async ({ page, editorPage }) => {
     // Select Classic Color — a recipe that has whiteBalanceKelvin: 5300
-    // Use .first() because the card appears in both Editor's Choice and Classic Chrome sections
-    const classicColorCard = page.locator('aside [aria-label="Apply preset Classic Color"]').first()
+    // Scope to the curated section because this preset also appears by film.
+    const classicColorCard = page.getByRole('complementary', { name: 'Preset browser' })
+      .getByRole('region', { name: "Editor's Choice presets", exact: true })
+      .getByRole('button', { name: /^Apply preset Classic Color(?:, selected)?$/ })
     await classicColorCard.click()
-    await page.locator('aside [aria-label="Apply preset Classic Color, selected"]').first().waitFor({ state: 'visible', timeout: 10_000 })
+    await expect(classicColorCard).toHaveAttribute('aria-label', 'Apply preset Classic Color, selected')
     await page.getByRole('button', { name: 'Open Adjust inspector' }).click()
 
     const panel = tuningOverlay(page)

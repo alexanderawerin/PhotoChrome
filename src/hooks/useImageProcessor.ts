@@ -1,7 +1,6 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback } from 'react'
 import { ImageProcessor } from '../engine/processor'
-import { ImageItem, Recipe } from '../engine/types'
-import { createProcessingPlan } from '../engine/processing-plan'
+import { ImageItem } from '../engine/types'
 import { THUMBNAIL_MAX_SIZE } from '../constants'
 import { extractExif } from '../engine/exif'
 import {
@@ -11,15 +10,6 @@ import {
 import { createDefaultTransformState } from '../engine/transform'
 
 const MAX_CONCURRENT_DECODES = 2
-
-export interface ProcessedImage {
-  /** Оригинальное изображение в полном разрешении */
-  original: ImageData
-  /** Копия оригинала для возможного отката изменений */
-  processed: ImageData
-  /** Уменьшенная версия для быстрого превью */
-  thumbnail: ImageData
-}
 
 /**
  * Генерирует уникальный ID для изображения
@@ -142,14 +132,6 @@ export function useImageProcessor() {
   }, [images])
 
   /**
-   * Получить текущее активное изображение
-   */
-  const currentImage = useMemo(() =>
-    images[currentIndex] ?? null,
-    [images, currentIndex]
-  )
-
-  /**
    * Перейти к изображению по индексу
    */
   const goToImage = useCallback((index: number) => {
@@ -182,63 +164,6 @@ export function useImageProcessor() {
   }, [])
 
   /**
-   * Обновить текущее изображение
-   */
-  const updateCurrentImage = useCallback((updates: Partial<ImageItem>) => {
-    if (currentImage) {
-      updateImage(currentImage.id, updates)
-    }
-  }, [currentImage, updateImage])
-
-  /**
-   * Обрабатывает thumbnail с применением рецепта.
-   * Используется для быстрого предпросмотра.
-   * @deprecated Используйте прямой доступ к imageItem.recipe
-   */
-  const processImage = useCallback(
-    (recipe: Recipe): ImageData | null => {
-      if (!currentImage) return null
-
-      try {
-        return ImageProcessor.process(
-          currentImage.thumbnail,
-          createProcessingPlan(recipe, currentImage.thumbnail)
-        )
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Не удалось обработать изображение'
-        setError(message)
-        console.error('Image processing failed:', err)
-        return null
-      }
-    },
-    [currentImage]
-  )
-
-  /**
-   * Обрабатывает полное изображение с применением рецепта.
-   * Используется для финального экспорта.
-   * @deprecated Используйте прямой доступ к imageItem.recipe
-   */
-  const processFullImage = useCallback(
-    (recipe: Recipe): ImageData | null => {
-      if (!currentImage) return null
-
-      try {
-        return ImageProcessor.process(
-          currentImage.original,
-          createProcessingPlan(recipe, currentImage.original)
-        )
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Не удалось обработать изображение'
-        setError(message)
-        console.error('Full image processing failed:', err)
-        return null
-      }
-    },
-    [currentImage]
-  )
-
-  /**
    * Сбрасывает состояние хука к начальному.
    */
   const reset = useCallback(() => {
@@ -247,27 +172,11 @@ export function useImageProcessor() {
     setError(null)
   }, [])
 
-  // Backward compatibility: если загружено одно изображение, возвращаем старый формат
-  const legacyImageData = useMemo(() => {
-    if (images.length === 1 && currentImage) {
-      return {
-        original: currentImage.original,
-        processed: currentImage.transformedOriginal,
-        thumbnail: currentImage.thumbnail
-      }
-    }
-    return null
-  }, [images, currentImage])
-
   return {
     /** Массив загруженных изображений */
     images,
-    /** Текущее активное изображение */
-    currentImage,
     /** Индекс текущего изображения */
     currentIndex,
-    /** Общее количество изображений */
-    totalImages: images.length,
     /** Флаг загрузки */
     isLoading,
     /** Сообщение об ошибке */
@@ -285,21 +194,7 @@ export function useImageProcessor() {
     previousImage,
     /** Обновить изображение по ID */
     updateImage,
-    /** Обновить текущее изображение */
-    updateCurrentImage,
-
-    /** @deprecated Обработать thumbnail (используйте recipe в ImageItem) */
-    processImage,
-    /** @deprecated Обработать полное изображение (используйте recipe в ImageItem) */
-    processFullImage,
     /** Сбросить состояние */
     reset,
-
-    /** @deprecated Backward compatibility для single image mode */
-    image: currentImage?.file ?? null,
-    /** @deprecated Backward compatibility для single image mode */
-    imageData: legacyImageData,
-    /** @deprecated Backward compatibility для single image mode */
-    loadImage: async (file: File) => loadImages([file])
   }
 }

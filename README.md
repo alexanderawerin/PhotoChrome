@@ -2,10 +2,13 @@
 
 Apply legendary Fujifilm film simulations to your photos and videos right in the browser. No uploads, no servers — everything runs locally on your device.
 
-Development toward Photochrome 2.0 is tracked in the [project roadmap](docs/ROADMAP.md). Technical health work is tracked in the [audit fix plan](docs/audit-2026-07-02-fix-plan-ru.md).
+Development toward Photochrome 2.0 is tracked in the [project roadmap](docs/ROADMAP.md). Technical health work and the latest maintenance check are tracked in the [audit fix plan](docs/audit-2026-07-02-fix-plan-ru.md).
 
 ## Features
 
+- **Playable demo**: Start with three demo photos; add your own media to unlock Adjust, Crop, and export
+- **Smart Picks and Favorites**: Local photo recommendations and saved favorite presets
+- **Batch export**: Export photos with presets as a ZIP; untouched photos are skipped
 - **10 film simulations**: Provia, Velvia, Classic Chrome, Classic Neg, Astia, Eterna, Acros, Superia, Pro 400H, Neopan
 - **100 ready-made presets**: Community-curated recipes grouped by style
 - **Editor's Choice**: 10 curated top picks by the community
@@ -20,8 +23,10 @@ Development toward Photochrome 2.0 is tracked in the [project roadmap](docs/ROAD
 
 ## Getting Started
 
+Use Node.js 22, matching CI.
+
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -31,14 +36,31 @@ npm run dev
 npm run build
 ```
 
+Build output is written to `out/`. Use `npm run preview` to serve the build locally.
+
 ## Testing
+
+Checks that do not launch a browser:
+
+```bash
+npm run lint
+npm run test:e2e:types                  # Type-check E2E helpers, specs, and config
+npm test                               # Engine and preset unit tests
+npm run build
+```
+
+Browser checks (require installed browsers):
 
 ```bash
 npx playwright install chromium firefox  # Install browsers (once)
 npm run test:e2e                         # All tests (Chromium + Firefox + Mobile)
-npm run test:e2e:chromium                # Chromium only (fast feedback)
+npm run test:e2e:chromium                # Desktop Chromium, matching main CI
 npm run test:e2e:ui                      # Interactive UI mode
 ```
+
+Main CI runs lint, unit tests, build, and desktop Chromium E2E. Firefox and the selected mobile specs run in a separate weekly/manual workflow. `mobile-chrome` emulates a Pixel 7; it does not verify real mobile hardware. WebKit/Safari is not configured. `test:e2e:types` is a separate local check and does not run browser tests.
+
+The app has a web manifest but no service worker, offline support, or OS share-target handler. Add files through the app's upload controls.
 
 ## Project Structure
 
@@ -52,6 +74,9 @@ src/
 │   ├── grain.ts         # Film grain
 │   ├── effects.ts       # Clarity, sharpness, color chrome
 │   ├── transform.ts     # Rotate and crop
+│   ├── video/           # Video capabilities, decoding, audio, muxing, and export
+│   ├── recommend/       # Local Smart Picks analysis and scoring
+│   ├── batch-export.ts  # Photo ZIP export
 │   └── webgl/           # GPU-accelerated processing (WebGL2)
 ├── presets/
 │   ├── simulations/     # Fujifilm film simulations (JSON + HaldCLUT PNG)
@@ -82,7 +107,7 @@ Simulations without a HaldCLUT (Classic Neg, Eterna) fall back to a curve-based 
 - **Tailwind CSS** + **shadcn/ui**
 - **WebGL2** with `sampler3D` for GPU LUT lookup
 - **Canvas API** + **Web Workers** for image processing
-- **Playwright** for E2E testing
+- **Vitest** for unit tests; **Playwright** for E2E testing
 
 ## License
 

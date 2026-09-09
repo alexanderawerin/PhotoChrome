@@ -488,10 +488,6 @@ export const getAllRecipes = (): Recipe[] => {
   return Object.values(RECIPES)
 }
 
-export const getSimulationName = (simulationId: string): string => {
-  return SIMULATION_NAMES[simulationId] || simulationId
-}
-
 export const getRecipesGroupedBySimulation = (): RecipeGroup[] => {
   const groups: Record<string, Recipe[]> = {}
   

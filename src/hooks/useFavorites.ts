@@ -32,13 +32,6 @@ export function useFavorites() {
   }, [favorites])
 
   /**
-   * Check if a recipe is in favorites
-   */
-  const isFavorite = useCallback((recipeId: string): boolean => {
-    return favorites.has(recipeId)
-  }, [favorites])
-
-  /**
    * Toggle favorite status for a recipe
    */
   const toggleFavorite = useCallback((recipeId: string) => {
@@ -54,24 +47,6 @@ export function useFavorites() {
   }, [])
 
   /**
-   * Add a recipe to favorites
-   */
-  const addFavorite = useCallback((recipeId: string) => {
-    setFavorites(prev => new Set([...prev, recipeId]))
-  }, [])
-
-  /**
-   * Remove a recipe from favorites
-   */
-  const removeFavorite = useCallback((recipeId: string) => {
-    setFavorites(prev => {
-      const next = new Set(prev)
-      next.delete(recipeId)
-      return next
-    })
-  }, [])
-
-  /**
    * Get array of favorite recipe IDs
    */
   const getFavoriteIds = useCallback((): string[] => {
@@ -79,20 +54,7 @@ export function useFavorites() {
   }, [favorites])
 
   return {
-    /** Set of favorite recipe IDs */
-    favorites,
-    /** Check if recipe is favorited */
-    isFavorite,
-    /** Toggle favorite status */
     toggleFavorite,
-    /** Add to favorites */
-    addFavorite,
-    /** Remove from favorites */
-    removeFavorite,
-    /** Get array of favorite IDs */
     getFavoriteIds,
-    /** Number of favorites */
-    count: favorites.size,
   }
 }
-

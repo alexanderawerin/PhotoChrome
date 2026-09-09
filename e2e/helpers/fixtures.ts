@@ -1,15 +1,6 @@
 import { test as base } from '@playwright/test'
 import { uploadImage, uploadMultipleImages, waitForEditor } from './upload'
 
-type AppFixtures = {
-  /** Page navigated to landing screen */
-  landingPage: ReturnType<typeof base.extend> extends never ? never : never
-  /** Page with a single image loaded in editor */
-  editorPage: ReturnType<typeof base.extend> extends never ? never : never
-  /** Page with two images loaded in editor */
-  multiImageEditorPage: ReturnType<typeof base.extend> extends never ? never : never
-}
-
 export const test = base.extend<{
   landingPage: void
   editorPage: void

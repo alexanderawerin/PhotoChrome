@@ -99,7 +99,7 @@ async function installProcessorMock(
     let calls = 0
     // @ts-expect-error Test-only restoration hook.
     window.__restoreCompletionProcessor = () => { ImageProcessor.processAsync = original }
-    ImageProcessor.processAsync = (imageData, plan, options) => {
+    ImageProcessor.processAsync = (imageData: ImageData, plan: unknown, options: unknown) => {
       calls++
       if (mockMode === 'fail-all' || (mockMode === 'fail-second-call' && calls === 2)) {
         return Promise.reject(new Error('Forced completion export failure'))
@@ -119,7 +119,7 @@ async function restoreProcessorMock(page: Page): Promise<void> {
 async function uploadNamedBatch(page: Page): Promise<void> {
   const landscape = await readFile(fixturePath('test-image.jpg'))
   const portrait = await readFile(fixturePath('test-image-2.jpg'))
-  const input = page.locator('input[aria-label="Choose photos or video to edit"], input#media-upload').first()
+  const input = page.getByLabel('Choose photos or video to edit', { exact: true })
   await input.setInputFiles([
     { name: 'success.jpg', mimeType: 'image/jpeg', buffer: landscape },
     { name: 'failed.jpg', mimeType: 'image/jpeg', buffer: portrait },
@@ -188,7 +188,7 @@ test.describe('Editor — Export completion', () => {
 
     try {
       const downloadPromise = page.waitForEvent('download')
-      await page.getByRole('button', { name: 'Export all photos' }).first().click()
+      await page.getByRole('button', { name: 'Export all photos' }).click()
       const download = await downloadPromise
       const archivePath = await download.path()
       if (!archivePath) throw new Error('Batch download path unavailable')
@@ -218,12 +218,12 @@ test.describe('Editor — Export completion', () => {
     await uploadMultipleImages(page)
     await waitForEditor(page)
     await selectFirstRecipe(page)
-    await page.getByRole('button', { name: 'Apply current preset to all 2 images' }).first().click()
+    await page.getByRole('button', { name: 'Apply current preset to all 2 images' }).click()
     await installProcessorMock(page, 'fail-all')
 
     try {
       const downloadPromise = page.waitForEvent('download')
-      await page.getByRole('button', { name: 'Export all photos' }).first().click()
+      await page.getByRole('button', { name: 'Export all photos' }).click()
       const download = await downloadPromise
       const archivePath = await download.path()
       if (!archivePath) throw new Error('Batch download path unavailable')
@@ -260,7 +260,7 @@ test.describe('Editor — Export completion', () => {
 
     const dialog = completionDialog(page)
     await expect(dialog).toBeVisible()
-    const before = await preview.evaluate(element => ({ width: element.width, height: element.height }))
+    const before = await preview.evaluate((element: HTMLCanvasElement) => ({ width: element.width, height: element.height }))
 
     const focusIsInside = () => dialog.evaluate(element => element.contains(document.activeElement))
     await expect.poll(focusIsInside).toBe(true)
@@ -274,7 +274,7 @@ test.describe('Editor — Export completion', () => {
     await page.keyboard.press('Control+s')
     await expect(dialog).toBeVisible()
     await expect(page.getByRole('slider', { name: 'Crop angle' })).toBeHidden()
-    await expect.poll(() => preview.evaluate(element => ({ width: element.width, height: element.height }))).toEqual(before)
+    await expect.poll(() => preview.evaluate((element: HTMLCanvasElement) => ({ width: element.width, height: element.height }))).toEqual(before)
     await page.waitForTimeout(150)
     expect(downloads).toBe(1)
 

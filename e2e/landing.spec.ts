@@ -28,8 +28,9 @@ test.describe('Playable demo', () => {
       window.__releaseImageDecode = release
       // @ts-expect-error Test-only restoration hook.
       window.__restoreCreateImageBitmap = () => { window.createImageBitmap = original }
-      // @ts-expect-error Test-only decode gate at the browser boundary.
-      window.createImageBitmap = (...args) => gate.then(() => original(...args))
+      window.createImageBitmap = new Proxy(original, {
+        apply: (target, thisArg, args) => gate.then(() => Reflect.apply(target, thisArg, args)),
+      })
     })
 
     await page.locator('input[aria-label="Choose photos or video to edit"]').setInputFiles(fixturePath('test-image.jpg'))
@@ -66,14 +67,15 @@ test.describe('Playable demo', () => {
       let failed = false
       // @ts-expect-error Test-only restoration hook.
       window.__restoreCreateImageBitmap = () => { window.createImageBitmap = original }
-      // @ts-expect-error Test-only failure at the browser decoding boundary.
-      window.createImageBitmap = (...args) => {
-        if (!failed) {
-          failed = true
-          return Promise.reject(new Error('Forced image decode failure'))
-        }
-        return original(...args)
-      }
+      window.createImageBitmap = new Proxy(original, {
+        apply(target, thisArg, args) {
+          if (!failed) {
+            failed = true
+            return Promise.reject(new Error('Forced image decode failure'))
+          }
+          return Reflect.apply(target, thisArg, args)
+        },
+      })
     })
 
     await page.locator('input[aria-label="Choose photos or video to edit"]').setInputFiles(fixturePath('test-image.jpg'))

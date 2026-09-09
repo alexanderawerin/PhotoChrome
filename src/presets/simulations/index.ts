@@ -90,13 +90,6 @@ export const getSimulation = (id: string): FilmSimulation | undefined => {
   return SIMULATIONS[id]
 }
 
-/**
- * Gets all available simulations.
- */
-export const getAllSimulations = (): FilmSimulation[] => {
-  return Object.values(SIMULATIONS)
-}
-
 /** Whether a LUT-backed simulation has a bundled asset resolvable by Vite. */
 export const hasSimulationLUTAsset = (simulationId: string): boolean => {
   return Boolean(lutUrls[simulationId])

@@ -1,5 +1,7 @@
 # Smart Picks Implementation Plan
 
+> Архивный документ: описывает исходный план мая 2026, а не текущий список задач. Реализацию проверяйте по коду и [актуальному roadmap](../../ROADMAP.md); незакрытые чекбоксы ниже сохранены как история планирования.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Реализовать секцию «Smart Picks» — рекомендация 5 наиболее подходящих рецептов для активного фото на основе эвристик (статистика изображения + EXIF), без ML и без cloud.

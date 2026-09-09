@@ -32,22 +32,19 @@ test.describe('Editor — Smart Picks', () => {
     ).toBeVisible({ timeout: SMART_PICKS_TIMEOUT })
   })
 
-  test('Switching between images updates Smart Picks', async ({ page, multiImageEditorPage }, testInfo) => {
+  test('Smart Picks remain selectable after switching images', async ({ page, multiImageEditorPage }, testInfo) => {
     test.skip(testInfo.project.name === 'mobile-chrome', 'desktop-only test')
     const section = page.locator('aside section[aria-label="Smart Picks"]')
     await expect(section).toBeVisible({ timeout: SMART_PICKS_TIMEOUT })
 
-    const initialLabel = await section.locator('[aria-label^="Apply preset"]').first().getAttribute('aria-label')
-
-    const thumbs = page.locator('[aria-label^="Image"]')
-    await thumbs.nth(1).click()
-
-    await page.waitForTimeout(500)
-
-    await expect(section).toBeVisible()
-    const newLabel = await section.locator('[aria-label^="Apply preset"]').first().getAttribute('aria-label')
-    expect(newLabel).toBeTruthy()
-    void initialLabel
+    const thumbnails = page.getByRole('tablist', { name: 'Image thumbnails' })
+    const secondImage = thumbnails.getByRole('tab').nth(1)
+    await secondImage.click()
+    await expect(secondImage).toHaveAttribute('aria-selected', 'true')
+    await expect(section.getByRole('button', { name: /^Apply preset / })).toHaveCount(5)
+    const card = section.getByRole('button', { name: /^Apply preset / }).first()
+    await card.click()
+    await expect(card).toHaveAttribute('aria-label', /, selected$/)
   })
 
   test('Smart Picks visible in horizontal mobile scroll', async ({ page, editorPage }, testInfo) => {

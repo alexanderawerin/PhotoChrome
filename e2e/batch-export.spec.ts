@@ -25,7 +25,7 @@ test('Export all creates a stored-JPEG ZIP with a skipped-photo report', async (
   await selectFirstRecipe(page)
 
   const downloadPromise = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Export all photos' }).first().click()
+  await page.getByRole('button', { name: 'Export all photos' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toMatch(/^photochrome_batch_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.zip$/)
 
@@ -48,7 +48,7 @@ test('cancelling batch export destroys the partial archive and does not download
   await uploadMultipleImages(page)
   await waitForEditor(page)
   await selectFirstRecipe(page)
-  await page.getByRole('button', { name: 'Apply current preset to all 2 images' }).first().click()
+  await page.getByRole('button', { name: 'Apply current preset to all 2 images' }).click()
   await page.waitForTimeout(400)
 
   await page.evaluate(async () => {
@@ -68,7 +68,7 @@ test('cancelling batch export destroys the partial archive and does not download
 
   let downloaded = false
   page.on('download', () => { downloaded = true })
-  await page.getByRole('button', { name: 'Export all photos' }).first().click()
+  await page.getByRole('button', { name: 'Export all photos' }).click()
   const progress = page.getByRole('status', { name: 'Batch export progress' })
   await expect(progress).toBeVisible()
   await progress.getByRole('button', { name: 'Cancel' }).click()

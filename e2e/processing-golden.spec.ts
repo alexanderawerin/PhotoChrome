@@ -103,7 +103,7 @@ test.describe('Processing engine golden parity', () => {
           flipXY: compareOrientation(true, true),
         },
         // The asymmetric top-left sample catches vertical/horizontal inversion explicitly.
-        topLeft: [cpu, worker, webgl].map(image => Array.from(image.data.slice(0, 4))),
+        topLeft: [cpu, worker, webgl].map((image: ImageData) => Array.from(image.data.slice(0, 4))),
       }
     })
 

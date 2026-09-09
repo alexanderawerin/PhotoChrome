@@ -54,7 +54,14 @@ export default tseslint.config(
   {
     files: ['e2e/**/*.ts'],
     rules: {
-      '@typescript-eslint/no-unused-vars': 'off',
+      // Playwright activates setup fixtures by destructuring them, even when
+      // their void values are not read in the test body.
+      '@typescript-eslint/no-unused-vars': ['error', {
+        argsIgnorePattern: '^(?:_|landingPage$|editorPage$|multiImageEditorPage$)',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+        destructuredArrayIgnorePattern: '^_',
+      }],
     },
   },
   {

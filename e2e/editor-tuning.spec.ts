@@ -10,7 +10,7 @@ test.describe('Editor — Tuning Panel', () => {
     await page.getByRole('button', { name: 'Open Adjust inspector' }).click()
   }
 
-  test('tuning panel opens when tune button is clicked', async ({ page, editorPage }) => {
+  test('tuning panel opens when the Adjust inspector button is clicked', async ({ page, editorPage }) => {
     await selectAndOpen(page)
     await expect(inspector(page).getByText('Highlight')).toBeVisible()
     await expect(inspector(page).getByText('Shadow')).toBeVisible()
@@ -27,7 +27,13 @@ test.describe('Editor — Tuning Panel', () => {
 
   test('reset control restores a slider to the preset value', async ({ page, editorPage }) => {
     await selectAndOpen(page)
-    await expect(inspector(page).getByRole('button', { name: 'Reset Highlight to preset' })).toBeVisible()
+    const highlight = inspector(page).locator('#slider-highlight').getByRole('slider')
+    const presetValue = await highlight.getAttribute('aria-valuenow')
+    await highlight.focus()
+    await page.keyboard.press(presetValue === '4' ? 'ArrowLeft' : 'ArrowRight')
+    await expect(highlight).not.toHaveAttribute('aria-valuenow', presetValue!)
+    await inspector(page).getByRole('button', { name: 'Reset Highlight to preset' }).click()
+    await expect(highlight).toHaveAttribute('aria-valuenow', presetValue!)
   })
 
   test('inspector is dedicated to adjustments', async ({ page, editorPage }) => {

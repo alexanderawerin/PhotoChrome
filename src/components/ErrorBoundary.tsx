@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react'
-import { AlertTriangle, RefreshCw, Zap } from 'lucide-react'
+import { RefreshCw, Zap } from 'lucide-react'
 import { Button } from './ui/button'
 import {
   Empty,
@@ -131,43 +131,5 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
     return this.props.children
   }
-}
-
-/**
- * Simple error fallback for smaller components.
- */
-interface ErrorFallbackProps {
-  message?: string
-  onRetry?: () => void
-}
-
-export function ErrorFallback({ 
-  message = 'Failed to load', 
-  onRetry 
-}: ErrorFallbackProps): JSX.Element {
-  return (
-    <Empty className="border-0 p-6 min-h-0 flex-none">
-      <EmptyHeader className="gap-1.5">
-        <EmptyMedia variant="icon" className="bg-red-500/10 text-red-400 size-10 rounded-xl [&_svg]:size-5">
-          <AlertTriangle />
-        </EmptyMedia>
-        <EmptyDescription className="text-zinc-400 text-sm">
-          {message}
-        </EmptyDescription>
-      </EmptyHeader>
-      {onRetry && (
-        <EmptyContent>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onRetry}
-            className="text-zinc-400 hover:text-white hover:bg-zinc-800"
-          >
-            Retry
-          </Button>
-        </EmptyContent>
-      )}
-    </Empty>
-  )
 }
 

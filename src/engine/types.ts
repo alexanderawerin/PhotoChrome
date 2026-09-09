@@ -23,11 +23,6 @@ export interface ColorBalanceConfig {
   highlights: ColorBalance
 }
 
-export interface GrainConfig {
-  strength: number
-  size: number
-}
-
 export interface FilmSimulation {
   id: string
   name: string
@@ -123,14 +118,4 @@ export interface ImageItem {
   rotation: Rotation
   /** Недеструктивное состояние геометрии для mobile editor. */
   transform: ImageTransformState
-}
-
-/**
- * Состояние для работы с множественными изображениями
- */
-export interface MultiImageState {
-  /** Массив загруженных изображений */
-  images: ImageItem[]
-  /** Индекс текущего активного изображения */
-  currentIndex: number
 }

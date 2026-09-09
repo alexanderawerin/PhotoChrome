@@ -64,15 +64,3 @@ export function applyCurve(
   }
 }
 
-/**
- * Создаёт линейную (identity) кривую
- */
-export function createLinearCurve(): CurvePoints {
-  return {
-    points: [
-      [0, 0],
-      [255, 255]
-    ]
-  }
-}
-

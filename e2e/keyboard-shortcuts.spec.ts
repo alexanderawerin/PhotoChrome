@@ -4,14 +4,14 @@ import { selectFirstRecipe } from './helpers/upload'
 test.describe('Keyboard Shortcuts', () => {
   test('R rotates the image', async ({ page, editorPage }) => {
     const canvas = page.locator('canvas[aria-label="Preview"]')
-    const before = await canvas.evaluate(element => ({
+    const before = await canvas.evaluate((element: HTMLCanvasElement) => ({
       width: element.width,
       height: element.height,
     }))
 
     await page.keyboard.press('r')
 
-    await expect.poll(() => canvas.evaluate(element => ({
+    await expect.poll(() => canvas.evaluate((element: HTMLCanvasElement) => ({
       width: element.width,
       height: element.height,
     }))).toEqual({ width: before.height, height: before.width })
