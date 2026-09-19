@@ -6,7 +6,6 @@ import type { ImageTransformState } from './transform'
 
 export type EffectStrength = 'off' | 'weak' | 'strong'
 export type GrainSize = 'small' | 'large'
-export type Rotation = 0 | 90 | 180 | 270
 
 export interface CurvePoints {
   points: [number, number][]
@@ -102,7 +101,7 @@ export interface ImageItem {
   original: ImageData
   /** Превью для быстрой обработки */
   thumbnail: ImageData
-  /** EXIF-данные (ISO, цветовая температура) для рекомендаций */
+  /** EXIF для рекомендаций; текущий загрузчик извлекает только ISO. */
   exif?: ExifSubset
 
   /** Выбранный рецепт для этого изображения */
@@ -114,8 +113,6 @@ export interface ImageItem {
   transformedOriginal: ImageData
   /** Трансформированное превью */
   transformedThumbnail: ImageData
-  /** Текущий угол поворота */
-  rotation: Rotation
-  /** Недеструктивное состояние геометрии для mobile editor. */
+  /** Недеструктивное состояние геометрии изображения. */
   transform: ImageTransformState
 }

@@ -1,6 +1,6 @@
 # Photochrome
 
-Apply legendary Fujifilm film simulations to your photos and videos right in the browser. No uploads, no servers — everything runs locally on your device.
+Apply legendary Fujifilm film simulations to your photos and videos right in the browser. Photo and video processing runs locally on your device, without uploading media to a processing server.
 
 Development toward Photochrome 2.0 is tracked in the [project roadmap](docs/ROADMAP.md). Technical health work and the latest maintenance check are tracked in the [audit fix plan](docs/audit-2026-07-02-fix-plan-ru.md).
 
@@ -38,6 +38,12 @@ npm run build
 
 Build output is written to `out/`. Use `npm run preview` to serve the build locally.
 
+## Asset maintenance
+
+- `npm run process-cards` regenerates `public/cards/` from the JPEG sources in `img/` with randomized grading. Those source photos are still needed by the generator.
+- `npm run generate-seo` regenerates favicons and replaces `public/og-image.jpg` with a template using photos from `public/cards/`. This template does not reproduce the currently committed custom artwork. That artwork still says “60+ recipes”; update its editable source or explicitly choose the generated template before publishing a refreshed social image. HTML metadata and the generator use the current count of 100.
+- `node scripts/convert-haldclut.mjs` is an optional source-asset tool. It requires Level 12 RGB PNGs in `src/presets/simulations/lut-originals/`, which are not included in this repository, and overwrites matching Level 8 PNGs in `src/presets/simulations/lut/`. Normal builds use the committed Level 8 assets and do not need this step.
+
 ## Testing
 
 Checks that do not launch a browser:
@@ -62,6 +68,8 @@ Main CI runs lint, unit tests, build, and desktop Chromium E2E. Firefox and the 
 
 The app has a web manifest but no service worker, offline support, or OS share-target handler. Add files through the app's upload controls.
 
+The page includes Yandex.Metrika analytics in `index.html` (including Webvisor, clickmap, and link tracking). Local media processing does not mean the page makes no network requests.
+
 ## Project Structure
 
 ```
@@ -74,6 +82,9 @@ src/
 │   ├── grain.ts         # Film grain
 │   ├── effects.ts       # Clarity, sharpness, color chrome
 │   ├── transform.ts     # Rotate and crop
+│   ├── editor-sessions.ts # Photo-owned temporary editing drafts
+│   ├── media-session.ts # Media loading, replacement, cancellation, and retry
+│   ├── media-loading.ts # Photo/video decoding and demo loading
 │   ├── video/           # Video capabilities, decoding, audio, muxing, and export
 │   ├── recommend/       # Local Smart Picks analysis and scoring
 │   ├── batch-export.ts  # Photo ZIP export
@@ -86,6 +97,12 @@ src/
 ```
 
 ## How Film Simulations Work
+
+Committed photo edits live in `ImageItem`. `useEditorSession` owns one temporary Adjust, desktop tuning, or Crop draft, bound to the photo and preset; Apply/Done commits it, while Cancel or switching owners discards it. Export snapshots the visible draft. Preset preview caches use immutable `ImageData` object identity, so new photos and transformed buffers cannot share an entry accidentally.
+
+`MediaSession` owns loading, retry, and loaded media. A pending or failed replacement retains the previous editor; Retry repeats the original replace/append/video/demo request. Cancellation and operation identity reject late decoder results, and video resources are released when their ownership ends. `useMediaSession` connects this lifecycle to React; `useVideoExport` owns video export separately. Native decoder and browser behavior still require E2E checks beyond the unit-tested state transitions.
+
+Smart Picks analyzes photo pixels in a Web Worker and caches recommendations by photo ID. The JPEG EXIF reader currently extracts ISO only. The scorer accepts an optional color temperature, but reading camera-specific Kelvin metadata is not implemented; that requires extending `extractExif` with format-specific handling and test fixtures.
 
 Photochrome uses a **hybrid processing pipeline** that combines 3D color lookup tables with parametric effects:
 

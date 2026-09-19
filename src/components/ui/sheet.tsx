@@ -108,8 +108,6 @@ SheetDescription.displayName = SheetPrimitive.Description.displayName
 
 export {
   Sheet,
-  SheetPortal,
-  SheetOverlay,
   SheetContent,
   SheetHeader,
   SheetTitle,

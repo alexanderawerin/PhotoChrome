@@ -3,11 +3,12 @@
  */
 export type ExifSubset = {
   iso?: number
+  /** Accepted by the scorer; extractExif does not read camera-specific Kelvin tags yet. */
   colorTemperatureKelvin?: number
 }
 
 /**
- * Извлекает ISO (и потенциально Kelvin) из EXIF JPEG-файла.
+ * Извлекает ISO из EXIF JPEG-файла. Чтение Kelvin пока не реализовано.
  * Возвращает undefined, если файл не JPEG, EXIF отсутствует, или парсинг провалился.
  */
 export async function extractExif(file: File): Promise<ExifSubset | undefined> {

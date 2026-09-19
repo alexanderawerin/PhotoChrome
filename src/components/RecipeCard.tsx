@@ -4,14 +4,14 @@ import { Spinner } from './ui/spinner'
 import { Card } from './ui/card'
 import { Recipe } from '../engine/types'
 import { ImageProcessor } from '../engine/processor'
+import { getImageKey } from '../engine/image-identity'
 import { loadSimulationLUT } from '../presets/simulations'
 import { createProcessingPlan } from '../engine/processing-plan'
 import { 
   RECIPE_CARD_PREVIEW_SIZE, 
   PREVIEW_GENERATION_DELAY,
   PREVIEW_CACHE_MAX_SIZE,
-  SMALL_IMAGE_CACHE_MAX_SIZE,
-  IMAGE_HASH_SAMPLE_COUNT
+  SMALL_IMAGE_CACHE_MAX_SIZE
 } from '../constants'
 
 interface RecipeCardProps {
@@ -28,7 +28,7 @@ interface RecipeCardProps {
 
 /**
  * Кэш для уменьшенных изображений.
- * Ключ: строка вида "width_height_hash"
+ * Ключ: идентификатор неизменяемого ImageData
  * Значение: уменьшенное ImageData
  */
 const smallImageCache = new Map<string, ImageData>()
@@ -48,29 +48,6 @@ let reusableSourceCanvas: HTMLCanvasElement | null = null
 let reusableSourceCtx: CanvasRenderingContext2D | null = null
 let reusableTargetCanvas: HTMLCanvasElement | null = null
 let reusableTargetCtx: CanvasRenderingContext2D | null = null
-
-/**
- * Создаёт уникальный ключ для кэширования на основе imageData.
- * Использует размеры и множественные сэмплы пикселей для надёжного хэша.
- * 
- * Алгоритм: берём IMAGE_HASH_SAMPLE_COUNT точек равномерно распределённых
- * по данным изображения и комбинируем их в строку.
- */
-function getImageKey(imageData: ImageData): string {
-  const data = imageData.data
-  const len = data.length
-  
-  // Равномерно распределённые точки для сэмплирования
-  const samples: number[] = []
-  const step = Math.max(1, Math.floor(len / IMAGE_HASH_SAMPLE_COUNT))
-  
-  for (let i = 0; i < IMAGE_HASH_SAMPLE_COUNT; i++) {
-    const idx = Math.min(i * step, len - 1)
-    samples.push(data[idx])
-  }
-  
-  return `${imageData.width}x${imageData.height}_${samples.join(',')}`
-}
 
 /**
  * Инициализирует переиспользуемые canvas элементы.

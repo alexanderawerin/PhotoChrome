@@ -38,14 +38,6 @@ export function isSafari(): boolean {
   return userAgent.includes('Safari') && !userAgent.includes('Chrome') && !userAgent.includes('Chromium')
 }
 
-export function isVideoFile(file: File): boolean {
-  return file.type.startsWith('video/')
-}
-
-export function supportsVideoExport(): boolean {
-  return typeof VideoEncoder !== 'undefined'
-}
-
 export async function isVideoCodecSupported(
   codec = 'avc1.42002a',
   requirements: VideoCodecRequirements = {}

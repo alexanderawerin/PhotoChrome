@@ -464,13 +464,6 @@ export class ImageProcessor {
   }
 
   /**
-   * Загружает изображение из File в ImageData
-   */
-  static loadImage(file: File): Promise<ImageData> {
-    return this.fileToImageData(file)
-  }
-
-  /**
    * Создаёт уменьшенную копию изображения для превью
    */
   static createThumbnail(file: File, maxSize: number): Promise<ImageData> {

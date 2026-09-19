@@ -1,14 +1,11 @@
 import { useEffect, useCallback } from 'react'
 import { Recipe } from '../engine/types'
-import { AspectRatio } from '../engine/transform'
 
 interface KeyboardShortcutsConfig {
   /** Режим обрезки активен */
   isCropping: boolean
   /** Режим тюнинга активен */
   isTuning: boolean
-  /** Текущее соотношение сторон */
-  cropRatio: AspectRatio
   /** Активный рецепт */
   activeRecipe: Recipe | null
   /** Общее количество изображений */
@@ -55,6 +52,8 @@ interface KeyboardShortcutsHandlers {
  * Shortcuts:
  * - R: Поворот по часовой
  * - Shift+R: Поворот против часовой
+ * - F: Отразить горизонтально
+ * - ArrowLeft/ArrowRight: Предыдущее/следующее фото
  * - C: Открыть обрезку
  * - T: Открыть/закрыть тюнинг
  * - P: Переключить панель

@@ -30,9 +30,6 @@ function getRandomCardImages(count: number): string[] {
   )
 }
 
-/** Rotation factor for cards based on their angle */
-const ROTATION_FACTOR = 1
-
 /** Breakpoint for desktop (md) */
 const DESKTOP_BREAKPOINT = 768
 
@@ -52,16 +49,15 @@ function calculateCirclePositions(cardCount: number, radius: number) {
     const rotate = angle + 90
     
     return { 
-      rotate: rotate * ROTATION_FACTOR, 
+      rotate,
       translateX: x, 
       translateY: y,
-      angle
     }
   })
 }
 
 /**
- * Decorative circle of gradient cards displayed on the landing screen.
+ * Decorative circle of photo cards displayed on the fallback upload screen.
  * Purely visual element, hidden from screen readers.
  */
 export function PhotoArc() {

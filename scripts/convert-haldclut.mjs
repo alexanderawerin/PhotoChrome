@@ -4,23 +4,15 @@
  * HaldCLUT layout for level N:
  * - Image dimensions: N^3 x N^3
  * - Grid size (colors per channel): N^2
- * - Organized as N^2 x N^2 grid of N x N blocks
- * - For each pixel at (x, y):
- *   - blockX = floor(x / N), blockY = floor(y / N)
- *   - innerX = x % N, innerY = y % N
- *   - blue = blockY * N^2 + blockX (select block from grid)
- *   - Wait — actually the mapping is:
- *     The pixel at position (x, y) represents input color:
- *     - red = x % N^2 (position within row, wrapped)
- *     - green = y % N^2
- *     - blue = floor(x / N^2) + floor(y / N^2) * N
- *     No — let's use the standard sequential layout:
  *
  * Standard HaldCLUT: pixels are laid out sequentially, with R varying fastest,
  * then G, then B. For grid size G = N^2:
  *   pixel index = b * G * G + g * G + r
  *   x = index % width, y = floor(index / width)
  *
+ * Input: Level 12 RGB PNGs in src/presets/simulations/lut-originals/
+ * (source assets are not included in this repository).
+ * Output: overwrites matching files in src/presets/simulations/lut/.
  * Usage: node scripts/convert-haldclut.mjs
  */
 import sharp from 'sharp'

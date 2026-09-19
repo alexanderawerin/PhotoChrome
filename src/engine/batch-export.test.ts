@@ -24,7 +24,6 @@ const item = (fileName: string, withRecipe = true): ImageItem => ({
   customSettings: {},
   transformedOriginal: imageData,
   transformedThumbnail: imageData,
-  rotation: 0,
   transform: createDefaultTransformState(),
 })
 

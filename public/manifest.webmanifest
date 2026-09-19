@@ -31,13 +31,5 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ],
-  "screenshots": [
-    {
-      "src": "/og-image.jpg",
-      "sizes": "1200x630",
-      "type": "image/jpeg",
-      "label": "Photochrome landing screen with film recipe cards"
-    }
   ]
 }

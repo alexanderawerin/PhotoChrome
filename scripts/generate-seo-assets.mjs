@@ -146,7 +146,7 @@ async function generateOgImage() {
       <!-- Subtitle -->
       <text x="${width/2}" y="270" text-anchor="middle" class="subtitle" font-size="24">Fujifilm film simulations for your photos</text>
       <!-- Features -->
-      <text x="${width/2}" y="560" text-anchor="middle" class="badge" font-size="16">Provia • Velvia • Classic Chrome • Classic Neg • 60+ Recipes</text>
+      <text x="${width/2}" y="560" text-anchor="middle" class="badge" font-size="16">Provia • Velvia • Classic Chrome • Classic Neg • 100 Recipes</text>
       <!-- URL -->
       <text x="${width/2}" y="600" text-anchor="middle" class="badge" font-size="14">photochrome.netdesigner.ru</text>
     </svg>

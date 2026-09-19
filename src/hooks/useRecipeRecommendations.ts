@@ -17,7 +17,7 @@ export function useRecipeRecommendations(
   imageId: string | null,
   thumbnail: ImageData | null,
   exif?: ExifSubset
-): { recipeIds: string[]; isReady: boolean } {
+): { recipeIds: string[] } {
   const [recipeIds, setRecipeIds] = useState<string[]>([])
   const workerRef = useRef<Worker | null>(null)
   const cacheRef = useRef<Map<string, string[]>>(new Map())
@@ -106,5 +106,5 @@ export function useRecipeRecommendations(
     return () => clearTimeout(timeoutId)
   }, [imageId, thumbnail, exif])
 
-  return { recipeIds, isReady: recipeIds.length > 0 }
+  return { recipeIds }
 }

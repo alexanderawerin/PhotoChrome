@@ -17,23 +17,14 @@ import { ImageProcessor } from '../engine/processor'
 import { loadSimulationLUT } from '../presets/simulations'
 import { createProcessingPlan } from '../engine/processing-plan'
 import { getAllRecipes } from '../presets/recipes'
-import { type ImageTransformState } from '../engine/transform'
 import { useFavorites } from '../hooks/useFavorites'
-import { useTransform } from '../hooks/useTransform'
+import { useEditorSession } from '../hooks/useEditorSession'
 import { useIsMdUp } from '../hooks/useIsMdUp'
 import { useIsWideDesktop } from '../hooks/useIsWideDesktop'
-import { useTuning } from '../hooks/useTuning'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useViewportHeight, getViewportHeightStyle } from '../hooks/useViewportHeight'
 import { useRecipeRecommendations } from '../hooks/useRecipeRecommendations'
-import {
-  beginAdjustSession,
-  createRandomRecipeSettings,
-  resetAdjustSession,
-  updateAdjustSession,
-  type AdjustSession,
-  type AdjustTool,
-} from '../engine/editor-sessions'
+import { createRandomRecipeSettings } from '../engine/editor-sessions'
 import { exportPhoto, type PhotoExportResult } from '../engine/photo-export'
 import {
   exportPhotoBatch,
@@ -58,8 +49,7 @@ interface EditorProps {
 /**
  * Главный компонент редактора.
  * Использует композицию хуков для разделения ответственности:
- * - useTransform: повороты и обрезка
- * - useTuning: режим тонкой настройки
+ * - useEditorSession: черновики Adjust/Crop и сохранённые настройки
  * - useKeyboardShortcuts: горячие клавиши
  * - useViewportHeight: корректная высота на мобильных
  */
@@ -83,7 +73,7 @@ export function Editor({
   const currentImage = images[currentIndex]
   const totalImages = images.length
 
-  const [previewImage, setPreviewImage] = useState<ImageData>(currentImage.transformedThumbnail)
+  const [preview, setPreview] = useState({ imageId: currentImage.id, data: currentImage.transformedThumbnail })
   const [isProcessing, setIsProcessing] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [isApplyingToAll, setIsApplyingToAll] = useState(false)
@@ -98,7 +88,6 @@ export function Editor({
     }
   })
   const [mobileMode, setMobileMode] = useState<'presets' | 'adjust' | 'crop'>('presets')
-  const [adjustSession, setAdjustSession] = useState<AdjustSession | null>(null)
   const [isCropControlActive, setIsCropControlActive] = useState(false)
   const [exportError, setExportError] = useState<Extract<PhotoExportResult, { status: 'error' }>['error'] | null>(null)
   const exportAbortControllerRef = useRef<AbortController | null>(null)
@@ -147,94 +136,32 @@ export function Editor({
     return () => observer.disconnect()
   }, [isMdUp])
 
-  // Refs для доступа к актуальным значениям из callbacks (избегаем stale closures)
-  const customSettingsRef = useRef<RecipeSettings>(currentImage.customSettings)
-  const transformedThumbnailRef = useRef<ImageData>(currentImage.transformedThumbnail)
+  const edit = useEditorSession(currentImage, onImageUpdate)
+  const adjustSession = edit.session?.kind === 'adjust' ? edit.session : null
+  const isCropping = edit.session?.kind === 'crop'
+  const isTuning = edit.session?.kind === 'tuning'
+  const { settings, transformedThumbnail } = edit
 
-  /**
-   * Обновляет превью с заданными параметрами
-   */
-  const updatePreview = useCallback((
-    thumbData: ImageData,
-    recipe: Recipe | null,
-    settings: RecipeSettings
-  ) => {
-    if (recipe) {
-      const plan = createProcessingPlan(recipe, thumbData, settings)
-      setPreviewImage(ImageProcessor.process(thumbData, plan))
-    } else {
-      setPreviewImage(thumbData)
-    }
-  }, [])
-
-  // Transform hook (rotation, crop)
-  const transform = useTransform({
-    originalImage: currentImage.original,
-    thumbnail: currentImage.thumbnail,
-    transformedOriginal: currentImage.transformedOriginal,
-    transformedThumbnail: currentImage.transformedThumbnail,
-    externalTransformState: currentImage.transform,
-    onTransformPreview: useCallback((newThumbnail: ImageData) => {
-      transformedThumbnailRef.current = newThumbnail
-      updatePreview(newThumbnail, currentImage.recipe, customSettingsRef.current)
-    }, [currentImage.recipe, updatePreview]),
-    onTransformChange: useCallback((newOriginal: ImageData, newThumbnail: ImageData, transformState: ImageTransformState) => {
-      transformedThumbnailRef.current = newThumbnail
-      onImageUpdate(currentImage.id, {
-        transformedOriginal: newOriginal,
-        transformedThumbnail: newThumbnail,
-        transform: transformState,
-      })
-      updatePreview(newThumbnail, currentImage.recipe, customSettingsRef.current)
-    }, [currentImage, onImageUpdate, updatePreview])
-  })
-
-  // Синхронизируем ref с актуальным состоянием transform
-  transformedThumbnailRef.current = transform.transformedThumbnail
-
-  // Tuning hook (fine-tune settings)
-  const tuning = useTuning({
-    initialSettings: currentImage.customSettings,
-    onSettingsChange: useCallback((newSettings: RecipeSettings) => {
-      customSettingsRef.current = newSettings
-      onImageUpdate(currentImage.id, { customSettings: newSettings })
-      updatePreview(transformedThumbnailRef.current, currentImage.recipe, newSettings)
-    }, [currentImage, onImageUpdate, updatePreview])
-  })
-
-  // Синхронизируем ref с актуальным состоянием tuning
-  customSettingsRef.current = tuning.customSettings
-
-  // ============================================================================
-  // Sync preview when switching images
-  // ============================================================================
-
+  // Both committed edits and the active draft feed the same preview path.
   useEffect(() => {
     let cancelled = false
-
     const loadAndPreview = async () => {
       setIsProcessing(true)
       try {
-        if (currentImage.recipe) {
-          await loadSimulationLUT(currentImage.recipe.filmSimulation)
-        }
+        if (currentImage.recipe) await loadSimulationLUT(currentImage.recipe.filmSimulation)
         if (!cancelled) {
-          updatePreview(
-            currentImage.transformedThumbnail,
-            currentImage.recipe,
-            currentImage.customSettings
-          )
+          const data = currentImage.recipe
+            ? ImageProcessor.process(transformedThumbnail, createProcessingPlan(currentImage.recipe, transformedThumbnail, settings))
+            : transformedThumbnail
+          setPreview({ imageId: currentImage.id, data })
         }
       } finally {
         if (!cancelled) setIsProcessing(false)
       }
     }
-    loadAndPreview()
-
-    return () => {
-      cancelled = true
-    }
-  }, [currentImage.id, currentImage.transformedThumbnail, currentImage.recipe, currentImage.customSettings, updatePreview])
+    void loadAndPreview()
+    return () => { cancelled = true }
+  }, [currentImage.id, currentImage.recipe, transformedThumbnail, settings])
 
   // ============================================================================
   // Recipe Processing
@@ -248,8 +175,8 @@ export function Editor({
       recipe,
       customSettings: {} // Сброс настроек при смене рецепта
     })
-    tuning.resetSettings()
-  }, [currentImage.id, onImageUpdate, tuning])
+    edit.cancel()
+  }, [currentImage.id, onImageUpdate, edit])
 
   /**
    * Применить текущий рецепт и настройки ко всем изображениям
@@ -260,7 +187,9 @@ export function Editor({
     setIsApplyingToAll(true)
 
     try {
-      const { recipe, customSettings } = currentImage
+      const { recipe } = currentImage
+      const customSettings = settings
+      edit.commit()
 
       // Используем setTimeout для показа индикатора загрузки
       await new Promise(resolve => setTimeout(resolve, 100))
@@ -276,7 +205,7 @@ export function Editor({
     } finally {
       setIsApplyingToAll(false)
     }
-  }, [currentImage, images, onImageUpdate])
+  }, [currentImage, images, onImageUpdate, settings, edit])
 
   /**
    * Случайный рецепт (применяется к текущему изображению)
@@ -292,9 +221,9 @@ export function Editor({
       const recipe = availableRecipes[randomIndex]
       const customSettings = createRandomRecipeSettings()
       onImageUpdate(currentImage.id, { recipe, customSettings })
-      tuning.updateSettings(customSettings)
+      edit.cancel()
     }
-  }, [currentImage.id, currentImage.recipe, onImageUpdate, tuning])
+  }, [currentImage.id, currentImage.recipe, onImageUpdate, edit])
 
   // ============================================================================
   // Panel & UI
@@ -306,77 +235,33 @@ export function Editor({
   const handlePanelToggle = useCallback(() => {
     if (isWideDesktop) return
     setIsPanelOpen(prev => !prev)
-    if (tuning.isTuning) {
-      tuning.applyTuning()
-    }
-  }, [isWideDesktop, tuning])
+    if (isTuning) edit.commit()
+  }, [isWideDesktop, isTuning, edit])
 
-  /**
-   * Открытие тюнинга с проверкой панели
-   */
   const handleTuningOpen = useCallback(() => {
     if (isWideDesktop) return
     if (isPanelOpen) {
-      if (tuning.isTuning) tuning.applyTuning()
+      if (isTuning) edit.commit()
       setIsPanelOpen(false)
     } else {
-      if (!tuning.isTuning) {
-      tuning.toggleTuning()
-      }
+      edit.openTuning()
       setIsPanelOpen(true)
     }
-  }, [isWideDesktop, tuning, isPanelOpen])
+  }, [isWideDesktop, isPanelOpen, isTuning, edit])
 
-  /**
-   * Открытие crop с закрытием tuning
-   */
   const handleCropClick = useCallback(() => {
     if (demoMode) return
-    if (!isMdUp) {
-      if (adjustSession) {
-        tuning.updateSettings(adjustSession.before)
-        setAdjustSession(null)
-      }
-      setMobileMode('crop')
-    }
-    if (tuning.isTuning) {
-      tuning.applyTuning()
-    }
-    transform.openCrop()
-  }, [adjustSession, demoMode, isMdUp, tuning, transform])
+    if (!isMdUp) setMobileMode('crop')
+    // Desktop Apply preserves its established panel behavior. A mobile tool
+    // is canceled when leaving it; openCrop replaces that draft atomically.
+    if (isTuning) edit.commit()
+    edit.openCrop()
+  }, [demoMode, isMdUp, isTuning, edit])
 
-  const openAdjustTool = useCallback((tool: AdjustTool) => {
-    setAdjustSession(beginAdjustSession(tool, tuning.customSettings))
-  }, [tuning.customSettings])
-
-  const changeAdjustValue = useCallback((value: RecipeSettings[AdjustTool]) => {
-    if (!adjustSession) return
-    const next = updateAdjustSession(adjustSession, value)
-    setAdjustSession(next)
-    tuning.updateSettings(next.draft)
-  }, [adjustSession, tuning])
-
-  const resetAdjustValue = useCallback(() => {
-    if (!currentImage.recipe) return
-    if (!adjustSession) return
-    const next = resetAdjustSession(adjustSession, currentImage.recipe)
-    setAdjustSession(next)
-    tuning.updateSettings(next.draft)
-  }, [adjustSession, currentImage.recipe, tuning])
-
-  const cancelAdjustSession = useCallback(() => {
-    if (adjustSession) tuning.updateSettings(adjustSession.before)
-    setAdjustSession(null)
-  }, [adjustSession, tuning])
-
-  const changeMobileMode = useCallback((mode: 'presets' | 'adjust' | 'crop') => {
-    if (adjustSession) {
-      tuning.updateSettings(adjustSession.before)
-      setAdjustSession(null)
-    }
-    if (transform.isCropping) transform.cancelCrop()
+  const changeMobileMode = (mode: 'presets' | 'adjust' | 'crop') => {
+    edit.cancel()
     setMobileMode(mode)
-  }, [adjustSession, transform, tuning])
+  }
 
   // ============================================================================
   // Export
@@ -392,16 +277,17 @@ export function Editor({
     setExportError(null)
     setIsExporting(true)
     try {
-      const mergedSettings = tuning.getMergedSettings(currentImage.recipe)
+      const exportImage = edit.exportImage()
+      const mergedSettings = { ...currentImage.recipe.settings, ...exportImage.customSettings }
       const plan = createProcessingPlan(
         currentImage.recipe,
-        transform.transformedOriginal,
+        exportImage.transformedOriginal,
         mergedSettings
       )
 
       const baseName = currentImage.fileName.replace(/\.[^.]+$/, '')
       const result = await exportPhoto({
-        imageData: transform.transformedOriginal,
+        imageData: exportImage.transformedOriginal,
         plan,
         fileName: `photochrome_${currentImage.recipe.id}_${baseName}.jpg`,
         watermarkText: APP_URL,
@@ -421,7 +307,7 @@ export function Editor({
       }
       setIsExporting(false)
     }
-  }, [currentImage, transform.transformedOriginal, tuning])
+  }, [currentImage, edit])
 
   const handleExportAll = useCallback(async () => {
     if (exportAbortControllerRef.current || batchAbortControllerRef.current) return
@@ -442,7 +328,8 @@ export function Editor({
 
     let result: BatchExportResult
     try {
-      result = await exportPhotoBatch(images, {
+      const currentExportImage = edit.exportImage()
+      result = await exportPhotoBatch(images.map(image => image.id === currentExportImage.id ? currentExportImage : image), {
         signal: controller.signal,
         onProgress: setBatchProgress,
       })
@@ -485,7 +372,7 @@ export function Editor({
         if (url) URL.revokeObjectURL(url)
       }
     }
-  }, [images])
+  }, [images, edit])
 
   const isBatchExporting = batchProgress !== null
   const canExportAll = images.some((image) => Boolean(image.recipe))
@@ -508,22 +395,21 @@ export function Editor({
 
   useKeyboardShortcuts(
     {
-      isCropping: transform.isCropping,
-      isTuning: tuning.isTuning,
-      cropRatio: transform.cropRatio,
+      isCropping: isCropping,
+      isTuning: isTuning,
       activeRecipe: currentImage.recipe,
       totalImages,
     },
     {
-      onRotateClockwise: transform.rotateClockwise,
-      onRotateCounterClockwise: transform.rotateCounterClockwise,
-      onFlipHorizontal: transform.flipHorizontal,
+      onRotateClockwise: () => edit.rotate(90),
+      onRotateCounterClockwise: () => edit.rotate(270),
+      onFlipHorizontal: edit.flip,
       onCropOpen: handleCropClick,
-      onCropCancel: transform.cancelCrop,
-      onCropApply: transform.applyCrop,
+      onCropCancel: edit.cancel,
+      onCropApply: edit.commit,
       onTuningToggle: handleTuningOpen,
-      onTuningCancel: tuning.cancelTuning,
-      onTuningApply: tuning.applyTuning,
+      onTuningCancel: edit.cancel,
+      onTuningApply: edit.commit,
       onPanelToggle: handlePanelToggle,
       onExport: handleExport,
       onCompareStart: handleCompareStart,
@@ -538,8 +424,8 @@ export function Editor({
   // Render
   // ============================================================================
 
-  const displayImage = showOriginal ? transform.transformedThumbnail : previewImage
-  const mobileCover = !isMdUp && mobileMode !== 'crop' && !transform.isCropping
+  const displayImage = showOriginal || preview.imageId !== currentImage.id ? transformedThumbnail : preview.data
+  const mobileCover = !isMdUp && mobileMode !== 'crop' && !isCropping
 
   return (
     <div 
@@ -548,7 +434,7 @@ export function Editor({
     >
       <DesktopPresetPanel
         activeRecipe={currentImage.recipe}
-        transformedThumbnail={transform.transformedThumbnail}
+        transformedThumbnail={transformedThumbnail}
         favoriteIds={getFavoriteIds()}
         onRecipeSelect={handleRecipeSelect}
         onRandomRecipe={handleRandomRecipe}
@@ -610,20 +496,20 @@ export function Editor({
           )}
           <Preview
             imageData={displayImage}
-            cropMode={transform.isCropping}
-            cropRatio={transform.cropRatio}
-            cropOffset={transform.cropOffset}
-            onCropOffsetChange={transform.setCropOffset}
-            cropRect={transform.transformState.cropRect}
-            onCropRectChange={transform.setFreeCropRect}
-            cropScale={transform.transformState.cropScale}
-            onCropScaleChange={transform.setCropScale}
+            cropMode={isCropping}
+            cropRatio={edit.transformState.cropRatio}
+            cropOffset={edit.transformState.cropOffset}
+            onCropOffsetChange={cropOffset => edit.changeCrop({ cropOffset })}
+            cropRect={edit.transformState.cropRect}
+            onCropRectChange={cropRect => edit.changeCrop({ cropRect })}
+            cropScale={edit.transformState.cropScale}
+            onCropScaleChange={cropScale => edit.changeCrop({ cropScale })}
             cropGridActive={isCropControlActive}
             cover={mobileCover}
             onMouseDown={handleCompareStart}
             onMouseUp={handleCompareEnd}
             onMouseLeave={handleCompareEnd}
-            enableSwipe={totalImages > 1 && !transform.isCropping}
+            enableSwipe={totalImages > 1 && !isCropping}
             onSwipeLeft={onNextImage}
             onSwipeRight={onPreviousImage}
           />
@@ -642,7 +528,7 @@ export function Editor({
         </div>
 
         {!demoMode && (
-          <div className={`flex-shrink-0 items-center justify-center gap-3 border-t border-zinc-800 bg-black px-4 py-3 ${transform.isCropping ? 'hidden' : 'hidden md:flex'}`} role="toolbar" aria-label="Desktop editor actions">
+          <div className={`flex-shrink-0 items-center justify-center gap-3 border-t border-zinc-800 bg-black px-4 py-3 ${isCropping ? 'hidden' : 'hidden md:flex'}`} role="toolbar" aria-label="Desktop editor actions">
             {!isWideDesktop && (
               <Button variant="outline" onClick={handleTuningOpen} disabled={!currentImage.recipe} aria-label={isPanelOpen ? 'Close Adjust inspector' : 'Open Adjust inspector'} aria-expanded={isPanelOpen}>
                 <Settings2 className="size-4" aria-hidden="true" /> Adjust
@@ -668,25 +554,25 @@ export function Editor({
           </div>
         )}
 
-        <div className={`hidden flex-shrink-0 border-t border-zinc-800 bg-black md:block ${transform.isCropping ? '' : 'md:hidden'}`}>
+        <div className={`hidden flex-shrink-0 border-t border-zinc-800 bg-black md:block ${isCropping ? '' : 'md:hidden'}`}>
           <div className="flex justify-center gap-2 border-b border-zinc-800 px-4 py-2">
-            <Button variant="outline" size="sm" onClick={transform.rotateClockwise} aria-label="Rotate 90 degrees clockwise">
+            <Button variant="outline" size="sm" onClick={() => edit.rotate(90)} aria-label="Rotate 90 degrees clockwise">
               <RotateCw className="size-4" aria-hidden="true" /> Rotate
             </Button>
-            <Button variant="outline" size="sm" onClick={transform.flipHorizontal} aria-label="Flip horizontally">
+            <Button variant="outline" size="sm" onClick={edit.flip} aria-label="Flip horizontally">
               <FlipHorizontal2 className="size-4" aria-hidden="true" /> Flip
             </Button>
           </div>
           <CropPanel
-            cropRatio={transform.cropRatio}
-            fineAngle={transform.transformState.fineAngle}
-            cropScale={transform.transformState.cropScale}
-            onCropRatioChange={transform.setCropRatio}
-            onFineAngleChange={transform.setFineAngle}
-            onCropScaleChange={transform.setCropScale}
+            cropRatio={edit.transformState.cropRatio}
+            fineAngle={edit.transformState.fineAngle}
+            cropScale={edit.transformState.cropScale}
+            onCropRatioChange={cropRatio => edit.changeCrop({ cropRatio })}
+            onFineAngleChange={fineAngle => edit.changeCrop({ fineAngle })}
+            onCropScaleChange={cropScale => edit.changeCrop({ cropScale })}
             onInteractionChange={setIsCropControlActive}
-            onApply={transform.applyCrop}
-            onCancel={transform.cancelCrop}
+            onApply={edit.commit}
+            onCancel={edit.cancel}
           />
         </div>
 
@@ -695,7 +581,7 @@ export function Editor({
         <div className="flex-shrink-0 md:hidden">
           {mobileMode === 'presets' && (
             <RecipePanel
-              sourceImage={transform.transformedThumbnail}
+              sourceImage={transformedThumbnail}
               activeRecipeId={currentImage.recipe?.id ?? null}
               favoriteIds={getFavoriteIds()}
               onRecipeSelect={handleRecipeSelect}
@@ -708,32 +594,32 @@ export function Editor({
           {mobileMode === 'adjust' && (
             <MobileAdjustControls
               recipe={currentImage.recipe}
-              settings={tuning.customSettings}
+              settings={settings}
               session={adjustSession}
-              onOpen={openAdjustTool}
-              onChange={changeAdjustValue}
-              onReset={resetAdjustValue}
+              onOpen={edit.openAdjust}
+              onChange={edit.changeAdjust}
+              onReset={edit.resetAdjust}
             />
           )}
-          {mobileMode === 'crop' && !transform.isCropping && (
+          {mobileMode === 'crop' && !isCropping && (
             <div className="flex h-28 items-center gap-2 border-t border-white/10 bg-transparent p-3" aria-label="Crop tools">
               <Button variant="outline" onClick={handleCropClick} className="min-h-20 flex-1" aria-label="Open crop session">Crop</Button>
-              <Button variant="outline" onClick={transform.rotateClockwise} className="min-h-20 flex-1" aria-label="Rotate 90 degrees clockwise">Rotate</Button>
-              <Button variant="outline" onClick={transform.flipHorizontal} className="min-h-20 flex-1" aria-label="Flip horizontally">Flip</Button>
+              <Button variant="outline" onClick={() => edit.rotate(90)} className="min-h-20 flex-1" aria-label="Rotate 90 degrees clockwise">Rotate</Button>
+              <Button variant="outline" onClick={edit.flip} className="min-h-20 flex-1" aria-label="Flip horizontally">Flip</Button>
             </div>
           )}
-          {!isMdUp && transform.isCropping && (
+          {!isMdUp && isCropping && (
             <section className="border-t border-white/10" aria-label="Crop image">
               <CropPanel
-                cropRatio={transform.cropRatio}
-                fineAngle={transform.transformState.fineAngle}
-                cropScale={transform.transformState.cropScale}
-                onCropRatioChange={transform.setCropRatio}
-                onFineAngleChange={transform.setFineAngle}
-                onCropScaleChange={transform.setCropScale}
+                cropRatio={edit.transformState.cropRatio}
+                fineAngle={edit.transformState.fineAngle}
+                cropScale={edit.transformState.cropScale}
+                onCropRatioChange={cropRatio => edit.changeCrop({ cropRatio })}
+                onFineAngleChange={fineAngle => edit.changeCrop({ fineAngle })}
+                onCropScaleChange={cropScale => edit.changeCrop({ cropScale })}
                 onInteractionChange={setIsCropControlActive}
-                onApply={transform.applyCrop}
-                onCancel={transform.cancelCrop}
+                onApply={edit.commit}
+                onCancel={edit.cancel}
                 showActions={false}
               />
             </section>
@@ -785,15 +671,15 @@ export function Editor({
                   Upload photos
                 </Button>
               </>
-            ) : transform.isCropping ? (
+            ) : isCropping ? (
               <>
-                <Button variant="outline" onClick={transform.cancelCrop} className="flex-1">Cancel</Button>
-                <Button onClick={transform.applyCrop} className="flex-1">Done</Button>
+                <Button variant="outline" onClick={edit.cancel} className="flex-1">Cancel</Button>
+                <Button onClick={edit.commit} className="flex-1">Done</Button>
               </>
             ) : adjustSession ? (
               <>
-                <Button variant="outline" onClick={cancelAdjustSession} className="flex-1">Cancel</Button>
-                <Button onClick={() => setAdjustSession(null)} className="flex-1">Done</Button>
+                <Button variant="outline" onClick={edit.cancel} className="flex-1">Cancel</Button>
+                <Button onClick={edit.commit} className="flex-1">Done</Button>
               </>
             ) : (
               <>
@@ -848,10 +734,10 @@ export function Editor({
         isOpen={isAdjustPanelVisible}
         enabled={!demoMode}
         activeRecipe={currentImage.recipe}
-        customSettings={tuning.customSettings}
-        onSettingsChange={tuning.updateSettings}
-        onTuningApply={tuning.applyTuning}
-        onTuningCancel={tuning.cancelTuning}
+        customSettings={settings}
+        onSettingsChange={edit.changeSettings}
+        onTuningApply={edit.commit}
+        onTuningCancel={edit.cancel}
       />
 
       {/* Help dialog */}
@@ -922,7 +808,12 @@ export function Editor({
         <ExportCompletion
           result={completion}
           onClose={() => setCompletion(null)}
-          onNewEdit={onBack}
+          onNewEdit={() => {
+            setCompletion(null)
+            edit.cancel()
+            setMobileMode('presets')
+            onBack()
+          }}
           onRestoreFocus={() => {
             if (exportFocusRef.current?.isConnected) exportFocusRef.current.focus({ preventScroll: true })
           }}

@@ -11,7 +11,8 @@ import { loadSimulationLUT } from '../presets/simulations'
 import { createProcessingPlan } from '../engine/processing-plan'
 import { getAllRecipes } from '../presets/recipes'
 import { useFavorites } from '../hooks/useFavorites'
-import { VideoData, VideoExportState } from '../hooks/useVideoProcessor'
+import type { VideoData } from '../engine/media-loading'
+import type { VideoExportState } from '../hooks/useVideoExport'
 import { Spinner } from './ui/spinner'
 
 interface VideoEditorProps {
@@ -22,6 +23,7 @@ interface VideoEditorProps {
   exportState: VideoExportState
   onCancelExport: () => void
   onDismissExportError: () => void
+  interactionDisabled?: boolean
 }
 
 /**
@@ -85,6 +87,7 @@ export function VideoEditor({
   exportState,
   onCancelExport,
   onDismissExportError,
+  interactionDisabled = false,
 }: VideoEditorProps) {
   const { video, thumbnail, metadata } = videoData
   const [activeRecipe, setActiveRecipe] = useState<Recipe | null>(null)
@@ -234,6 +237,10 @@ export function VideoEditor({
    * Keyboard shortcuts
    */
   useEffect(() => {
+    if (interactionDisabled) {
+      setShowOriginal(false)
+      return
+    }
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return
@@ -289,6 +296,7 @@ export function VideoEditor({
       window.removeEventListener('keyup', handleKeyUp)
     }
   }, [
+    interactionDisabled,
     isTuning,
     activeRecipe,
     exportState.isExporting,

@@ -2,6 +2,18 @@ import { test, expect } from './helpers/fixtures'
 import { fixturePath, uploadImage, uploadMultipleImages, waitForEditor } from './helpers/upload'
 
 test.describe('Playable demo', () => {
+  test('recovers from a failed initial demo request', async ({ page }) => {
+    await page.route('**/*unsplash.webp', route => route.fulfill({ status: 503, body: 'Unavailable' }))
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
+    await expect(page.getByRole('alert')).toContainText('Failed to load demo')
+    await expect(page.getByRole('button', { name: 'Retry', exact: true })).toBeFocused()
+    await page.unroute('**/*unsplash.webp')
+    await page.getByRole('button', { name: 'Retry', exact: true }).click()
+    await waitForEditor(page)
+    await expect(page.getByRole('alert')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Upload photos', exact: true })).toBeVisible()
+  })
+
   test('shows real demo photos, presets, compare surface, and a persistent upload CTA', async ({ page, landingPage }) => {
     await waitForEditor(page)
     await expect(page.getByRole('button', { name: 'Upload photos' })).toBeVisible()

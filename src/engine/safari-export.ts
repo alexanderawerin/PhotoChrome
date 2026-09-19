@@ -183,11 +183,3 @@ function seekVideo(video: HTMLVideoElement, time: number): Promise<void> {
     video.currentTime = time
   })
 }
-
-/**
- * Check if browser is Safari
- */
-export function isSafari(): boolean {
-  const ua = navigator.userAgent
-  return ua.includes('Safari') && !ua.includes('Chrome') && !ua.includes('Chromium')
-}

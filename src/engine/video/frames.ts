@@ -10,10 +10,19 @@ export interface VideoMetadata {
 
 const SEEK_TIMEOUT_MS = 10_000
 
-export async function loadVideo(file: File): Promise<{
+export function releaseVideo(video: HTMLVideoElement): void {
+  const url = video.src
+  video.pause()
+  video.removeAttribute('src')
+  video.load()
+  if (url) URL.revokeObjectURL(url)
+}
+
+export async function loadVideo(file: File, signal?: AbortSignal): Promise<{
   video: HTMLVideoElement
   metadata: VideoMetadata
 }> {
+  signal?.throwIfAborted()
   return new Promise((resolve, reject) => {
     const video = document.createElement('video')
     video.muted = true
@@ -24,7 +33,7 @@ export async function loadVideo(file: File): Promise<{
 
     const loadTimeout = setTimeout(() => {
       cleanup()
-      URL.revokeObjectURL(url)
+      releaseVideo(video)
       reject(new Error('Video loading timed out. The file may be too large or the format is not supported.'))
     }, SEEK_TIMEOUT_MS)
 
@@ -33,6 +42,13 @@ export async function loadVideo(file: File): Promise<{
       video.onloadedmetadata = null
       video.oncanplay = null
       video.onerror = null
+      signal?.removeEventListener('abort', onAbort)
+    }
+
+    const onAbort = () => {
+      cleanup()
+      releaseVideo(video)
+      reject(signal?.reason ?? new DOMException('Video load cancelled', 'AbortError'))
     }
 
     const handleReady = () => {
@@ -45,7 +61,7 @@ export async function loadVideo(file: File): Promise<{
         aspectRatio: video.videoWidth / video.videoHeight,
       }
       if (metadata.duration > VIDEO_MAX_DURATION) {
-        URL.revokeObjectURL(url)
+        releaseVideo(video)
         reject(new Error(`Video is too long. Maximum duration is ${VIDEO_MAX_DURATION} seconds.`))
         return
       }
@@ -56,10 +72,11 @@ export async function loadVideo(file: File): Promise<{
     video.oncanplay = handleReady
     video.onerror = () => {
       cleanup()
-      URL.revokeObjectURL(url)
+      releaseVideo(video)
       reject(new Error('Failed to load video. The file may be corrupted or in an unsupported format.'))
     }
     video.src = url
+    signal?.addEventListener('abort', onAbort, { once: true })
     video.load()
   })
 }

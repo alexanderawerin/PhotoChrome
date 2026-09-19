@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { ImageOff, Film, RefreshCw } from 'lucide-react'
 import { LandingScreen } from './components/LandingScreen'
 import { Editor } from './components/Editor'
@@ -14,8 +14,8 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from './components/ui/empty'
-import { useImageProcessor } from './hooks/useImageProcessor'
-import { useVideoProcessor } from './hooks/useVideoProcessor'
+import { useMediaSession } from './hooks/useMediaSession'
+import { useVideoExport } from './hooks/useVideoExport'
 import demoOneUrl from '../img/alexander-awerin-3yqVPhHHsdI-unsplash.webp'
 import demoTwoUrl from '../img/alexander-awerin-AQI2wTv1SWo-unsplash.webp'
 import demoThreeUrl from '../img/alexander-awerin-yafEjegDFl4-unsplash.webp'
@@ -71,313 +71,125 @@ function LoadingContent({ isLoading, children }: { isLoading: boolean; children:
   )
 }
 
-type MediaType = 'image' | 'video' | null
-type MediaSelection =
-  | { type: 'image'; files: File[] }
-  | { type: 'video'; file: File }
-
-/**
- * Main application component.
- * Starts in the demo editor and switches to user media; retains an upload fallback.
- */
+/** Keeps the last working editor mounted while its replacement loads. */
 function AppContent() {
-  const [mediaType, setMediaType] = useState<MediaType>(null)
-  const [fileName, setFileName] = useState<string>('')
-  const [isDemoInitializing, setIsDemoInitializing] = useState(true)
-  const demoLoadStarted = useRef(false)
-  const lastMediaSelectionRef = useRef<MediaSelection | null>(null)
-  const loadingPreviewUrlRef = useRef<string | null>(null)
-  const [loadingPreviewUrl, setLoadingPreviewUrl] = useState<string | null>(null)
+  const { session, state, previewUrl } = useMediaSession(DEMO_PHOTOS)
+  const { media } = state
+  const { exportState, exportVideoWithEffects, cancelExport, dismissExportError } = useVideoExport(
+    media?.kind === 'video' ? media.data : null,
+  )
   const errorFileInputRef = useRef<HTMLInputElement>(null)
-  const {
-    images,
-    currentIndex,
-    isLoading: isImageLoading,
-    error: imageError,
-    loadImages,
-    addImages,
-    goToImage,
-    nextImage,
-    previousImage,
-    updateImage,
-    reset: resetImage,
-  } = useImageProcessor()
-
-  const {
-    videoData,
-    isLoading: isVideoLoading,
-    error: videoError,
-    exportState,
-    loadVideoFile,
-    exportVideoWithEffects,
-    cancelExport,
-    dismissExportError,
-    reset: resetVideo,
-  } = useVideoProcessor()
-
-  const isLoading = isImageLoading || isVideoLoading
-  const error = imageError || videoError
-
-  const setLoadingPreviewForFile = useCallback((file: File | null) => {
-    if (loadingPreviewUrlRef.current) {
-      URL.revokeObjectURL(loadingPreviewUrlRef.current)
-    }
-
-    const nextUrl = file?.type.startsWith('image/') ? URL.createObjectURL(file) : null
-    loadingPreviewUrlRef.current = nextUrl
-    setLoadingPreviewUrl(nextUrl)
-  }, [])
-
-  const clearLoadingPreview = useCallback(() => {
-    if (loadingPreviewUrlRef.current) {
-      URL.revokeObjectURL(loadingPreviewUrlRef.current)
-      loadingPreviewUrlRef.current = null
-    }
-    setLoadingPreviewUrl(null)
-  }, [])
-
-  useEffect(() => () => {
-    if (loadingPreviewUrlRef.current) {
-      URL.revokeObjectURL(loadingPreviewUrlRef.current)
-      loadingPreviewUrlRef.current = null
-    }
-  }, [])
-
-  const loadDemo = useCallback(async () => {
-    setIsDemoInitializing(true)
-    try {
-      const files = await Promise.all(DEMO_PHOTOS.map(async (url, index) => {
-        const response = await fetch(url)
-        if (!response.ok) throw new Error('Failed to load demo photo')
-        const blob = await response.blob()
-        return new File([blob], `Demo ${index + 1}.webp`, { type: blob.type || 'image/webp' })
-      }))
-      await loadImages(files)
-    } finally {
-      setIsDemoInitializing(false)
-    }
-  }, [loadImages])
+  const retryButtonRef = useRef<HTMLButtonElement>(null)
+  const isLoading = state.status === 'loading' || state.status === 'empty'
+  const blocked = state.status !== 'ready'
+  const request = state.status === 'loading' || state.status === 'error' ? state.request : null
+  const isVideoRequest = request?.kind === 'video'
+  const error = state.status === 'error' ? state.message : null
 
   useEffect(() => {
-    if (demoLoadStarted.current) return
-    demoLoadStarted.current = true
-    void loadDemo()
-  }, [loadDemo])
+    if (state.status === 'error') retryButtonRef.current?.focus()
+  }, [state.status])
 
-  const handleFileSelect = useCallback(async (files: File | File[], type: 'image' | 'video') => {
-    if (type === 'image') {
-      const fileArray = Array.isArray(files) ? files : [files]
-      if (fileArray.length === 0) return
-      lastMediaSelectionRef.current = { type: 'image', files: fileArray }
-      setLoadingPreviewForFile(fileArray[0])
-      setFileName(fileArray.length === 1 ? fileArray[0].name : `${fileArray.length} images`)
-      setMediaType(type)
-      try {
-        await loadImages(fileArray)
-      } finally {
-        clearLoadingPreview()
-      }
-    } else {
-      const file = Array.isArray(files) ? files[0] : files
-      if (!file) return
-      lastMediaSelectionRef.current = { type: 'video', file }
-      setLoadingPreviewForFile(null)
-      setFileName(file.name)
-      setMediaType(type)
-      try {
-        await loadVideoFile(file)
-      } finally {
-        clearLoadingPreview()
-      }
-    }
-  }, [clearLoadingPreview, loadImages, loadVideoFile, setLoadingPreviewForFile])
-
-  const handleReset = useCallback(() => {
-    lastMediaSelectionRef.current = null
-    clearLoadingPreview()
-    setMediaType(null)
-    setFileName('')
-    resetImage()
-    resetVideo()
-    void loadDemo()
-  }, [clearLoadingPreview, loadDemo, resetImage, resetVideo])
-
-  const handleRetry = useCallback(() => {
-    const selection = lastMediaSelectionRef.current
-    if (!selection) {
-      handleReset()
-      return
-    }
-
-    if (selection.type === 'image') {
-      void handleFileSelect(selection.files, 'image')
-    } else {
-      void handleFileSelect(selection.file, 'video')
-    }
-  }, [handleFileSelect, handleReset])
-
-  // Determine error type for contextual icon
-  const isVideoError = mediaType === 'video'
-  const ErrorIcon = isVideoError ? Film : ImageOff
-
-  // Show error state
-  if (error) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-        <Empty className="max-w-md border-0">
-          <EmptyHeader>
-            <EmptyMedia 
-              variant="icon" 
-              className="bg-rose-500/10 text-rose-400 size-16 rounded-2xl [&_svg]:size-8"
-            >
-              <ErrorIcon />
-            </EmptyMedia>
-            <EmptyTitle className="text-xl text-white">
-              {isVideoError ? 'Failed to load video' : 'Failed to load image'}
-            </EmptyTitle>
-            <EmptyDescription className="text-zinc-400">
-              {error}
-            </EmptyDescription>
-          </EmptyHeader>
-
-          <EmptyContent>
-            <div className="flex w-full flex-col gap-2">
-              <input
-                ref={errorFileInputRef}
-                type="file"
-                accept={isVideoError
-                  ? 'video/mp4,video/webm,video/quicktime,video/mov'
-                  : 'image/jpeg,image/png,image/webp,image/gif'}
-                multiple={!isVideoError}
-                className="sr-only"
-                aria-label={isVideoError ? 'Choose another video' : 'Choose another photo'}
-                onChange={event => {
-                  const files = Array.from(event.target.files ?? [])
-                  event.target.value = ''
-                  if (files.length > 0) {
-                    void handleFileSelect(
-                      isVideoError ? files[0] : files,
-                      isVideoError ? 'video' : 'image'
-                    )
-                  }
-                }}
-              />
-              <Button
-                onClick={handleRetry}
-                variant="outline"
-                className="gap-2 border-zinc-700 hover:bg-zinc-800 hover:text-white"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Retry
-              </Button>
-              <Button onClick={() => errorFileInputRef.current?.click()}>
-                Choose another
-              </Button>
-              <Button variant="ghost" onClick={handleReset}>Back to demo</Button>
-            </div>
-          </EmptyContent>
-        </Empty>
-      </div>
-    )
+  const handleFileSelect = (files: File | File[], type: 'image' | 'video'): Promise<void> => {
+    const selection = Array.isArray(files) ? files : [files]
+    if (selection.length === 0) return Promise.resolve()
+    return type === 'video'
+      ? session.load({ kind: 'video', file: selection[0] })
+      : session.load({ kind: 'photos', files: selection, mode: 'replace' })
   }
 
-  // Demo photos use the editor with restricted controls.
-  if (mediaType === null && images.length > 0) {
-    return (
-      <Editor
-        images={images}
-        currentIndex={currentIndex}
-        onIndexChange={goToImage}
-        onImageUpdate={updateImage}
-        onNextImage={nextImage}
-        onPreviousImage={previousImage}
-        onBack={handleReset}
-        onAddImages={async files => handleFileSelect(files, 'image')}
-        onMediaSelect={handleFileSelect}
-        demoMode
+  const startDemo = () => { void session.load({ kind: 'demo' }) }
+  let content: ReactNode
+  if (media?.kind === 'video') {
+    content = (
+      <VideoEditor
+        videoData={media.data}
+        fileName={media.fileName}
+        onBack={startDemo}
+        onExport={exportVideoWithEffects}
+        exportState={exportState}
+        onCancelExport={cancelExport}
+        onDismissExportError={dismissExportError}
+        interactionDisabled={blocked}
       />
     )
-  }
-
-  if (mediaType === null && isDemoInitializing) {
-    return <main className="min-h-screen bg-zinc-950"><LoadingOverlay mediaType="image" /></main>
-  }
-
-  if (mediaType === null || (mediaType === 'image' && images.length === 0) || (mediaType === 'video' && !videoData && images.length === 0)) {
-    return (
-      <>
-        <LoadingContent isLoading={isLoading}>
-          <LandingScreen onFileSelect={handleFileSelect} />
-        </LoadingContent>
-        {isLoading && (
-          <LoadingOverlay
-            mediaType={mediaType === 'video' ? 'video' : 'image'}
-            previewUrl={mediaType === 'image' ? loadingPreviewUrl : undefined}
-          />
-        )}
-      </>
+  } else if (media) {
+    content = (
+      <Editor
+        images={media.images}
+        currentIndex={media.currentIndex}
+        onIndexChange={session.goToImage}
+        onImageUpdate={session.updateImage}
+        onNextImage={() => session.goToImage(media.currentIndex + 1)}
+        onPreviousImage={() => session.goToImage(media.currentIndex - 1)}
+        onBack={startDemo}
+        onAddImages={files => session.load({ kind: 'photos', files, mode: media.kind === 'demo' ? 'replace' : 'append' })}
+        onMediaSelect={handleFileSelect}
+        demoMode={media.kind === 'demo'}
+        interactionDisabled={blocked}
+      />
     )
+  } else if (isLoading) {
+    content = <main className="min-h-screen bg-zinc-950" />
+  } else {
+    content = <LandingScreen onFileSelect={handleFileSelect} />
   }
 
-  // Keep the current image editor visible while a replacement image or video loads.
-  if (images.length > 0 && (mediaType === 'image' || (mediaType === 'video' && !videoData))) {
-    return (
-      <>
-        <LoadingContent isLoading={isLoading}>
-          <Editor
-            images={images}
-            currentIndex={currentIndex}
-            onIndexChange={goToImage}
-            onImageUpdate={updateImage}
-            onNextImage={nextImage}
-            onPreviousImage={previousImage}
-            onBack={handleReset}
-            onAddImages={addImages}
-            interactionDisabled={isLoading}
-          />
-        </LoadingContent>
-        {isLoading && (
-          <LoadingOverlay
-            mediaType={mediaType === 'video' ? 'video' : 'image'}
-            previewUrl={mediaType === 'image' ? loadingPreviewUrl : undefined}
-          />
-        )}
-      </>
-    )
-  }
-
-  // Show video editor
-  if (mediaType === 'video' && videoData) {
-    return (
-      <>
-        <LoadingContent isLoading={isLoading}>
-          <VideoEditor
-            videoData={videoData}
-            fileName={fileName}
-            onBack={handleReset}
-            onExport={exportVideoWithEffects}
-            exportState={exportState}
-            onCancelExport={cancelExport}
-            onDismissExportError={dismissExportError}
-          />
-        </LoadingContent>
-        {isLoading && <LoadingOverlay mediaType="video" />}
-      </>
-    )
-  }
-
-  return null
+  const ErrorIcon = isVideoRequest ? Film : ImageOff
+  return (
+    <>
+      <LoadingContent isLoading={blocked}>{content}</LoadingContent>
+      {isLoading && <LoadingOverlay mediaType={isVideoRequest ? 'video' : 'image'} previewUrl={previewUrl} />}
+      {error && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-zinc-950 p-4" role="alert">
+          <Empty className="max-w-md border-0">
+            <EmptyHeader>
+              <EmptyMedia variant="icon" className="bg-rose-500/10 text-rose-400 size-16 rounded-2xl [&_svg]:size-8">
+                <ErrorIcon />
+              </EmptyMedia>
+              <EmptyTitle className="text-xl text-white">
+                {isVideoRequest ? 'Failed to load video' : request?.kind === 'demo' ? 'Failed to load demo' : 'Failed to load image'}
+              </EmptyTitle>
+              <EmptyDescription className="text-zinc-400">{error}</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <div className="flex w-full flex-col gap-2">
+                <input
+                  ref={errorFileInputRef}
+                  type="file"
+                  accept={isVideoRequest ? 'video/mp4,video/webm,video/quicktime,video/mov' : 'image/jpeg,image/png,image/webp,image/gif'}
+                  multiple={!isVideoRequest}
+                  className="sr-only"
+                  aria-label={isVideoRequest ? 'Choose another video' : 'Choose another photo'}
+                  onChange={event => {
+                    const files = Array.from(event.target.files ?? [])
+                    event.target.value = ''
+                    if (request?.kind === 'photos' && request.mode === 'append') {
+                      void session.load({ ...request, files })
+                    } else {
+                      void handleFileSelect(files, isVideoRequest ? 'video' : 'image')
+                    }
+                  }}
+                />
+                <Button ref={retryButtonRef} onClick={() => { void session.retry() }} variant="outline" className="gap-2 border-zinc-700 hover:bg-zinc-800 hover:text-white">
+                  <RefreshCw className="w-4 h-4" /> Retry
+                </Button>
+                <Button onClick={() => errorFileInputRef.current?.click()}>Choose another</Button>
+                <Button variant="ghost" onClick={media ? session.resume : startDemo}>
+                  {media && media.kind !== 'demo' ? 'Back to editor' : 'Back to demo'}
+                </Button>
+              </div>
+            </EmptyContent>
+          </Empty>
+        </div>
+      )}
+    </>
+  )
 }
 
-/**
- * Root application component wrapped with error boundary.
- */
+/** Root application component wrapped with error boundary. */
 function App() {
-  return (
-    <ErrorBoundary>
-      <AppContent />
-    </ErrorBoundary>
-  )
+  return <ErrorBoundary><AppContent /></ErrorBoundary>
 }
 
 export default App

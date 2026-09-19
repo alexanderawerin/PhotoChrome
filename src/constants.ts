@@ -65,9 +65,6 @@ export const PREVIEW_CACHE_MAX_SIZE = 100
 /** Maximum number of small images to cache */
 export const SMALL_IMAGE_CACHE_MAX_SIZE = 100
 
-/** Number of sample points for image hashing (for cache key generation) */
-export const IMAGE_HASH_SAMPLE_COUNT = 16
-
 /** Circle animation parameters */
 export const PHOTO_ARC = {
   /** Mobile settings */

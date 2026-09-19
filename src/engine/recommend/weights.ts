@@ -17,7 +17,6 @@ export const THRESHOLDS = {
   shadowsRecover: 0.1,
   isoHigh: 1600,
   kelvinTolerance: 500,
-  monochromatic: 0.1,
   dominantHueCountHigh: 3,
 }
 

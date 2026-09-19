@@ -1,4 +1,4 @@
-import type { Recipe, RecipeSettings } from './types'
+import type { ImageItem, Recipe, RecipeSettings } from './types'
 import {
   clampFineAngle,
   createDefaultTransformState,
@@ -24,21 +24,70 @@ export type AdjustTool = keyof Pick<RecipeSettings,
   | 'whiteBalanceKelvin'
 >
 
+export interface EditOwner {
+  imageId: string
+  recipeId: string | null
+}
+
 export interface AdjustSession {
+  kind: 'adjust'
+  owner: EditOwner
   tool: AdjustTool
   before: RecipeSettings
   draft: RecipeSettings
 }
 
 export interface CropSession {
+  kind: 'crop'
+  owner: EditOwner
   before: ImageTransformState
   draft: ImageTransformState
 }
 
+export interface TuningSession {
+  kind: 'tuning'
+  owner: EditOwner
+  before: RecipeSettings
+  draft: RecipeSettings
+}
+
+export type EditorSession = AdjustSession | TuningSession | CropSession
+
+export function editOwner(image: Pick<ImageItem, 'id' | 'recipe'>): EditOwner {
+  return { imageId: image.id, recipeId: image.recipe?.id ?? null }
+}
+
+/** A draft cannot follow the user to another photo or another preset. */
+export function activeEditorSession(session: EditorSession | null, owner: EditOwner): EditorSession | null {
+  return session?.owner.imageId === owner.imageId && session.owner.recipeId === owner.recipeId
+    ? session
+    : null
+}
+
+/** Only the active draft is committed; Cancel simply discards it. */
+export function editorSessionChanges(
+  session: EditorSession | null,
+  owner: EditOwner,
+): { customSettings: RecipeSettings } | { transform: ImageTransformState } | null {
+  const active = activeEditorSession(session, owner)
+  if (!active) return null
+  return active.kind === 'crop'
+    ? { transform: cloneTransform(active.draft) }
+    : { customSettings: cloneSettings(active.draft) }
+}
+
+export function beginTuningSession(owner: EditOwner, settings: RecipeSettings): TuningSession {
+  return { kind: 'tuning', owner, before: cloneSettings(settings), draft: cloneSettings(settings) }
+}
+
+export function updateTuningSession(session: TuningSession, settings: RecipeSettings): TuningSession {
+  return { ...session, draft: cloneSettings(settings) }
+}
+
 const cloneSettings = (settings: RecipeSettings): RecipeSettings => ({ ...settings })
 
-export function beginAdjustSession(tool: AdjustTool, settings: RecipeSettings): AdjustSession {
-  return { tool, before: cloneSettings(settings), draft: cloneSettings(settings) }
+export function beginAdjustSession(owner: EditOwner, tool: AdjustTool, settings: RecipeSettings): AdjustSession {
+  return { kind: 'adjust', owner, tool, before: cloneSettings(settings), draft: cloneSettings(settings) }
 }
 
 /** Generates only values accepted by the existing processing pipeline. */
@@ -87,13 +136,13 @@ export function resetAdjustSession(session: AdjustSession, recipe: Recipe): Adju
   return { ...session, draft }
 }
 
-export function beginCropSession(transform: ImageTransformState): CropSession {
-  return { before: cloneTransform(transform), draft: cloneTransform(transform) }
+export function beginCropSession(owner: EditOwner, transform: ImageTransformState): CropSession {
+  return { kind: 'crop', owner, before: cloneTransform(transform), draft: cloneTransform(transform) }
 }
 
 export function updateCropSession(
   session: CropSession,
-  update: Partial<Pick<ImageTransformState, 'fineAngle' | 'cropRatio' | 'cropScale' | 'cropOffset' | 'cropRect'>>,
+  update: Partial<ImageTransformState>,
 ): CropSession {
   return {
     ...session,
@@ -136,8 +185,8 @@ function clamp01(value: number): number {
 }
 
 function normalizeCropRect(rect: NormalizedCropRect): NormalizedCropRect {
-  const x = clamp01(rect.x)
-  const y = clamp01(rect.y)
+  const x = Math.min(0.99, clamp01(rect.x))
+  const y = Math.min(0.99, clamp01(rect.y))
   return {
     x,
     y,
