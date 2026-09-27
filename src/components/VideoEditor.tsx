@@ -469,6 +469,7 @@ export function VideoEditor({
 
       {/* Desktop: Right panel with presets */}
       <aside
+        aria-label="Preset browser"
         className={`
           hidden md:block flex-shrink-0 h-full overflow-hidden
           bg-black border-l border-zinc-800

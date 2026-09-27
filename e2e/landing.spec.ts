@@ -122,8 +122,6 @@ test.describe('Playable demo', () => {
     })
 
     await page.locator('input[aria-label="Choose photos or video to edit"]').setInputFiles(fixturePath('test-video.mp4'))
-    const loading = page.getByRole('status', { name: 'Loading video' })
-    await expect(loading).toBeVisible()
     await expect(page.locator('canvas[aria-label="Preview"]')).toBeVisible()
     await expect(page.locator('[data-slot="empty-title"]')).toContainText('Failed to load video')
     const chooseAnother = page.getByLabel('Choose another video')

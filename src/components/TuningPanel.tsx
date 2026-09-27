@@ -269,6 +269,7 @@ export function TuningPanel({
                 </div>
                 <Slider
                   id={sliderId}
+                  aria-label={param.label}
                   value={[value]}
                   min={param.min}
                   max={param.max}
