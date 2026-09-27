@@ -99,6 +99,7 @@ export function useKeyboardShortcuts(
     }
 
     const key = e.key.toLowerCase()
+    const isSliderFocused = e.target instanceof HTMLElement && e.target.closest('[role="slider"]') !== null
 
     switch (key) {
       case 'r':
@@ -137,7 +138,7 @@ export function useKeyboardShortcuts(
 
       case 'arrowleft':
         // Навигация к предыдущему изображению
-        if (!isCropping && !isTuning && totalImages > 1 && onPreviousImage) {
+        if (!isSliderFocused && !isCropping && !isTuning && totalImages > 1 && onPreviousImage) {
           e.preventDefault()
           onPreviousImage()
         }
@@ -145,7 +146,7 @@ export function useKeyboardShortcuts(
 
       case 'arrowright':
         // Навигация к следующему изображению
-        if (!isCropping && !isTuning && totalImages > 1 && onNextImage) {
+        if (!isSliderFocused && !isCropping && !isTuning && totalImages > 1 && onNextImage) {
           e.preventDefault()
           onNextImage()
         }
