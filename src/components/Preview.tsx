@@ -23,6 +23,8 @@ interface PreviewProps {
   onSwipeRight?: () => void
   enableSwipe?: boolean
   cover?: boolean
+  /** Media ownership changes invalidate an in-flight touch gesture. */
+  gestureContextKey?: string
 }
 
 export function Preview({
@@ -44,17 +46,40 @@ export function Preview({
   onSwipeRight,
   enableSwipe = false,
   cover = false,
+  gestureContextKey,
 }: PreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [canvasDisplaySize, setCanvasDisplaySize] = useState({ width: 0, height: 0 })
 
   // Swipe detection
-  const touchStartX = useRef(0)
-  const touchEndX = useRef(0)
-  const touchStartY = useRef(0)
-  const touchEndY = useRef(0)
+  const gesture = useRef<{ startX: number; startY: number; endX: number; endY: number; swiping: boolean; cancelled: boolean } | null>(null)
+  const suppressMouseUntil = useRef(0)
+  const releaseComparison = useRef(onMouseUp)
+  releaseComparison.current = onMouseUp
   const pinchStart = useRef<{ distance: number; scale: number } | null>(null)
+
+  useEffect(() => {
+    const release = () => {
+      gesture.current = null
+      pinchStart.current = null
+      releaseComparison.current?.()
+    }
+    const onVisibility = () => { if (document.hidden) release() }
+    window.addEventListener('blur', release)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('blur', release)
+      document.removeEventListener('visibilitychange', onVisibility)
+      release()
+    }
+  }, [])
+
+  useEffect(() => {
+    gesture.current = null
+    pinchStart.current = null
+    releaseComparison.current?.()
+  }, [gestureContextKey, cropMode, enableSwipe])
 
   // Рисуем изображение на canvas
   useEffect(() => {
@@ -134,7 +159,10 @@ export function Preview({
 
   // Swipe handlers
   const handleTouchStart = (e: React.TouchEvent) => {
+    suppressMouseUntil.current = performance.now() + 700
+    gesture.current = null
     if (cropMode && e.touches.length === 2) {
+      onMouseUp?.()
       const [first, second] = Array.from(e.touches)
       pinchStart.current = {
         distance: Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY),
@@ -142,44 +170,53 @@ export function Preview({
       }
       return
     }
-    if (!enableSwipe || cropMode) {
-      // Fallback к обычным onTouch handlers
-      onMouseDown?.()
+    if (cropMode || e.touches.length !== 1) {
+      onMouseUp?.()
       return
     }
-
-    touchStartX.current = e.touches[0].clientX
-    touchStartY.current = e.touches[0].clientY
+    const { clientX, clientY } = e.touches[0]
+    gesture.current = { startX: clientX, startY: clientY, endX: clientX, endY: clientY, swiping: false, cancelled: false }
+    onMouseDown?.()
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (cropMode && e.touches.length === 2 && pinchStart.current && onCropScaleChange) {
-      e.preventDefault()
       const [first, second] = Array.from(e.touches)
       const distance = Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY)
       onCropScaleChange(Math.max(1, Math.min(3, pinchStart.current.scale * distance / pinchStart.current.distance)))
       return
     }
-    if (!enableSwipe || cropMode) return
-
-    touchEndX.current = e.touches[0].clientX
-    touchEndY.current = e.touches[0].clientY
-  }
-
-  const handleTouchEnd = () => {
-    pinchStart.current = null
-    if (!enableSwipe || cropMode) {
-      // Fallback к обычным onTouch handlers
+    if (cropMode || !gesture.current) return
+    if (e.touches.length !== 1) {
+      gesture.current = null
       onMouseUp?.()
       return
     }
+    const current = gesture.current
+    current.endX = e.touches[0].clientX
+    current.endY = e.touches[0].clientY
+    const dx = Math.abs(current.startX - current.endX)
+    const dy = Math.abs(current.startY - current.endY)
+    if (Math.max(dx, dy) > 50) {
+      current.swiping = enableSwipe && dx > dy
+      if (dy >= dx) current.cancelled = true
+      onMouseUp?.()
+    }
+  }
 
-    const swipeDistanceX = touchStartX.current - touchEndX.current
-    const swipeDistanceY = touchStartY.current - touchEndY.current
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    suppressMouseUntil.current = performance.now() + 700
+    pinchStart.current = null
+    const current = gesture.current
+    gesture.current = null
+    onMouseUp?.()
+    if (!current || !enableSwipe || cropMode || current.cancelled || e.touches.length > 0) return
+    const swipeDistanceX = current.startX - current.endX
+    const swipeDistanceY = current.startY - current.endY
     const minSwipeDistance = 50
 
     // Проверяем что это горизонтальный свайп (а не вертикальный скролл)
-    if (Math.abs(swipeDistanceX) > Math.abs(swipeDistanceY) && Math.abs(swipeDistanceX) > minSwipeDistance) {
+    if (current.swiping && Math.abs(swipeDistanceX) > Math.abs(swipeDistanceY) && Math.abs(swipeDistanceX) > minSwipeDistance) {
       if (swipeDistanceX > 0) {
         onSwipeLeft?.() // Свайп влево = следующее фото
       } else {
@@ -188,16 +225,26 @@ export function Preview({
     }
   }
 
+  const handleTouchCancel = () => {
+    suppressMouseUntil.current = performance.now() + 700
+    gesture.current = null
+    pinchStart.current = null
+    onMouseUp?.()
+  }
+
   return (
     <div
       ref={wrapperRef}
       className="w-full h-full flex items-center justify-center select-none overflow-hidden"
-      onMouseDown={cropMode ? undefined : onMouseDown}
+      style={{ touchAction: cropMode ? 'none' : 'pan-y' }}
+      onMouseDown={cropMode ? undefined : () => { if (performance.now() >= suppressMouseUntil.current) onMouseDown?.() }}
       onMouseUp={cropMode ? undefined : onMouseUp}
       onMouseLeave={cropMode ? undefined : onMouseLeave}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
+      onContextMenu={event => event.preventDefault()}
     >
       <div 
         className="relative shrink-0 transition-[width,height] [transition-duration:280ms] ease-out motion-reduce:transition-none md:transition-none"

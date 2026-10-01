@@ -1,25 +1,27 @@
 # Photochrome
 
-Edit photos and short videos with 10 Fujifilm-inspired film simulations and 100 presets right in the browser. Try the three-photo demo, save favorite presets, get local Smart Picks, and export individual photos, photo ZIPs, or processed video. Media processing runs locally on your device, without uploading files to a processing server.
+Edit photos and videos up to 30 seconds in your browser. Start with Original, choose one of ten Fujifilm-inspired base films, optionally crop or rotate, then export. Advanced settings keeps all 100 existing recipes and manual color controls available within their film. Media processing runs locally on your device, without uploading files to a processing server.
 
-Development toward Photochrome 2.0 is tracked in the [project roadmap](docs/ROADMAP.md). Technical health work and the latest maintenance check are tracked in the [audit fix plan](docs/audit-2026-07-02-fix-plan-ru.md).
+Implementation evidence and remaining browser/device gates are recorded in the [acceptance report](docs/film-first-acceptance.md) and [project roadmap](docs/ROADMAP.md). Measured preview and memory results, raw trials and reproduction instructions are in the [performance report](docs/film-first-performance.md). Earlier maintenance evidence is recorded in the [audit fix plan](docs/audit-2026-07-02-fix-plan-ru.md).
 
 ## Features
 
-- **Playable demo**: Start with three demo photos; add your own media to unlock Adjust, Crop, and export
-- **Smart Picks and Favorites**: Local photo recommendations and saved favorite presets
-- **Batch export**: Export photos with presets as a ZIP; untouched photos are skipped
-- **10 film simulations**: Provia, Velvia, Classic Chrome, Classic Neg, Astia, Eterna, Acros, Superia, Pro 400H, Neopan
-- **100 ready-made presets**: Community-curated recipes grouped by style
-- **Editor's Choice**: 10 curated top picks by the community
-- **White Balance Kelvin**: Fine-tune color temperature from 2500K to 10000K
-- **Send feedback**: Report bugs or request features directly from the Help dialog
-- **Live preview**: Instant preview of all presets on your photo
-- **Editing tools**: Rotate, crop with draggable frame, fine-tune any parameter
-- **Video support**: Apply simulations to videos up to 30 seconds
-- **Hybrid processing**: CPU LUT processing for photos, Web Workers for photo export, and WebGL2 for video and eligible curve-based photo previews
-- **EXIF metadata**: Recipe settings saved in exported JPEG
-- **Privacy-first**: All processing happens in the browser, your photos never leave your device
+- **Three-photo demo**: Switch photos, try films and compare with Original; add your own photos or video to unlock geometry, Advanced settings and export.
+- **Original and ten base films**: Provia, Velvia, Astia, Pro 400H, Superia, Acros, Neopan, Eterna, Classic Chrome and Classic Neg. New media starts as Original; choosing a film clears earlier color overrides while preserving geometry.
+- **100 Advanced recipes**: Recipes and Manual share one temporary preview. Apply commits the profile and settings together; Cancel, Escape or changing media/film discards the draft. Favorite recipe IDs are shared between photo and video, with favorites first within their film.
+- **Manual color**: Existing tone, color, grain and detail controls, white-balance presets and 2500–10000 K temperature. Parameter reset uses the selected recipe or base-film value.
+- **Photo and video geometry**: Free/fixed crop, positioning, zoom, quarter turns, fine angle and horizontal reflection. Geometry stays independent of color; comparison disables color while keeping the composition and video playback position.
+- **JPEG, ZIP and MP4 export**: Save applied edits, including Original and geometry-only results. Export all includes every loaded photo; partial failures are reported and zero-success exports produce no success archive.
+- **Apply color to all photos**: Copy the applied film, recipe and effective color settings, including Original, while preserving each photo's geometry.
+- **Video sound**: Preserve source audio when the actual browser export configuration supports it. Otherwise, silent output requires an explicit **Export without sound** choice; Cancel leaves the edit available. MP4 support is checked at runtime.
+- **Local processing**: CPU/worker processing for photos and WebGL2 for video and eligible photo previews. Required film resources must be ready before applying or exporting a processed result.
+- **EXIF and feedback**: JPEG export metadata and GitHub feedback from Help remain available.
+
+## Large photos and export quality
+
+Editing keeps your source files and smaller previews rather than retaining decoded full-resolution originals for every photo. Geometry previews stay reversible; each export decodes its source on demand and applies the approved color and composition at full resolution. ZIP export processes photos sequentially. Smaller strip/recipe previews do not reduce saved JPEG dimensions.
+
+The existing photo limits remain **20 files, 25 MiB per file, 64 megapixels per file and 200 megapixels in total**. A rejected append or replacement preserves the previous working session. These are upload limits, not a guarantee of a safe peak memory footprint on every device. The [measured comparison](docs/film-first-performance.md) documents the tested four-photo workload and its browser/device limitations.
 
 ## Getting Started
 
@@ -43,7 +45,7 @@ Build output is written to `out/`. Use `npm run preview` to serve the build loca
 - `npm run process-cards` regenerates `public/cards/` from the JPEG sources in `img/` with randomized grading. Those source photos are still needed by the generator.
 - `npm run generate-seo` regenerates favicons and `public/og-image.jpg` using the template in `scripts/generate-seo-assets.mjs` and sorted photos from `public/cards/`. The recipe count is read from the JSON presets; the committed social image uses this template.
 - `npm run convert-luts` is an optional source-asset tool. It requires Level 12 RGB PNGs in `src/presets/simulations/lut-originals/`, which are not included in this repository, and overwrites matching Level 8 PNGs in `src/presets/simulations/lut/`. Normal builds use the committed Level 8 assets and do not need this step.
-- `npm run generate-fixtures` regenerates the committed E2E JPEGs and MP4. It requires `ffmpeg` (or `FFMPEG_PATH`) for the H.264/AAC video. Browser tests use the committed fixtures and do not need this step.
+- `npm run generate-fixtures` regenerates the committed E2E JPEGs and asymmetric MP4 fixtures, including silent, audio-offset, variable-timing and rotated sources. It requires `ffmpeg` (or `FFMPEG_PATH`) for the H.264/AAC video. Browser tests use the committed fixtures and do not need this step.
 
 ## Testing
 
@@ -58,7 +60,7 @@ npm test                               # Engine and preset unit tests
 npm run build
 ```
 
-Browser checks (require installed browsers):
+Browser checks require installed browsers. Video geometry checks also require `ffmpeg` on `PATH` (or `FFMPEG_PATH`) to inspect downloaded MP4 frames. Both GitHub browser workflows install it before running the tests.
 
 ```bash
 npx playwright install chromium firefox  # Install browsers (once)
@@ -93,11 +95,10 @@ src/
 │   ├── grain.ts         # Film grain
 │   ├── effects.ts       # Clarity, sharpness, color chrome
 │   ├── transform.ts     # Rotate and crop
-│   ├── editor-sessions.ts # Photo-owned temporary editing drafts
+│   ├── editor-sessions.ts # Media-owned color and geometry drafts
 │   ├── media-session.ts # Media loading, replacement, cancellation, and retry
 │   ├── media-loading.ts # Photo/video decoding and demo loading
 │   ├── video/           # Video capabilities, decoding, audio, muxing, and export
-│   ├── recommend/       # Local Smart Picks analysis and scoring
 │   ├── batch-export.ts  # Photo ZIP export
 │   └── webgl/           # GPU-accelerated processing (WebGL2)
 ├── presets/
@@ -109,11 +110,11 @@ src/
 
 ## How Film Simulations Work
 
-Committed photo edits live in `ImageItem`. `useEditorSession` owns one temporary Adjust, desktop tuning, or Crop draft, bound to the photo and preset; Apply/Done commits it, while Cancel or switching owners discards it. Export snapshots the visible draft. Preset preview caches use immutable `ImageData` object identity, so new photos and transformed buffers cannot share an entry accidentally.
+Committed photo color and geometry, the source `File`, source dimensions and preview buffers live in each `ImageItem`; video retains its own committed color and transform. The shared editor-session contract owns one temporary Advanced or Crop draft bound to its media and committed profile. Apply commits the complete draft, while Cancel or changing ownership discards it. Export snapshots the applied state and is unavailable during a draft. Retry reuses the failed request rather than reading a newly selected profile or export mode. Current photo preview work runs in the existing worker, coalesces frequent changes and rejects obsolete results. Recipe previews run when needed/visible, strip previews are reduced before processing, and bounded caches and processors are released on disposal. Preview caches use immutable `ImageData` identity.
 
-`MediaSession` owns loading, retry, and loaded media. A pending or failed replacement retains the previous editor; Retry repeats the original replace/append/video/demo request. Cancellation and operation identity reject late decoder results, and video resources are released when their ownership ends. `useMediaSession` connects this lifecycle to React; `useVideoExport` owns video export separately. Native decoder and browser behavior still require E2E checks beyond the unit-tested state transitions.
+`MediaSession` owns loading, exact-request Retry and loaded media. A pending or failed replacement retains the previous editor; cancellation and operation identity reject stale decoder results. Video URLs and decoder/encoder resources are released when ownership ends. `useMediaSession` connects loading to React, while `useVideoExport` owns video export cancellation and explicit sound consent.
 
-Smart Picks analyzes photo pixels in a Web Worker and caches recommendations by photo ID. The JPEG EXIF reader currently extracts ISO only. The scorer accepts an optional color temperature, but reading camera-specific Kelvin metadata is not implemented; that requires extending `extractExif` with format-specific handling and test fixtures.
+Video export decodes source frames with their presentation timestamps and durations, composes the shared geometry and encodes MP4. Codec dimensions are checked after composition; an odd dimension receives at most one pixel of padding rather than image stretching. Browser support and device behavior require actual runtime verification; the roadmap lists outstanding gates.
 
 Photochrome uses a **hybrid processing pipeline** that combines 3D color lookup tables with parametric effects:
 
@@ -121,7 +122,7 @@ Photochrome uses a **hybrid processing pipeline** that combines 3D color lookup 
 
 2. **Parametric effects** — Applied on top of the LUT: highlight/shadow recovery, white balance shift, color chrome, grain, clarity, sharpness. These remain adjustable per-recipe.
 
-Simulations without a HaldCLUT (Classic Neg, Eterna) fall back to a curve-based approach using 1D tone curves + split-toning color balance.
+Classic Neg and Eterna intentionally use a curve-based approach using 1D tone curves + split-toning color balance.
 
 | Simulation | Source | Method |
 |---|---|---|

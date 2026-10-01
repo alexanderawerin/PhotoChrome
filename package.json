@@ -13,6 +13,7 @@
     "generate-seo": "node scripts/generate-seo-assets.mjs",
     "convert-luts": "node scripts/convert-haldclut.mjs",
     "generate-fixtures": "node e2e/fixtures/generate.mjs",
+    "benchmark:editor": "node scripts/benchmark-editor.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:chromium": "playwright test --project=chromium",

@@ -20,5 +20,5 @@ void main() {
   }
 
   result /= 3.0;
-  fragColor = vec4(result, 1.0);
+  fragColor = vec4(result, texture(uTexture, vUv).a);
 }

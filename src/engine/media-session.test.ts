@@ -15,7 +15,7 @@ function photo(id: string): ImageItem {
   const pixels = { width: 4, height: 3, data: new Uint8ClampedArray(48) } as ImageData
   return {
     id, file: new File(['image'], `${id}.jpg`, { type: 'image/jpeg' }), fileName: `${id}.jpg`,
-    original: pixels, thumbnail: pixels, transformedOriginal: pixels, transformedThumbnail: pixels,
+    sourceSize: { width: 4, height: 3 }, thumbnail: pixels, transformedThumbnail: pixels,
     recipe: null, customSettings: {}, transform: createDefaultTransformState(),
   }
 }
@@ -39,6 +39,19 @@ function setup() {
   }
   return { session: new MediaSession(loaders), loaders }
 }
+
+it('validates appended photos against retained full source dimensions rather than preview dimensions', async () => {
+  const { session, loaders } = setup()
+  const retained = { ...photo('large'), sourceSize: { width: 8_000, height: 6_000 } }
+  loaders.photos.mockResolvedValueOnce([retained])
+  await session.load({ kind: 'photos', mode: 'replace', files: [retained.file] })
+  const added = photo('added')
+  loaders.photos.mockResolvedValueOnce([added])
+  await session.load({ kind: 'photos', mode: 'append', files: [added.file] })
+  expect(loaders.photos).toHaveBeenLastCalledWith(
+    [added.file], [{ file: retained.file, width: 8_000, height: 6_000 }], expect.any(AbortSignal),
+  )
+})
 
 const photos = (files = [photo('a').file]) => ({ kind: 'photos', files, mode: 'replace' } as const)
 const videoRequest = { kind: 'video', file: new File(['video'], 'clip.mp4', { type: 'video/mp4' }) } as const

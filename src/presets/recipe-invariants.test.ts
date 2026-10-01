@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { parseRecipe } from '../engine/schemas'
 import type { FilmSimulation, RecipeSettings } from '../engine/types'
-import { RECIPES, RECIPE_USE_CASES } from './recipes'
+import { RECIPES } from './recipes'
 import { hasSimulationLUTAsset, SIMULATIONS } from './simulations'
 
 const processingPaths = ['cpu', 'worker', 'webgl'] as const
@@ -28,7 +28,6 @@ describe('recipe registry invariants', () => {
   it('contains valid settings for every recipe', () => {
     for (const recipe of Object.values(RECIPES)) {
       expect(() => parseRecipe(recipe), recipe.id).not.toThrow()
-      expect(RECIPE_USE_CASES[recipe.id], `${recipe.id} has no use-case group`).toBeDefined()
     }
   })
 

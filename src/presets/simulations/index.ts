@@ -110,22 +110,41 @@ function loadImageAsImageData(url: string): Promise<ImageData> {
     const img = new Image()
     img.crossOrigin = 'anonymous'
     img.onload = () => {
-      const canvas = document.createElement('canvas')
-      canvas.width = img.width
-      canvas.height = img.height
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return reject(new Error('Failed to get canvas context'))
-      ctx.drawImage(img, 0, 0)
-      resolve(ctx.getImageData(0, 0, img.width, img.height))
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.width
+        canvas.height = img.height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return reject(new Error('Failed to get canvas context'))
+        ctx.drawImage(img, 0, 0)
+        resolve(ctx.getImageData(0, 0, img.width, img.height))
+      } catch (error) {
+        reject(error)
+      } finally {
+        img.onload = null
+        img.onerror = null
+      }
     }
-    img.onerror = () => reject(new Error(`Failed to load LUT image: ${url}`))
+    img.onerror = () => {
+      img.onload = null
+      img.onerror = null
+      reject(new Error(`Failed to load LUT image: ${url}`))
+    }
     img.src = url
   })
 }
 
+class SimulationResourceError extends Error {
+  constructor(public readonly simulationId: string, public readonly cause?: unknown) {
+    super(`Could not load the required film resource for ${SIMULATIONS[simulationId]?.name ?? simulationId}. Retry to load this film.`)
+    this.name = 'SimulationResourceError'
+  }
+}
+
 /**
  * Load the HaldCLUT for a simulation by its ID.
- * Returns cached result on subsequent calls. Returns null if no LUT is available.
+ * Returns null only for deliberately curve-based simulations. Required resource
+ * failures reject and are not cached, so the next request retries the asset.
  */
 export async function loadSimulationLUT(simulationId: string): Promise<HaldCLUT | null> {
   // Already cached
@@ -139,15 +158,15 @@ export async function loadSimulationLUT(simulationId: string): Promise<HaldCLUT 
   }
 
   const simulation = SIMULATIONS[simulationId]
-  if (!simulation?.lutImage) {
+  if (!simulation) throw new Error(`Simulation ${simulationId} was not found`)
+  if (!simulation.lutImage) {
     return null
   }
 
   // Get pre-resolved URL for this simulation's LUT
   const url = lutUrls[simulationId]
   if (!url) {
-    console.warn(`LUT URL not found for "${simulationId}"`)
-    return null
+    throw new SimulationResourceError(simulationId)
   }
 
   const promise = (async () => {
@@ -157,8 +176,7 @@ export async function loadSimulationLUT(simulationId: string): Promise<HaldCLUT 
       lutCache.set(simulationId, lut)
       return lut
     } catch (err) {
-      console.warn(`Failed to load LUT for "${simulationId}":`, err)
-      return null
+      throw new SimulationResourceError(simulationId, err)
     } finally {
       lutLoading.delete(simulationId)
     }

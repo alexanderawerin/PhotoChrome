@@ -72,6 +72,9 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Install video inspection tool
+        run: sudo apt-get install --no-install-recommends --yes ffmpeg
+
       - name: Run Chromium tests
         run: npm run test:e2e:chromium
 

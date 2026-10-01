@@ -2,12 +2,8 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   exportVideo,
   ExportCancelledError,
+  AudioPreservationError,
 } from '../engine/video'
-import {
-  exportVideoWithMediaRecorder,
-  canUseMediaRecorder,
-} from '../engine/safari-export'
-import { isSafari } from '../engine/video/capabilities'
 import { ProcessingPlan } from '../engine/types'
 import type { VideoData } from '../engine/media-loading'
 
@@ -16,6 +12,7 @@ export interface VideoExportState {
   progress: number
   status: string
   error: string | null
+  requiresSilentAudioConsent?: boolean
 }
 
 /** Export lifecycle for the video owned by the current media session. */
@@ -39,11 +36,10 @@ export function useVideoExport(videoData: VideoData | null) {
 
   /**
    * Export video with applied effects.
-   * Uses WebCodecs VideoEncoder for Chrome/Edge/Firefox.
-   * Uses MediaRecorder for the existing Safari fallback.
+   * Uses the runtime-tested MP4 WebCodecs path and explicit silent-export consent.
    */
   const exportVideoWithEffects = useCallback(
-    async (plan: ProcessingPlan): Promise<Blob | null> => {
+    async (plan: ProcessingPlan, options: { allowSilentAudio?: boolean } = {}): Promise<Blob | null> => {
       if (!videoData || activeExport.current) return null
       const controller = new AbortController()
       activeExport.current = controller
@@ -61,25 +57,14 @@ export function useVideoExport(videoData: VideoData | null) {
       })
 
       try {
-        // Safari: use MediaRecorder (WebCodecs VideoEncoder is broken in Safari)
-        const useSafariFallback = isSafari() && canUseMediaRecorder()
-        
-        const blob = useSafariFallback
-          ? await exportVideoWithMediaRecorder(
+        const blob = await exportVideo(
               videoData.video,
               plan,
               (progress, status) => {
                 if (isCurrent() && !controller.signal.aborted) setExportState({ isExporting: true, progress, status, error: null })
               },
-              () => controller.signal.aborted
-            )
-          : await exportVideo(
-              videoData.video,
-              plan,
-              (progress, status) => {
-                if (isCurrent() && !controller.signal.aborted) setExportState({ isExporting: true, progress, status, error: null })
-              },
-              () => controller.signal.aborted
+              () => controller.signal.aborted,
+              options
             )
 
         if (!isCurrent() || controller.signal.aborted) {
@@ -96,7 +81,7 @@ export function useVideoExport(videoData: VideoData | null) {
         }
 
         const message = err instanceof Error ? err.message : 'Export failed'
-        setExportState({ isExporting: false, progress: 0, status: '', error: message })
+        setExportState({ isExporting: false, progress: 0, status: '', error: message, requiresSilentAudioConsent: err instanceof AudioPreservationError })
         throw err
       } finally {
         if (isCurrent()) {
@@ -117,7 +102,7 @@ export function useVideoExport(videoData: VideoData | null) {
   }, [])
 
   const dismissExportError = useCallback(() => {
-    setExportState(previous => ({ ...previous, error: null }))
+    setExportState(previous => ({ ...previous, error: null, requiresSilentAudioConsent: false }))
   }, [])
 
   return {

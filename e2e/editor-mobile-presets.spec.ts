@@ -2,63 +2,15 @@ import { test, expect } from './helpers/fixtures'
 import AxeBuilder from '@axe-core/playwright'
 import type { Locator, Page } from '@playwright/test'
 import { uploadVideo } from './helpers/upload'
+import { advancedPanel, openAdvanced } from './helpers/advanced'
 
 test.use({ viewport: { width: 393, height: 852 } })
 
-const FILM_CATEGORIES = [
-  'Provia',
-  'Velvia',
-  'Astia',
-  'Pro 400H',
-  'Superia',
-  'Acros',
-  'Neopan',
-  'Eterna',
-  'Classic Chrome',
-  'Classic Neg.',
-]
+const FILMS = ['Provia', 'Velvia', 'Astia', 'Pro 400H', 'Superia', 'Acros', 'Neopan', 'Eterna', 'Classic Chrome', 'Classic Neg']
+const selection = (page: Page) => page.getByRole('group', { name: 'Film selection', exact: true })
+const film = (page: Page, name: string) => selection(page).getByRole('button', { name: `Select film ${name}`, exact: true })
 
-function mobilePresetNav(page: Page): Locator {
-  return page.getByRole('navigation', { name: 'Film presets' })
-}
-
-function categories(page: Page): Locator {
-  return mobilePresetNav(page).getByRole('group', { name: 'Preset categories' })
-}
-
-function carousel(page: Page): Locator {
-  return mobilePresetNav(page).getByRole('region', { name: 'Preset carousel' })
-}
-
-async function scrollLeft(region: Locator): Promise<number> {
-  return region.evaluate((element: HTMLElement) => element.scrollLeft)
-}
-
-async function cardRelativeLeft(card: Locator): Promise<number> {
-  return card.evaluate((element: HTMLElement) => {
-    const region = element.closest('[role="region"][aria-label="Preset carousel"]')
-    if (!(region instanceof HTMLElement)) return Number.NaN
-    return element.getBoundingClientRect().left - region.getBoundingClientRect().left
-  })
-}
-
-async function cardIsInCarouselViewport(card: Locator): Promise<boolean> {
-  return card.evaluate((element: HTMLElement) => {
-    const region = element.closest('[role="region"][aria-label="Preset carousel"]')
-    if (!(region instanceof HTMLElement)) return false
-    const cardRect = element.getBoundingClientRect()
-    const regionRect = region.getBoundingClientRect()
-    const cardCenter = cardRect.left + cardRect.width / 2
-    return cardCenter >= regionRect.left && cardCenter <= regionRect.right
-  })
-}
-
-async function selectedRecipeLabel(region: Locator): Promise<string | null> {
-  const selected = region.locator('[aria-label^="Apply preset"][aria-label$=", selected"]')
-  return selected.first().getAttribute('aria-label')
-}
-
-async function expectTouchTarget(locator: Locator): Promise<void> {
+async function expectTouchTarget(locator: Locator) {
   const box = await locator.boundingBox()
   expect(box).not.toBeNull()
   if (!box) return
@@ -66,196 +18,111 @@ async function expectTouchTarget(locator: Locator): Promise<void> {
   expect(box.height).toBeGreaterThanOrEqual(44)
 }
 
-test.describe('Editor — mobile preset categories', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.removeItem('photochrome_favorites')
-      localStorage.removeItem('photochrome-help-version')
-    })
+async function visibleInSelection(locator: Locator) {
+  return locator.evaluate(element => {
+    const group = element.closest('[aria-label="Film selection"]')!
+    const region = group.getBoundingClientRect()
+    const button = element.getBoundingClientRect()
+    return button.left >= region.left - 1 && button.right <= region.right + 1
   })
+}
 
-  test('renders the category row and keeps Random as the first carousel item', async ({ page, editorPage }) => {
-    const nav = mobilePresetNav(page)
-    const categoryRow = categories(page)
-    const presetCarousel = carousel(page)
-
-    await expect(nav).toBeVisible()
-    await expect(categoryRow).toBeVisible()
-    await expect(presetCarousel).toBeVisible()
-    await expect(categoryRow.getByRole('button', { name: 'Smart Picks', exact: true })).toBeVisible({ timeout: 15_000 })
-
-    const categoryButtons = categoryRow.getByRole('button')
-    const categoryNames = await categoryButtons.evaluateAll(buttons =>
-      buttons.map(button => (button.textContent ?? '').replace(/\s+/g, ' ').trim())
-    )
-    expect(categoryNames.slice(0, 3)).toEqual(['Favorites', 'Smart Picks', "Editor's Choice"])
-    expect(categoryNames.slice(3)).toEqual(FILM_CATEGORIES)
-    for (const name of categoryNames) {
-      await expectTouchTarget(categoryRow.getByRole('button', { name, exact: true }))
+test.describe('Editor — mobile films', () => {
+  test('offers Original and exactly ten films with touch-sized main choices', async ({ page, editorPage }) => {
+    await expect(selection(page)).toBeVisible()
+    await expect(selection(page).getByRole('button')).toHaveCount(11)
+    const original = selection(page).getByRole('button', { name: 'Select Original', exact: true })
+    await expect(original).toHaveAttribute('aria-pressed', 'true')
+    await expectTouchTarget(original)
+    for (const name of FILMS) {
+      await expect(film(page, name)).toBeVisible()
+      await expectTouchTarget(film(page, name))
     }
-
-    await expect(categoryRow.getByRole('button', { name: 'Favorites', exact: true })).toHaveAttribute('aria-current', 'true')
-    await expect(categoryRow.getByRole('button', { name: 'Smart Picks', exact: true })).not.toHaveAttribute('aria-current', 'true')
-    await expect(categoryRow.getByRole('button', { name: "Editor's Choice", exact: true })).not.toHaveAttribute('aria-current', 'true')
-
-    const firstCarouselButton = presetCarousel.locator('button').first()
-    await expect(firstCarouselButton).toHaveAttribute('aria-label', 'Random preset')
+    await expect(page.getByRole('button', { name: /Random|Smart Picks|Editor's Choice/ })).toHaveCount(0)
   })
 
-  test('clicking a category scrolls its cards into view and marks it active', async ({ page, editorPage }) => {
-    const categoryRow = categories(page)
-    const presetCarousel = carousel(page)
-    const targetCategory = categoryRow.getByRole('button', { name: "Editor's Choice", exact: true })
-    const targetGroup = presetCarousel.getByRole('group', { name: "Editor's Choice presets", exact: true })
-    const targetCard = targetGroup.locator('[data-recipe-card]').first()
-    const initialScrollLeft = await scrollLeft(presetCarousel)
-
-    await targetCategory.click()
-
-    await expect(targetCategory).toHaveAttribute('aria-current', 'true')
-    await expect.poll(() => scrollLeft(presetCarousel)).toBeGreaterThan(initialScrollLeft)
-    await expect.poll(() => cardIsInCarouselViewport(targetCard)).toBe(true)
+  test('selecting a film scrolls it into view and has one active color', async ({ page, editorPage }) => {
+    const target = film(page, 'Classic Neg')
+    await target.click()
+    await expect(target).toHaveAttribute('aria-pressed', 'true')
+    await expect(selection(page).locator('button[aria-pressed="true"]')).toHaveCount(1)
+    await expect.poll(() => visibleInSelection(target)).toBe(true)
   })
 
-  test('manual card scrolling synchronizes the active category', async ({ page, editorPage }) => {
-    const categoryRow = categories(page)
-    const presetCarousel = carousel(page)
-    const targetCategory = categoryRow.getByRole('button', { name: 'Provia', exact: true })
-    const targetGroup = presetCarousel.getByRole('group', { name: 'Provia presets', exact: true })
-    const targetCard = targetGroup.locator('[data-recipe-card]').first()
-
-    await targetCard.evaluate((element: HTMLElement) => {
-      element.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'start' })
-    })
-
-    await expect.poll(() => cardIsInCarouselViewport(targetCard)).toBe(true)
-    await expect(targetCategory).toHaveAttribute('aria-current', 'true')
+  test('native film-row scrolling preserves the applied choice', async ({ page, editorPage }) => {
+    await film(page, 'Provia').click()
+    await film(page, 'Classic Neg').evaluate(element => element.scrollIntoView({ block: 'nearest', inline: 'end', behavior: 'auto' }))
+    await expect.poll(() => visibleInSelection(film(page, 'Classic Neg'))).toBe(true)
+    await expect(film(page, 'Provia')).toHaveAttribute('aria-pressed', 'true')
+    await expect(film(page, 'Classic Neg')).toHaveAttribute('aria-pressed', 'false')
   })
 
-  test('keeps a manually scrolled card visible through an unrelated editor rerender', async ({ page, editorPage }) => {
-    const categoryRow = categories(page)
-    const presetCarousel = carousel(page)
-    const targetCategory = categoryRow.getByRole('button', { name: 'Provia', exact: true })
-    const targetGroup = presetCarousel.getByRole('group', { name: 'Provia presets', exact: true })
-    const targetCard = targetGroup.locator('[data-recipe-card]').first()
-
-    // Trigger the parent rerender in the same browser task as the native scroll.
-    // This reproduces the window before the carousel's scroll event is delivered.
-    await targetCard.evaluate((element: HTMLElement) => {
-      element.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'start' })
-      document.querySelector<HTMLButtonElement>('header button[aria-label="Help"]')?.click()
-    })
-
-    const helpDialog = page.getByRole('dialog', { name: 'Photochrome help' })
-    await expect(helpDialog).toBeVisible()
-    await helpDialog.getByRole('button', { name: 'Close' }).click()
-    await expect.poll(() => cardIsInCarouselViewport(targetCard)).toBe(true)
-    await expect(targetCategory).toHaveAttribute('aria-current', 'true')
+  test('keeps film-row scroll position and selected film after Help rerenders', async ({ page, editorPage }) => {
+    await film(page, 'Classic Neg').click()
+    const scroll = await selection(page).evaluate(element => element.scrollLeft)
+    const help = page.locator('header:visible').getByRole('button', { name: 'Help', exact: true })
+    await help.click()
+    const dialog = page.getByRole('dialog', { name: 'Photochrome help', exact: true })
+    await expect(dialog).toBeVisible()
+    await dialog.getByRole('button', { name: 'Close', exact: true }).click()
+    await expect(film(page, 'Classic Neg')).toHaveAttribute('aria-pressed', 'true')
+    await expect.poll(() => selection(page).evaluate(element => element.scrollLeft)).toBe(scroll)
   })
 
-  test('keeps the visible film card stable while adding and removing a favorite', async ({ page, editorPage }) => {
-    const categoryRow = categories(page)
-    const presetCarousel = carousel(page)
-    const targetCategory = categoryRow.getByRole('button', { name: 'Provia', exact: true })
-    const targetGroup = presetCarousel.getByRole('group', { name: 'Provia presets', exact: true })
-    const targetCard = targetGroup.locator('[data-recipe-card]').first()
-    const secondCard = targetGroup.locator('[data-recipe-card]').nth(1)
-
-    await targetCard.evaluate((element: HTMLElement) => {
-      element.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'start' })
-    })
-    await expect(targetCategory).toHaveAttribute('aria-current', 'true')
-    await expect.poll(() => cardIsInCarouselViewport(targetCard)).toBe(true)
-
-    const firstFavoriteToggle = targetCard.getByRole('button', { name: 'Add to favorites' })
-    await expectTouchTarget(firstFavoriteToggle)
-    await firstFavoriteToggle.click()
-    await expect(targetCard.getByRole('button', { name: 'Remove from favorites' })).toBeVisible()
-
-    // 0→1 keeps the Favorites slot the same width.  1→2 grows it by one card,
-    // which is the transition that must preserve the visible Provia card.
-    const positionWithOneFavorite = await cardRelativeLeft(targetCard)
-    const secondFavoriteToggle = secondCard.getByRole('button', { name: 'Add to favorites' })
-    await expectTouchTarget(secondFavoriteToggle)
-    await secondFavoriteToggle.click()
-    await expect(secondCard.getByRole('button', { name: 'Remove from favorites' })).toBeVisible()
-    expect(Math.abs((await cardRelativeLeft(targetCard)) - positionWithOneFavorite)).toBeLessThan(12)
-
-    const positionWithTwoFavorites = await cardRelativeLeft(targetCard)
-    await secondCard.getByRole('button', { name: 'Remove from favorites' }).click()
-    await expect(secondCard.getByRole('button', { name: 'Add to favorites' })).toBeVisible()
-    expect(Math.abs((await cardRelativeLeft(targetCard)) - positionWithTwoFavorites)).toBeLessThan(12)
+  test('favorites belong to film-scoped Advanced recipes and persist after Cancel', async ({ page, editorPage }) => {
+    await film(page, 'Provia').click()
+    await openAdvanced(page)
+    const panel = advancedPanel(page)
+    const card = panel.locator('[data-recipe-card]').filter({ has: page.getByRole('button', { name: 'Apply preset Provia Portrait', exact: true }) })
+    const favorite = card.getByRole('button', { name: 'Add to favorites', exact: true })
+    await expectTouchTarget(favorite)
+    await favorite.click()
+    await panel.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await openAdvanced(page)
+    await expect(card.getByRole('button', { name: 'Remove from favorites', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(panel.getByRole('button', { name: /^Apply preset/ })).toHaveCount(8)
   })
 
-  test('keeps Favorites empty section and demo restrictions while Random applies a preset', async ({ page, landingPage }) => {
-    const presetCarousel = carousel(page)
-    const favoritesGroup = presetCarousel.getByRole('group', { name: 'Favorites presets', exact: true })
-    const modes = page.getByRole('navigation', { name: 'Editor modes' })
-
-    await expect(page.getByRole('button', { name: 'Upload photos', exact: true })).toBeVisible({ timeout: 15_000 })
-    await expect(favoritesGroup).toBeVisible()
-    await expect(favoritesGroup.locator('[aria-label^="Apply preset"]')).toHaveCount(0)
-    await expect(modes.getByRole('button', { name: /^presets$/i })).toHaveAttribute('aria-current', 'page')
-    await expect(modes.getByRole('button', { name: /^adjust$/i })).toHaveCount(0)
-    await expect(modes.getByRole('button', { name: /^crop$/i })).toHaveCount(0)
+  test('the three-photo demo applies base films and preserves action restrictions', async ({ page, landingPage }) => {
+    await expect(page.getByRole('button', { name: 'Upload photos', exact: true })).toBeVisible({ timeout: 15000 })
+    const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
+    await expect(modes.getByRole('button', { name: 'Films', exact: true })).toHaveAttribute('aria-current', 'page')
+    await expect(modes.getByRole('button', { name: 'Advanced', exact: true })).toHaveCount(0)
+    await expect(modes.getByRole('button', { name: 'Crop', exact: true })).toHaveCount(0)
     await expect(page.getByRole('button', { name: /Export/ })).toHaveCount(0)
-
-    const accessibility = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-      .analyze()
+    await film(page, 'Provia').click()
+    await expect(film(page, 'Provia')).toHaveAttribute('aria-pressed', 'true')
+    await film(page, 'Velvia').click()
+    await expect(film(page, 'Velvia')).toHaveAttribute('aria-pressed', 'true')
+    const accessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
     expect(accessibility.violations).toEqual([])
-
-    const random = presetCarousel.getByRole('button', { name: 'Random preset', exact: true })
-    await random.click()
-    await expect.poll(() => selectedRecipeLabel(presetCarousel)).toBeTruthy()
-    const firstRandomRecipe = await selectedRecipeLabel(presetCarousel)
-    expect(firstRandomRecipe).toBeTruthy()
-
-    await random.click()
-    await expect.poll(() => selectedRecipeLabel(presetCarousel)).not.toBe(firstRandomRecipe)
-    const secondRandomRecipe = await selectedRecipeLabel(presetCarousel)
-    expect(secondRandomRecipe).toBeTruthy()
-    expect(secondRandomRecipe).not.toBe(firstRandomRecipe)
   })
 
-  test('activates a category from the keyboard', async ({ page, editorPage }) => {
-    const categoryRow = categories(page)
-    const targetCategory = categoryRow.getByRole('button', { name: 'Provia', exact: true })
-
-    await targetCategory.focus()
+  test('keyboard selects films and Original without recipe browsing', async ({ page, editorPage }) => {
+    await film(page, 'Provia').focus()
     await page.keyboard.press('Enter')
-
-    await expect(targetCategory).toHaveAttribute('aria-current', 'true')
-    await expect(categoryRow.locator('[aria-current="true"]')).toHaveCount(1)
+    await expect(film(page, 'Provia')).toHaveAttribute('aria-pressed', 'true')
+    const original = selection(page).getByRole('button', { name: 'Select Original', exact: true })
+    await original.focus()
+    await page.keyboard.press('Space')
+    await expect(original).toHaveAttribute('aria-pressed', 'true')
   })
 
-  test('syncs the final category when the preset carousel reaches its end', async ({ page, editorPage }) => {
-    const categoryRow = categories(page)
-    const presetCarousel = carousel(page)
-    const lastCategory = categoryRow.getByRole('button', { name: 'Classic Neg.', exact: true })
-
-    await presetCarousel.evaluate((element: HTMLElement) => {
-      element.scrollLeft = element.scrollWidth
-      element.dispatchEvent(new Event('scroll', { bubbles: true }))
-    })
-
-    await expect(lastCategory).toHaveAttribute('aria-current', 'true')
-    await expect.poll(async () => presetCarousel.evaluate((element: HTMLElement) => {
-      return element.scrollLeft + element.clientWidth >= element.scrollWidth - 1
-    })).toBe(true)
+  test('reduced motion retains keyboard selection and reachable row ends', async ({ page, editorPage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await film(page, 'Classic Neg').focus()
+    await page.keyboard.press('Enter')
+    await expect(film(page, 'Classic Neg')).toHaveAttribute('aria-pressed', 'true')
+    await expect.poll(() => visibleInSelection(film(page, 'Classic Neg'))).toBe(true)
   })
 
-  test('reuses preset navigation in the mobile video editor', async ({ page, landingPage }) => {
+  test('video uses the same eleven neutral color choices', async ({ page, landingPage }) => {
     await uploadVideo(page)
-
-    const nav = mobilePresetNav(page)
-    const categoryRow = categories(page)
-    const presetCarousel = carousel(page)
-
     await expect(page.getByText('test-video.mp4', { exact: true })).toBeVisible()
-    await expect(nav).toBeVisible()
-    await expect(categoryRow.getByRole('button', { name: 'Favorites', exact: true })).toBeVisible()
-    await expect(categoryRow.getByRole('button', { name: "Editor's Choice", exact: true })).toBeVisible()
-    await expect(presetCarousel.getByRole('button', { name: 'Random preset', exact: true })).toBeVisible()
+    await expect(selection(page)).toBeVisible()
+    await expect(selection(page).getByRole('button')).toHaveCount(11)
+    await expect(selection(page).getByRole('button', { name: 'Select Original', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await film(page, 'Provia').click()
+    await expect(film(page, 'Provia')).toHaveAttribute('aria-pressed', 'true')
   })
 })

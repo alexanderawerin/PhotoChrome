@@ -1,18 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { ImageItem, RecipeSettings } from '../engine/types'
+import type { ImageItem, Recipe, RecipeSettings } from '../engine/types'
 import {
   activeEditorSession,
-  beginAdjustSession,
   beginCropSession,
   beginTuningSession,
   editOwner,
   editorSessionChanges,
-  resetAdjustSession,
   setCropRatio,
-  updateAdjustSession,
   updateCropSession,
   updateTuningSession,
-  type AdjustTool,
+  selectTuningProfile,
+  restoreTuningBase,
   type EditorSession,
 } from '../engine/editor-sessions'
 import { nextQuarterTurn, renderImageTransform, toggleHorizontalFlip, type ImageTransformState } from '../engine/transform'
@@ -29,7 +27,8 @@ export function useEditorSession(
   const [draft, setDraft] = useState<EditorSession | null>(null)
   const owner = editOwner(image)
   const session = activeEditorSession(draft, owner)
-  const settings = session && session.kind !== 'crop' ? session.draft : image.customSettings
+  const settings = session?.kind === 'tuning' ? session.draft : image.customSettings
+  const profile = session?.kind === 'tuning' ? session.profile : image.recipe
   const transformState = session?.kind === 'crop' ? session.draft : image.transform
   const transformedThumbnail = useMemo(() => (
     transformState === image.transform
@@ -47,7 +46,6 @@ export function useEditorSession(
       if ('transform' in changes) {
         onImageUpdate(image.id, {
           ...changes,
-          transformedOriginal: renderImageTransform(image.original, changes.transform),
           transformedThumbnail,
         })
       } else {
@@ -74,7 +72,6 @@ export function useEditorSession(
     const next = { ...image.transform, ...update }
     onImageUpdate(image.id, {
       transform: next,
-      transformedOriginal: renderImageTransform(image.original, next),
       transformedThumbnail: renderImageTransform(image.thumbnail, next),
     })
   }
@@ -82,23 +79,24 @@ export function useEditorSession(
   return {
     session,
     settings,
+    profile,
     transformState,
     transformedThumbnail,
     cancel,
     commit,
-    openAdjust: (tool: AdjustTool) => setDraft(beginAdjustSession(owner, tool, image.customSettings)),
-    changeAdjust: (value: RecipeSettings[AdjustTool]) => setDraft(previous => {
+    openTuning: () => { if (image.recipe) setDraft(beginTuningSession(owner, image.customSettings, image.recipe)) },
+    selectDraftProfile: (next: Recipe) => setDraft(previous => {
       const current = activeEditorSession(previous, owner)
-      return current?.kind === 'adjust' ? updateAdjustSession(current, value) : current
+      return current?.kind === 'tuning' ? selectTuningProfile(current, next) : current
     }),
-    resetAdjust: () => setDraft(previous => {
+    restoreDraftBase: () => setDraft(previous => {
       const current = activeEditorSession(previous, owner)
-      return current?.kind === 'adjust' && image.recipe ? resetAdjustSession(current, image.recipe) : current
+      return current?.kind === 'tuning' ? restoreTuningBase(current) : current
     }),
-    openTuning: () => setDraft(beginTuningSession(owner, image.customSettings)),
     changeSettings: (next: RecipeSettings) => setDraft(previous => {
       const current = activeEditorSession(previous, owner)
-      const tuning = current?.kind === 'tuning' ? current : beginTuningSession(owner, image.customSettings)
+      if (!image.recipe) return current
+      const tuning = current?.kind === 'tuning' ? current : beginTuningSession(owner, image.customSettings, image.recipe)
       return updateTuningSession(tuning, next)
     }),
     openCrop: () => setDraft(beginCropSession(owner, image.transform)),
@@ -108,15 +106,6 @@ export function useEditorSession(
         : ((transformState.quarterTurns + angle) % 360) as ImageTransformState['quarterTurns'],
     }),
     flip: () => changeGeometry({ flipHorizontal: toggleHorizontalFlip(transformState).flipHorizontal }),
-    /** Export the visible draft without silently committing it to the photo. */
-    exportImage: (): ImageItem => ({
-      ...image,
-      customSettings: settings,
-      transform: transformState,
-      transformedThumbnail,
-      transformedOriginal: transformState === image.transform
-        ? image.transformedOriginal
-        : renderImageTransform(image.original, transformState),
-    }),
+
   }
 }

@@ -1,16 +1,17 @@
 import { test, expect } from './helpers/fixtures'
-import { selectFirstRecipe } from './helpers/upload'
+import { selectBaseFilm } from './helpers/upload'
 
 test.describe('Editor — Tuning Panel', () => {
   const inspector = (page: import('@playwright/test').Page) =>
-    page.getByRole('complementary', { name: 'Editing inspector' })
+    page.getByRole('region', { name: 'Advanced settings', exact: true })
 
   const selectAndOpen = async (page: import('@playwright/test').Page) => {
-    await selectFirstRecipe(page)
-    await page.getByRole('button', { name: 'Open Adjust inspector' }).click()
+    await selectBaseFilm(page)
+    await page.getByRole('button', { name: 'Open Advanced settings' }).click()
+    await inspector(page).getByRole('tab', { name: 'Manual', exact: true }).click()
   }
 
-  test('tuning panel opens when the Adjust inspector button is clicked', async ({ page, editorPage }) => {
+  test('Manual opens from Advanced for a base film', async ({ page, editorPage }) => {
     await selectAndOpen(page)
     await expect(inspector(page).getByText('Highlight')).toBeVisible()
     await expect(inspector(page).getByText('Shadow')).toBeVisible()
@@ -27,19 +28,20 @@ test.describe('Editor — Tuning Panel', () => {
 
   test('reset control restores a slider to the preset value', async ({ page, editorPage }) => {
     await selectAndOpen(page)
-    const highlight = inspector(page).locator('#slider-highlight').getByRole('slider')
+    const highlight = inspector(page).getByRole('slider', { name: 'Highlight', exact: true })
     const presetValue = await highlight.getAttribute('aria-valuenow')
     await highlight.focus()
     await page.keyboard.press(presetValue === '4' ? 'ArrowLeft' : 'ArrowRight')
     await expect(highlight).not.toHaveAttribute('aria-valuenow', presetValue!)
-    await inspector(page).getByRole('button', { name: 'Reset Highlight to preset' }).click()
+    await inspector(page).getByRole('button', { name: 'Reset Highlight to profile' }).click()
     await expect(highlight).toHaveAttribute('aria-valuenow', presetValue!)
   })
 
   test('inspector is dedicated to adjustments', async ({ page, editorPage }) => {
     await selectAndOpen(page)
     await expect(inspector(page).getByText('Highlight')).toBeVisible()
-    await expect(inspector(page).getByRole('tab')).toHaveCount(0)
+    await expect(inspector(page).getByRole('tab')).toHaveCount(2)
+    await expect(inspector(page).getByRole('tab', { name: 'Manual', exact: true })).toHaveAttribute('aria-selected', 'true')
     await expect(inspector(page).getByRole('button', { name: 'Choose crop ratio' })).toHaveCount(0)
   })
 })

@@ -119,6 +119,22 @@ describe('exportPhoto', () => {
     expect(anchor.remove).toHaveBeenCalledOnce()
   })
 
+  it('cancels at the final delivery boundary and releases the URL and anchor', async () => {
+    const anchor = stubDownload()
+    const controller = new AbortController()
+    vi.spyOn(ImageProcessor, 'processAsync').mockResolvedValue(request().imageData)
+    vi.spyOn(ImageProcessor, 'addWatermark').mockReturnValue(request().imageData)
+    vi.spyOn(ImageProcessor, 'imageDataToBlob').mockResolvedValue(new Blob(['jpeg']))
+    vi.mocked(document.body.appendChild).mockImplementation(() => {
+      controller.abort()
+      return anchor as unknown as HTMLAnchorElement
+    })
+    await expect(exportPhoto(request(controller.signal))).resolves.toEqual({ status: 'cancelled' })
+    expect(anchor.click).not.toHaveBeenCalled()
+    expect(anchor.remove).toHaveBeenCalledOnce()
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:photochrome-test')
+  })
+
   it('returns cancelled without converting AbortError into an export error', async () => {
     const controller = new AbortController()
     vi.spyOn(ImageProcessor, 'processAsync').mockImplementation(async () => {

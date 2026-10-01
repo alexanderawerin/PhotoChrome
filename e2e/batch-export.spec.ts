@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
-import { strFromU8, unzipSync } from 'fflate'
+import { unzipSync } from 'fflate'
 import { test, expect } from './helpers/fixtures'
-import { selectFirstRecipe, uploadMultipleImages, waitForEditor } from './helpers/upload'
+import { selectBaseFilm, uploadMultipleImages, waitForEditor } from './helpers/upload'
 
 function storedCompressionMethods(zip: Uint8Array): Map<string, number> {
   const methods = new Map<string, number>()
@@ -19,10 +19,10 @@ function storedCompressionMethods(zip: Uint8Array): Map<string, number> {
   return methods
 }
 
-test('Export all creates a stored-JPEG ZIP with a skipped-photo report', async ({ page, landingPage }) => {
+test('Export all creates a stored-JPEG ZIP including Original photos', async ({ page, landingPage }) => {
   await uploadMultipleImages(page)
   await waitForEditor(page)
-  await selectFirstRecipe(page)
+  await selectBaseFilm(page)
 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Export all photos' }).click()
@@ -34,36 +34,36 @@ test('Export all creates a stored-JPEG ZIP with a skipped-photo report', async (
   const bytes = new Uint8Array(await readFile(path))
   const entries = unzipSync(bytes)
   const jpegNames = Object.keys(entries).filter(name => name.endsWith('.jpg'))
-  expect(jpegNames).toHaveLength(1)
+  expect(jpegNames).toHaveLength(2)
   expect(entries[jpegNames[0]].slice(0, 2)).toEqual(new Uint8Array([0xff, 0xd8]))
-  expect(strFromU8(entries['export-report.txt'])).toContain('test-image-2.jpg: No recipe selected')
+  expect(entries['photochrome_original_test-image-2.jpg']).toBeDefined()
+  expect(entries['export-report.txt']).toBeUndefined()
 
   const methods = storedCompressionMethods(bytes)
   expect(methods.get(jpegNames[0]), 'JPEG must use ZIP method 0 (stored)').toBe(0)
   await expect(page.getByRole('status', { name: 'Batch export progress' })).toBeHidden()
-  await expect(page.getByRole('dialog', { name: 'Export complete' })).toContainText('1 exported · 1 skipped')
+  await expect(page.getByRole('dialog', { name: 'Export complete' })).toContainText('2 exported')
 })
 
 test('cancelling batch export destroys the partial archive and does not download', async ({ page, landingPage }) => {
   await uploadMultipleImages(page)
   await waitForEditor(page)
-  await selectFirstRecipe(page)
-  await page.getByRole('button', { name: 'Apply current preset to all 2 images' }).click()
-  await page.waitForTimeout(400)
+  await selectBaseFilm(page)
+  await page.getByRole('button', { name: 'Apply current color to all 2 images' }).click()
+  await expect(page.getByRole('status', { name: 'Applying preset to all images', exact: true })).toBeHidden()
 
-  await page.evaluate(async () => {
-    // @ts-expect-error Vite browser module path is unavailable to the Node compiler.
-    const { ImageProcessor } = await import('/src/engine/processor.ts')
-    const original = ImageProcessor.processAsync
+  await page.evaluate(() => {
+    const original = Worker.prototype.postMessage
     // @ts-expect-error Test-only restoration hook.
-    window.__restoreBatchProcessor = () => { ImageProcessor.processAsync = original }
-    ImageProcessor.processAsync = (_image: ImageData, _plan: unknown, options?: { signal?: AbortSignal }) => (
-      new Promise((_resolve, reject) => {
-        options?.signal?.addEventListener('abort', () => {
-          reject(new DOMException('Cancelled', 'AbortError'))
-        }, { once: true })
-      })
-    )
+    window.__restoreBatchProcessor = () => { Worker.prototype.postMessage = original }
+    Worker.prototype.postMessage = function (message: unknown, transfer: Transferable[] | StructuredSerializeOptions = []) {
+      if ((message as { type?: string }).type === 'process') {
+        // @ts-expect-error Observed browser worker boundary, not an editor API.
+        window.__batchWorkerRequestSeen = true
+        return
+      }
+      return original.call(this, message, Array.isArray(transfer) ? { transfer } : transfer)
+    }
   })
 
   let downloaded = false
@@ -71,6 +71,10 @@ test('cancelling batch export destroys the partial archive and does not download
   await page.getByRole('button', { name: 'Export all photos' }).click()
   const progress = page.getByRole('status', { name: 'Batch export progress' })
   await expect(progress).toBeVisible()
+  await page.waitForFunction(() => {
+    // @ts-expect-error Observed browser worker request.
+    return window.__batchWorkerRequestSeen === true
+  })
   await progress.getByRole('button', { name: 'Cancel' }).click()
   await expect(progress).toBeHidden()
   await page.waitForTimeout(500)

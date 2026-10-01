@@ -23,6 +23,15 @@ type Tab = 'quick-guide' | 'whats-new' | 'shortcuts' | 'feedback'
 
 const WHATS_NEW = [
   {
+    version: 'Current',
+    items: [
+      'Start with Original or choose one of ten base films for photos and video',
+      'Explore all 100 recipes and Manual controls in film-scoped Advanced settings',
+      'Apply or Cancel color and crop drafts; geometry survives film changes',
+      'Export every loaded photo, including Original; video sound fallback requires consent',
+    ],
+  },
+  {
     version: '1.6',
     items: [
       'Export all photos at once as a ZIP archive',
@@ -84,12 +93,12 @@ const BASE_KEYBOARD_SHORTCUTS = [
   { keys: ['Shift', 'R'], description: 'Rotate counter-clockwise' },
   { keys: ['C'], description: 'Open crop mode' },
   { keys: ['F'], description: 'Flip horizontally' },
-  { keys: ['T'], description: 'Open Adjust inspector' },
-  { keys: ['P'], description: 'Toggle inspector' },
+  { keys: ['T'], description: 'Open Advanced settings' },
+  { keys: ['P'], description: 'Toggle film panel' },
   { keys: ['Space'], description: 'Compare before/after (hold)' },
-  { keys: ['Esc'], description: 'Cancel crop/tuning' },
-  { keys: ['Enter'], description: 'Apply crop/tuning' },
-  { keys: ['⌘/Ctrl', 'S'], description: 'Export image' },
+  { keys: ['Esc'], description: 'Cancel crop or Advanced draft' },
+  { keys: ['Enter'], description: 'Apply crop or Advanced draft' },
+  { keys: ['⌘/Ctrl', 'S'], description: 'Export applied photo or video' },
 ]
 
 const MULTI_IMAGE_SHORTCUTS = [
@@ -129,7 +138,7 @@ export function HelpDialog({
         <SheetHeader>
           <SheetTitle className="sr-only">Photochrome help</SheetTitle>
           <SheetDescription className="sr-only">
-            Help and release notes
+            Film-first editing guide, shortcuts and historical release notes
           </SheetDescription>
         </SheetHeader>
 
@@ -218,12 +227,14 @@ export function HelpDialog({
 
 function QuickGuideContent() {
   const steps = [
-    ['Add photos', 'Upload one or more photos. Swipe the photo to move through a batch.'],
-    ['Presets', 'Choose a film preset, use Smart Picks, or hold the photo to compare before and after.'],
-    ['Adjust', 'Open a tool, preview changes live, then use Done or Cancel.'],
-    ['Crop', 'Crop, rotate, or flip without changing the other photos in the batch.'],
-    ['Batch', 'Apply preset and Adjust settings to all. Crop, Rotate, and Flip stay per photo.'],
-    ['Export', 'Export the current photo or export every photo that has a preset.'],
+    ['Try the demo', 'Switch between three photos, choose a film and hold the preview to compare. Add your own media to unlock editing and export.'],
+    ['Add photos or video', 'New media starts as Original. Add a photo batch or one video up to 30 seconds.'],
+    ['Choose a film', 'Select Original or one of ten base films. Changing film resets color settings and keeps your composition.'],
+    ['Advanced settings', 'For a selected film, Recipes and Manual share one temporary preview. Apply saves both; Cancel or Escape restores the applied result. Favorites stay within their film.'],
+    ['Compose', 'Crop, position, zoom, rotate, fine-tune the angle or reflect photos and video. Apply or Cancel the crop draft; comparison keeps the same geometry.'],
+    ['Apply color to all', 'Copy the applied color to every photo, including Original. Each photo keeps its own crop, rotation and reflection.'],
+    ['Export', 'Save the applied photo as JPEG, every loaded photo as a ZIP, or the composed video as MP4. Original and geometry-only edits are exportable. Apply or Cancel a draft first.'],
+    ['Video sound', 'If this browser cannot preserve source sound, choose Export without sound explicitly or Cancel. An already silent clip needs no consent.'],
   ]
   return (
     <ol className="space-y-3">
@@ -248,7 +259,7 @@ function WhatsNewContent() {
       {WHATS_NEW.map((release) => (
         <div key={release.version}>
           <h3 className="text-xs font-semibold text-zinc-400 mb-2">
-            Version {release.version}
+            {release.version === 'Current' ? 'Current workflow' : `Version ${release.version} (historical)`}
           </h3>
           <ul className="space-y-1.5">
             {release.items.map((item, index) => (

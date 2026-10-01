@@ -2,7 +2,9 @@ import { useRef, useEffect } from 'react'
 import { Film } from 'lucide-react'
 import { ImageItem, Recipe, RecipeSettings } from '../engine/types'
 import { ImageProcessor } from '../engine/processor'
-import { createProcessingPlan } from '../engine/processing-plan'
+import { usePreviewVisibility } from '../hooks/usePreviewVisibility'
+import { resizePreviewImage } from '../engine/preview-image'
+import { prepareProcessingPlan } from '../engine/processing-plan'
 
 interface ThumbnailStripProps {
   images: ImageItem[]
@@ -25,7 +27,7 @@ export function ThumbnailStrip({ images, currentIndex, onSelectImage }: Thumbnai
 
     if (thumbnail) {
       thumbnail.scrollIntoView({
-        behavior: 'smooth',
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
         block: 'nearest',
         inline: 'center'
       })
@@ -94,27 +96,37 @@ function ThumbnailPreview({
   customSettings: RecipeSettings
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const visible = usePreviewVisibility(canvasRef)
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
+    canvas.width = canvas.height = 1
+    if (!visible) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Применяем рецепт, если он есть
-    let processedData = imageData
-    if (recipe) {
-      processedData = ImageProcessor.process(
-        imageData,
-        createProcessingPlan(recipe, imageData, customSettings)
-      )
+    const controller = new AbortController()
+    // An empty thumbnail while waiting cannot be mistaken for an applied film.
+    const render = async () => {
+      try {
+        const smallImage = resizePreviewImage(imageData, Math.round(40 * Math.min(2, Math.max(1, window.devicePixelRatio))))
+        const plan = recipe
+          ? await prepareProcessingPlan(recipe, smallImage, customSettings, { signal: controller.signal })
+          : null
+        if (controller.signal.aborted) return
+        const processedData = plan ? ImageProcessor.process(smallImage, plan) : smallImage
+        canvas.width = processedData.width
+        canvas.height = processedData.height
+        ctx.putImageData(processedData, 0, 0)
+      } catch {
+        // Main preview owns actionable resource errors and Retry.
+      }
     }
-
-    canvas.width = processedData.width
-    canvas.height = processedData.height
-    ctx.putImageData(processedData, 0, 0)
-  }, [imageData, recipe, customSettings])
+    void render()
+    return () => { controller.abort(); canvas.width = canvas.height = 0 }
+  }, [imageData, recipe, customSettings, visible])
 
   return (
     <canvas

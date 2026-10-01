@@ -1,183 +1,162 @@
 import type { ProcessingPlan } from '../types'
 import { WebGLContextLostError, WebGLProcessor } from '../webgl/processor'
-import {
-  VIDEO_EXPORT_BITRATE,
-  VIDEO_EXPORT_FPS,
-} from '../../constants'
-import { encodeAudio, extractAudioData } from './audio'
-import { getExportCapabilities, isSafari, testVideoEncoderWorks } from './capabilities'
-import { closeCodecSafely, ExportCancelledError } from './errors'
-import { seekVideoWithTimeout } from './frames'
-import { createVideoMuxer } from './muxing'
+import { VIDEO_EXPORT_BITRATE } from '../../constants'
+import { encodeAudio, inspectSourceAudio, supportsAudioEncoding, type SourceAudio } from './audio'
+import { drawSourceSample, readPlaybackColorSpace } from './color'
+import { getExportCapabilities, isSafari } from './capabilities'
+import { AudioPreservationError, closeCodecSafely, ExportCancelledError } from './errors'
+import { getVideoOutputSize, renderVideoTransform } from './geometry'
+import { createVideoMuxer, type VideoMuxer } from './muxing'
+import { inspectSourceVideo, type SourceVideo } from './source'
 
 export async function exportVideo(
   video: HTMLVideoElement,
   plan: ProcessingPlan,
   onProgress: (progress: number, status: string) => void,
-  isCancelled?: () => boolean
+  isCancelled?: () => boolean,
+  options: { allowSilentAudio?: boolean } = {},
 ): Promise<Blob> {
   if (typeof VideoEncoder === 'undefined') {
-    throw new Error('Video export is not supported in this browser. Please use Chrome or Edge.')
+    throw new Error('Video export is not supported in this browser. Please use a browser with H.264 MP4 encoding support.')
   }
-
-  onProgress(0, 'Testing encoder...')
-  const encoderTest = await testVideoEncoderWorks()
-  if (!encoderTest.works) {
-    throw new Error(`Video encoding failed: ${encoderTest.error || 'Unknown error'}. Please try Chrome or Edge.`)
-  }
-
-  const width = video.videoWidth
-  const height = video.videoHeight
-  const duration = video.duration
-  const fps = VIDEO_EXPORT_FPS
-  const totalFrames = Math.floor(duration * fps)
-
-  onProgress(0, 'Checking codec support...')
-  const capabilities = await getExportCapabilities({
-    width,
-    height,
-    framerate: fps,
-    bitrate: VIDEO_EXPORT_BITRATE,
-  })
-  if (!capabilities.videoSupported || !capabilities.recommendedCodec) {
-    throw new Error('H.264 video encoding is not supported in this browser. Please use Chrome or Edge.')
-  }
-  const videoCodec = capabilities.recommendedCodec
-
-  onProgress(1, 'Initializing...')
-  let audioBuffer: AudioBuffer | null = null
-  if (capabilities.audioSupported) {
-    audioBuffer = await extractAudioData(video.src, status => onProgress(2, status))
-  }
-  const hasAudio = audioBuffer !== null
-
-  onProgress(5, 'Initializing encoder...')
-  const processor = new WebGLProcessor()
-  processor.init(width, height)
-  const muxer = await createVideoMuxer(
-    width,
-    height,
-    audioBuffer
-      ? {
-          numberOfChannels: Math.min(audioBuffer.numberOfChannels, 2),
-          sampleRate: audioBuffer.sampleRate,
-        }
-      : undefined
-  )
-
-  let encoderError: Error | null = null
-  let videoPacketWrites = Promise.resolve()
-  const safariMode = isSafari()
-  const videoEncoder = new VideoEncoder({
-    output: (chunk, metadata) => {
-      videoPacketWrites = videoPacketWrites
-        .then(() => muxer.addVideoChunk(chunk, metadata ?? undefined))
-        .catch(error => {
-          encoderError = error instanceof Error ? error : new Error(String(error))
-        })
-    },
-    error: error => {
-      console.error('Video encoder error:', error)
-      encoderError = error instanceof Error ? error : new Error(String(error))
-    },
-  })
-
-  const encoderConfig: VideoEncoderConfig = {
-    codec: videoCodec,
-    width,
-    height,
-    bitrate: safariMode ? 2_500_000 : VIDEO_EXPORT_BITRATE,
-    framerate: fps,
-  }
-  if (safariMode) encoderConfig.hardwareAcceleration = 'prefer-software'
-  videoEncoder.configure(encoderConfig)
-  if (videoEncoder.state !== 'configured') {
-    throw new Error('Failed to configure video encoder. Your browser may not support the required codec.')
-  }
-
-  const frameCanvas = document.createElement('canvas')
-  frameCanvas.width = width
-  frameCanvas.height = height
-  const frameContext = frameCanvas.getContext('2d')!
-
-  const waitForEncoderQueue = async (maxQueueSize = 2): Promise<void> => {
-    const startTime = Date.now()
-    while (videoEncoder.encodeQueueSize > maxQueueSize) {
-      await new Promise(resolve => setTimeout(resolve, 20))
-      if (encoderError) throw encoderError
-      if (videoEncoder.state === 'closed') {
-        throw new Error('VideoEncoder was closed unexpectedly. Try using Chrome for better compatibility.')
-      }
-      if (Date.now() - startTime > 30_000) {
-        throw new Error('Video encoding timed out. The video may be too complex for this browser.')
-      }
-    }
-  }
-
-  const encodeFrameSafely = async (videoFrame: VideoFrame, keyFrame: boolean): Promise<void> => {
-    await waitForEncoderQueue(safariMode ? 0 : 3)
-    if (videoEncoder.state !== 'configured') {
-      videoFrame.close()
-      await new Promise(resolve => setTimeout(resolve, 0))
-      throw encoderError ?? new Error('VideoEncoder is not in configured state')
-    }
-    videoEncoder.encode(videoFrame, { keyFrame })
-    videoFrame.close()
-    if (safariMode) await new Promise(resolve => setTimeout(resolve, 10))
-  }
-
-  try {
-    if (hasAudio && audioBuffer) {
-      onProgress(8, 'Encoding audio...')
-      await encodeAudio(
-        audioBuffer,
-        (chunk, metadata) => muxer.addAudioChunk(chunk, metadata),
-        isCancelled
-      )
-    }
-
-    for (let frame = 0; frame < totalFrames; frame++) {
-      if (isCancelled?.()) throw new ExportCancelledError()
-      if (encoderError) throw encoderError
-      if ((videoEncoder.state as string) === 'closed') {
-        throw new Error('VideoEncoder was closed unexpectedly. Try using Chrome for better compatibility.')
-      }
-
-      const time = frame / fps
-      const baseProgress = hasAudio ? 15 : 8
-      onProgress(
-        baseProgress + (frame / totalFrames) * (90 - baseProgress),
-        `Processing frame ${frame + 1}/${totalFrames}...`
-      )
-      await seekVideoWithTimeout(video, time)
-      frameContext.drawImage(video, 0, 0)
-      const processedCanvas = processor.processFrame(frameCanvas, plan, time)
-      const videoFrame = new VideoFrame(processedCanvas, {
-        timestamp: (frame * 1_000_000) / fps,
-      })
-      await encodeFrameSafely(videoFrame, frame % (safariMode ? 15 : 30) === 0)
-      if (frame % 3 === 0) await new Promise(resolve => setTimeout(resolve, 0))
-    }
-
+  let sourceVideo: SourceVideo | null = null
+  let sourceAudio: SourceAudio | null = null
+  let processor: WebGLProcessor | null = null
+  let muxer: VideoMuxer | null = null
+  let encoder: VideoEncoder | null = null
+  let sourceCanvas: HTMLCanvasElement | null = null
+  let composedCanvas: HTMLCanvasElement | null = null
+  let failure: Error | null = null
+  let writes = Promise.resolve()
+  const timings = new Map<number, number>()
+  const check = () => {
     if (isCancelled?.()) throw new ExportCancelledError()
-    if (encoderError) throw encoderError
-
+    if (failure) throw failure
+  }
+  try {
+    check()
+    onProgress(0, 'Checking source video...')
+    sourceVideo = await inspectSourceVideo(video.currentSrc || video.src, isCancelled)
+    check()
+    const { width, height } = getVideoOutputSize(sourceVideo.width, sourceVideo.height, plan.geometry)
+    const playbackColor = readPlaybackColorSpace(video)
+    const frameRate = sourceVideo.frameRate
+    const composedPlan: ProcessingPlan = { ...plan, targetSize: { width, height } }
+    const capabilities = await getExportCapabilities({ width, height, framerate: frameRate, bitrate: VIDEO_EXPORT_BITRATE })
+    if (!capabilities.recommendedCodec) {
+      throw new Error('H.264 MP4 encoding is not supported for this output size and frame rate. Try another browser or a smaller crop.')
+    }
+    check()
+    onProgress(1, 'Checking source sound...')
+    let hasAudio = false
+    if (!options.allowSilentAudio) try {
+      sourceAudio = await inspectSourceAudio(video.currentSrc || video.src)
+      check()
+      if (sourceAudio.track && sourceAudio.config) {
+        hasAudio = await supportsAudioEncoding(sourceAudio.config) && await sourceAudio.track.canDecode()
+        if (!hasAudio) throw new AudioPreservationError()
+      }
+    } catch (error) {
+      if (error instanceof ExportCancelledError) throw error
+      if (isCancelled?.()) throw new ExportCancelledError()
+      throw new AudioPreservationError()
+    }
+    check()
+    onProgress(5, 'Initializing encoder...')
+    if (plan.colorMode !== 'original') {
+      processor = new WebGLProcessor()
+      processor.init(width, height)
+    }
+    muxer = await createVideoMuxer(width, height, hasAudio && sourceAudio?.config ? {
+      numberOfChannels: sourceAudio.config.numberOfChannels,
+      sampleRate: sourceAudio.config.sampleRate,
+    } : undefined)
+    check()
+    encoder = new VideoEncoder({
+      output: (chunk, metadata) => {
+        const duration = timings.get(chunk.timestamp)
+        timings.delete(chunk.timestamp)
+        writes = writes.then(() => { check(); return muxer!.addVideoChunk(chunk, metadata, duration) }).catch(error => {
+          failure = error instanceof Error ? error : new Error(String(error))
+        })
+      },
+      error: error => { failure = error },
+    })
+    const config: VideoEncoderConfig = {
+      codec: capabilities.recommendedCodec, width, height,
+      bitrate: VIDEO_EXPORT_BITRATE, framerate: frameRate,
+    }
+    if (isSafari()) config.hardwareAcceleration = 'prefer-software'
+    encoder.configure(config)
+    sourceCanvas = document.createElement('canvas')
+    sourceCanvas.width = sourceVideo.width
+    sourceCanvas.height = sourceVideo.height
+    const context = sourceCanvas.getContext('2d')
+    if (!context) throw new Error('Unable to create the video frame canvas. Please retry.')
+    composedCanvas = document.createElement('canvas')
+    if (hasAudio && sourceAudio) {
+      onProgress(8, 'Encoding audio...')
+      try {
+        await encodeAudio(sourceAudio, (chunk, metadata) => muxer!.addAudioChunk(chunk, metadata), isCancelled)
+      } catch (error) {
+        if (error instanceof ExportCancelledError) throw error
+        if (isCancelled?.()) throw new ExportCancelledError()
+        throw new AudioPreservationError()
+      }
+    }
+    let frameIndex = 0
+    let previousKeyTime = -Infinity
+    for await (const sample of sourceVideo.samples()) {
+      let frame: VideoFrame | null = null
+      try {
+        check()
+        await drawSourceSample(sample, context, sourceVideo.width, sourceVideo.height, playbackColor)
+        check()
+        renderVideoTransform(sourceCanvas, sourceVideo.width, sourceVideo.height, plan.geometry, composedCanvas)
+        const processed = processor ? processor.processFrame(composedCanvas, composedPlan, sample.timestamp) : composedCanvas
+        const timestamp = sample.microsecondTimestamp
+        const duration = sample.microsecondDuration
+        frame = new VideoFrame(processed, { timestamp, duration })
+        const queueStart = Date.now()
+        while (encoder.encodeQueueSize > (isSafari() ? 0 : 3)) {
+          await new Promise(resolve => setTimeout(resolve, 10))
+          check()
+          if (Date.now() - queueStart > 30_000) throw new Error('Video encoding timed out. Please try another browser.')
+        }
+        check()
+        timings.set(timestamp, duration)
+        const keyFrame = sample.timestamp - previousKeyTime >= 1
+        encoder.encode(frame, { keyFrame })
+        if (keyFrame) previousKeyTime = sample.timestamp
+        frameIndex++
+        onProgress(15 + frameIndex / sourceVideo.packetCount * 75, `Processing frame ${frameIndex}/${sourceVideo.packetCount}...`)
+      } finally {
+        frame?.close()
+        sample.close()
+      }
+      if (frameIndex % 3 === 0) await new Promise(resolve => setTimeout(resolve, 0))
+    }
+    check()
     onProgress(95, 'Finalizing video...')
-    await videoEncoder.flush()
-    await videoPacketWrites
-    if (encoderError) throw encoderError
-    closeCodecSafely(videoEncoder)
+    await encoder.flush()
+    await writes
+    check()
+    closeCodecSafely(encoder)
     const blob = await muxer.finalize()
+    check()
     onProgress(100, 'Done!')
     return blob
   } catch (error) {
-    closeCodecSafely(videoEncoder)
-    await muxer.cancel().catch(() => {})
-    if (error instanceof WebGLContextLostError) {
-      throw new Error('Video processing was interrupted due to graphics hardware reset. Please try again.')
-    }
+    if (encoder) closeCodecSafely(encoder)
+    await muxer?.cancel().catch(() => {})
+    if (error instanceof WebGLContextLostError) throw new Error('Video processing was interrupted due to graphics hardware reset. Please try again.')
     throw error
   } finally {
-    processor.dispose()
+    if (encoder) closeCodecSafely(encoder)
+    processor?.dispose()
+    sourceAudio?.dispose()
+    sourceVideo?.dispose()
+    if (sourceCanvas) { sourceCanvas.width = 0; sourceCanvas.height = 0 }
+    if (composedCanvas) { composedCanvas.width = 0; composedCanvas.height = 0 }
   }
 }

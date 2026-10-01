@@ -1,22 +1,7 @@
 import { ProcessingPlan, RecipeSettings } from './types'
-import { applyHaldCLUT } from './haldclut'
-import { createCurveLUT, applyCurve } from './curves'
-import {
-  applyColorBalance,
-  applySaturation,
-  applyWhiteBalanceShift,
-  applyToneAdjustment,
-} from './color'
-import { applyPreprocessSettings } from './preprocess'
-import { applyGrain, grainEffectToStrength, grainSizeToNumber } from './grain'
-import {
-  applyClarity,
-  applySharpness,
-  applyColorChrome,
-  applyColorChromeFXBlue
-} from './effects'
+import { processOnCPU } from './cpu'
 import { getPhotoWebGLProcessor } from './webgl/processor'
-import { assertProcessingTarget } from './processing-plan'
+import { assertProcessingResourcesReady, assertProcessingTarget } from './processing-plan'
 
 // Maximum image dimension for WebGL processing (texture size limit)
 const WEBGL_MAX_DIMENSION = 4096
@@ -93,6 +78,8 @@ export class ImageProcessor {
     plan: ProcessingPlan
   ): ImageData {
     assertProcessingTarget(plan, imageData.width, imageData.height)
+    assertProcessingResourcesReady(plan)
+    if (plan.colorMode === 'original') return this.processOnCPU(imageData, plan)
     // 1. HaldCLUT simulations use CPU (reliable trilinear interpolation).
     //    WebGL sampler3D is unstable across browsers — CPU LUT is ~50ms for 1600px thumbnails.
     const { lut } = plan
@@ -125,10 +112,8 @@ export class ImageProcessor {
     try {
       const processor = getPhotoWebGLProcessor()
       processor.init(imageData.width, imageData.height)
-      const resultCanvas = processor.processFrame(imageData, plan, 0)
-      const ctx = resultCanvas.getContext('2d')
-      if (!ctx) return null
-      return ctx.getImageData(0, 0, resultCanvas.width, resultCanvas.height)
+      processor.processFrame(imageData, plan, 0)
+      return processor.getImageData()
     } catch {
       return null
     }
@@ -142,37 +127,8 @@ export class ImageProcessor {
     plan: ProcessingPlan
   ): ImageData {
     assertProcessingTarget(plan, imageData.width, imageData.height)
-    const processed = new ImageData(
-      new Uint8ClampedArray(imageData.data),
-      imageData.width,
-      imageData.height
-    )
-
-    const { simulation, settings, lut } = plan
-
-    applyPreprocessSettings(processed, settings)
-
-    // HaldCLUT path: single 3D LUT lookup replaces curve + colorBalance + saturation
-    if (lut) {
-      applyHaldCLUT(processed, lut)
-    } else {
-      // Fallback: curve-based approach
-      if (simulation.curve) {
-        const curveLUT = createCurveLUT(simulation.curve)
-        applyCurve(processed, curveLUT, 'rgb')
-      }
-      if (simulation.colorBalance) {
-        applyColorBalance(processed, simulation.colorBalance)
-      }
-      if (simulation.saturation !== undefined) {
-        applySaturation(processed, simulation.saturation)
-      }
-    }
-    if (settings) {
-      this.applyRecipeSettings(processed, settings)
-    }
-
-    return processed
+    assertProcessingResourcesReady(plan)
+    return processOnCPU(imageData, plan)
   }
 
   /**
@@ -185,6 +141,7 @@ export class ImageProcessor {
     options: ProcessAsyncOptions = {}
   ): Promise<ImageData> {
     assertProcessingTarget(plan, imageData.width, imageData.height)
+    assertProcessingResourcesReady(plan)
     const timeoutMs = options.timeoutMs ?? DEFAULT_PROCESSING_TIMEOUT_MS
     if (!Number.isFinite(timeoutMs) || timeoutMs < 0) {
       return Promise.reject(new Error('Processing timeout must be a non-negative finite number'))
@@ -366,146 +323,69 @@ export class ImageProcessor {
     return this.processingWorker
   }
 
-  /**
-   * Применяет настройки рецепта.
-   * Примечание: dynamicRange и whiteBalance уже обработаны в process() как pre-step.
-   */
-  private static applyRecipeSettings(
-    imageData: ImageData,
-    settings: RecipeSettings
-  ): void {
-    if (settings.highlight !== undefined || settings.shadow !== undefined) {
-      applyToneAdjustment(
-        imageData,
-        settings.highlight ?? 0,
-        settings.shadow ?? 0
-      )
-    }
-
-    if (settings.color !== undefined) {
-      applySaturation(imageData, settings.color / 10)
-    }
-
-    if (settings.wbShiftRed !== undefined || settings.wbShiftBlue !== undefined) {
-      applyWhiteBalanceShift(
-        imageData,
-        settings.wbShiftRed ?? 0,
-        settings.wbShiftBlue ?? 0
-      )
-    }
-
-    if (settings.colorChromeEffect) {
-      applyColorChrome(imageData, settings.colorChromeEffect)
-    }
-    if (settings.colorChromeFXBlue) {
-      applyColorChromeFXBlue(imageData, settings.colorChromeFXBlue)
-    }
-
-    if (settings.clarity !== undefined && settings.clarity !== 0) {
-      applyClarity(imageData, settings.clarity)
-    }
-    if (settings.sharpness !== undefined && settings.sharpness !== 0) {
-      applySharpness(imageData, settings.sharpness)
-    }
-
-    if (settings.grainEffect && settings.grainEffect !== 'off') {
-      const strength = grainEffectToStrength(settings.grainEffect)
-      const size = settings.grainSize ? grainSizeToNumber(settings.grainSize) : 1.0
-      applyGrain(imageData, strength, size)
+  /** Copy only the requested pixel size and release its backing canvas promptly. */
+  private static bitmapToImageData(bitmap: ImageBitmap, width: number, height: number): ImageData {
+    const canvas = document.createElement('canvas')
+    try {
+      canvas.width = width
+      canvas.height = height
+      const context = canvas.getContext('2d')
+      if (!context) throw new Error('Failed to get canvas context')
+      context.drawImage(bitmap, 0, 0, width, height)
+      return context.getImageData(0, 0, width, height)
+    } finally {
+      canvas.width = 0
+      canvas.height = 0
     }
   }
 
-  /**
-   * Загружает изображение из File в ImageData.
-   * Если передан maxSize — масштабирует так чтобы длинная сторона не превышала maxSize.
-   */
-  private static async fileToImageData(file: File, maxSize?: number): Promise<ImageData> {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
-      const url = URL.createObjectURL(file)
-
-      img.onload = () => {
-        URL.revokeObjectURL(url)
-
-        let width = img.width
-        let height = img.height
-
-        if (maxSize !== undefined) {
-          if (width > height && width > maxSize) {
-            height = (height * maxSize) / width
-            width = maxSize
-          } else if (height > maxSize) {
-            width = (width * maxSize) / height
-            height = maxSize
-          }
-        }
-
-        const canvas = document.createElement('canvas')
-        canvas.width = width
-        canvas.height = height
-
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          reject(new Error('Failed to get canvas context'))
-          return
-        }
-
-        ctx.drawImage(img, 0, 0, width, height)
-        resolve(ctx.getImageData(0, 0, width, height))
-      }
-
-      img.onerror = () => {
-        URL.revokeObjectURL(url)
-        reject(new Error('Failed to load image'))
-      }
-
-      img.src = url
-    })
-  }
-
-  /**
-   * Создаёт уменьшенную копию изображения для превью
-   */
-  static createThumbnail(file: File, maxSize: number): Promise<ImageData> {
-    return this.fileToImageData(file, maxSize)
-  }
-
-  /**
-   * Decodes a file once and derives both full-size and preview ImageData from
-   * the same ImageBitmap. The bitmap is always released after canvas copies.
-   */
-  static async decodeImagePair(
+  /** Load-time ownership retains dimensions and a preview, never full-size RGBA. */
+  static async decodeImagePreview(
     file: File,
     thumbnailMaxSize: number,
-    validateDimensions?: (width: number, height: number) => void
-  ): Promise<{ original: ImageData; thumbnail: ImageData; width: number; height: number }> {
+    validateDimensions?: (width: number, height: number) => void,
+    signal?: AbortSignal,
+  ): Promise<{ thumbnail: ImageData; width: number; height: number }> {
+    signal?.throwIfAborted()
+    if (!Number.isFinite(thumbnailMaxSize) || thumbnailMaxSize <= 0) throw new Error('Preview size must be positive')
     const bitmap = await createImageBitmap(file)
     try {
+      signal?.throwIfAborted()
       const { width, height } = bitmap
       validateDimensions?.(width, height)
+      signal?.throwIfAborted()
       const scale = Math.min(1, thumbnailMaxSize / Math.max(width, height))
-      const thumbnailWidth = Math.max(1, Math.round(width * scale))
-      const thumbnailHeight = Math.max(1, Math.round(height * scale))
+      const thumbnail = this.bitmapToImageData(bitmap, Math.max(1, Math.round(width * scale)), Math.max(1, Math.round(height * scale)))
+      signal?.throwIfAborted()
+      return { thumbnail, width, height }
+    } finally {
+      // Native decode cannot be interrupted; late results are closed and rejected.
+      bitmap.close()
+    }
+  }
 
-      const toImageData = (targetWidth: number, targetHeight: number): ImageData => {
-        const canvas = document.createElement('canvas')
-        canvas.width = targetWidth
-        canvas.height = targetHeight
-        const context = canvas.getContext('2d')
-        if (!context) throw new Error('Failed to get canvas context')
-        context.drawImage(bitmap, 0, 0, targetWidth, targetHeight)
-        return context.getImageData(0, 0, targetWidth, targetHeight)
-      }
-
-      return {
-        original: toImageData(width, height),
-        thumbnail: toImageData(thumbnailWidth, thumbnailHeight),
-        width,
-        height,
-      }
+  /** Export owns this full-resolution buffer for the duration of one photo. */
+  static async decodeImageOriginal(
+    file: File,
+    signal?: AbortSignal,
+    validateDimensions?: (width: number, height: number) => void,
+  ): Promise<ImageData> {
+    signal?.throwIfAborted()
+    const bitmap = await createImageBitmap(file)
+    try {
+      signal?.throwIfAborted()
+      validateDimensions?.(bitmap.width, bitmap.height)
+      signal?.throwIfAborted()
+      const original = this.bitmapToImageData(bitmap, bitmap.width, bitmap.height)
+      signal?.throwIfAborted()
+      return original
     } finally {
       bitmap.close()
     }
+  }
+
+  static async createThumbnail(file: File, maxSize: number): Promise<ImageData> {
+    return (await this.decodeImagePreview(file, maxSize)).thumbnail
   }
 
   /**
@@ -519,22 +399,27 @@ export class ImageProcessor {
     canvas.width = imageData.width
     canvas.height = imageData.height
 
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return imageData
-
-    ctx.putImageData(imageData, 0, 0)
-
-    const shortSide = Math.min(imageData.width, imageData.height)
-    const fontSize = Math.max(12, Math.round(shortSide * 0.015))
-    const bottomOffset = Math.round(shortSide * 0.015)
-
-    ctx.font = `500 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`
-    ctx.textBaseline = 'bottom'
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
-    ctx.textAlign = 'center'
-    ctx.fillText(text, imageData.width / 2, imageData.height - bottomOffset)
-
-    return ctx.getImageData(0, 0, canvas.width, canvas.height)
+    try {
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return imageData
+  
+      ctx.putImageData(imageData, 0, 0)
+  
+      const shortSide = Math.min(imageData.width, imageData.height)
+      const fontSize = Math.max(12, Math.round(shortSide * 0.015))
+      const bottomOffset = Math.round(shortSide * 0.015)
+  
+      ctx.font = `500 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`
+      ctx.textBaseline = 'bottom'
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
+      ctx.textAlign = 'center'
+      ctx.fillText(text, imageData.width / 2, imageData.height - bottomOffset)
+  
+      return ctx.getImageData(0, 0, canvas.width, canvas.height)
+    } finally {
+      canvas.width = 0
+      canvas.height = 0
+    }
   }
 
   /**
@@ -550,18 +435,22 @@ export class ImageProcessor {
     canvas.width = imageData.width
     canvas.height = imageData.height
 
-    const ctx = canvas.getContext('2d')
-    if (!ctx) throw new Error('Failed to get canvas context')
-
-    ctx.putImageData(imageData, 0, 0)
-
-    const blob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (b) => b ? resolve(b) : reject(new Error('Failed to create blob')),
-        'image/jpeg',
-        quality
-      )
-    })
+    let blob: Blob
+    try {
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Failed to get canvas context')
+      ctx.putImageData(imageData, 0, 0)
+      blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          value => value ? resolve(value) : reject(new Error('Failed to create blob')),
+          'image/jpeg',
+          quality,
+        )
+      })
+    } finally {
+      canvas.width = 0
+      canvas.height = 0
+    }
 
     if (!exifInfo) return blob
 

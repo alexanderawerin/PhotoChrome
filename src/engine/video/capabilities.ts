@@ -1,5 +1,3 @@
-import { supportsAudioEncoding } from './audio'
-import { closeCodecSafely } from './errors'
 
 interface VideoCodecRequirements {
   width?: number
@@ -59,39 +57,8 @@ async function isVideoCodecSupported(
   }
 }
 
-export async function testVideoEncoderWorks(): Promise<{ works: boolean; error?: string }> {
-  if (typeof VideoEncoder === 'undefined') {
-    return { works: false, error: 'VideoEncoder API not available' }
-  }
-  try {
-    let testError: string | null = null
-    const encoder = new VideoEncoder({
-      output: () => {},
-      error: error => { testError = error instanceof Error ? error.message : String(error) },
-    })
-    const config: VideoEncoderConfig = {
-      codec: 'avc1.42001e',
-      width: 640,
-      height: 480,
-      bitrate: 1_000_000,
-      framerate: 30,
-    }
-    if (isSafari()) config.hardwareAcceleration = 'prefer-software'
-    encoder.configure(config)
-    await new Promise(resolve => setTimeout(resolve, 100))
-    const state = encoder.state
-    closeCodecSafely(encoder)
-    if (testError) return { works: false, error: testError }
-    if (state !== 'configured') return { works: false, error: `Encoder state: ${state}` }
-    return { works: true }
-  } catch (error) {
-    return { works: false, error: error instanceof Error ? error.message : String(error) }
-  }
-}
-
 export interface VideoExportCapabilities {
   videoSupported: boolean
-  audioSupported: boolean
   recommendedCodec: string | null
 }
 
@@ -104,7 +71,7 @@ export async function getExportCapabilities(
   }
 ): Promise<VideoExportCapabilities> {
   if (typeof VideoEncoder === 'undefined') {
-    return { videoSupported: false, audioSupported: false, recommendedCodec: null }
+    return { videoSupported: false, recommendedCodec: null }
   }
   const h264Codecs = getAvcCodecCandidates(
     requirements.width,
@@ -120,7 +87,6 @@ export async function getExportCapabilities(
   }
   return {
     videoSupported: recommendedCodec !== null,
-    audioSupported: await supportsAudioEncoding(),
     recommendedCodec,
   }
 }

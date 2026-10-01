@@ -1,10 +1,12 @@
 import { test, expect } from './helpers/fixtures'
-import { fixturePath, selectFirstRecipe, waitForEditor } from './helpers/upload'
+import { fixturePath, selectBaseFilm, waitForEditor } from './helpers/upload'
 
 test.describe('Editor — Multi-Image Navigation', () => {
   test('discards an uncommitted inspector draft when changing photos', async ({ page, multiImageEditorPage }) => {
     await page.setViewportSize({ width: 1600, height: 900 })
-    await selectFirstRecipe(page)
+    await selectBaseFilm(page)
+    await page.getByRole('button', { name: 'Open Advanced settings', exact: true }).click()
+    await page.getByRole('region', { name: 'Advanced settings', exact: true }).getByRole('tab', { name: 'Manual', exact: true }).click()
     const inspector = page.getByRole('complementary', { name: 'Editing inspector', exact: true })
     const highlight = inspector.getByRole('slider', { name: 'Highlight', exact: true })
     const baseline = await highlight.getAttribute('aria-valuenow')
@@ -14,8 +16,11 @@ test.describe('Editor — Multi-Image Navigation', () => {
 
     const strip = page.getByRole('tablist', { name: 'Image thumbnails', exact: true })
     await strip.getByRole('tab', { name: 'Image 2 of 2: test-image-2.jpg', exact: true }).click()
-    await expect(inspector.getByText('Choose a film first', { exact: true })).toBeVisible()
+    await expect(inspector).toHaveCount(0)
+    await expect(page.getByLabel('Applied color', { exact: true })).toContainText('Original')
     await strip.getByRole('tab', { name: 'Image 1 of 2: test-image.jpg', exact: true }).click()
+    await page.getByRole('button', { name: 'Open Advanced settings', exact: true }).click()
+    await inspector.getByRole('tab', { name: 'Manual', exact: true }).click()
     await expect(highlight).toHaveAttribute('aria-valuenow', baseline!)
   })
 
@@ -23,11 +28,8 @@ test.describe('Editor — Multi-Image Navigation', () => {
     const strip = page.getByRole('tablist', { name: 'Image thumbnails', exact: true })
     const second = strip.getByRole('tab', { name: 'Image 2 of 2: test-image-2.jpg', exact: true })
     await second.click()
-    await selectFirstRecipe(page)
-    const selectedPreset = page.getByRole('complementary', { name: 'Preset browser' })
-      .getByRole('region', { name: "Editor's Choice presets", exact: true })
-      .getByRole('button', { name: /, selected$/ })
-    const presetLabel = await selectedPreset.getAttribute('aria-label')
+    await selectBaseFilm(page)
+    const selectedFilm = page.getByRole('button', { name: 'Select film Provia', exact: true })
 
     await page.evaluate(() => {
       const original = window.createImageBitmap
@@ -42,7 +44,7 @@ test.describe('Editor — Multi-Image Navigation', () => {
     await expect(page.getByRole('alert')).toContainText('Failed to load image')
     await page.getByRole('button', { name: 'Back to editor', exact: true }).click()
     await expect(second).toHaveAttribute('aria-selected', 'true')
-    await expect(selectedPreset).toHaveAttribute('aria-label', presetLabel!)
+    await expect(selectedFilm).toHaveAttribute('aria-pressed', 'true')
     await expect(strip.getByRole('tab')).toHaveCount(2)
 
     await page.evaluate(() => {
@@ -60,7 +62,7 @@ test.describe('Editor — Multi-Image Navigation', () => {
     await waitForEditor(page)
     await expect(strip.getByRole('tab')).toHaveCount(3)
     await expect(strip.getByRole('tab', { name: 'Image 2 of 3: test-image-2.jpg', exact: true })).toHaveAttribute('aria-selected', 'true')
-    await expect(selectedPreset).toHaveAttribute('aria-label', presetLabel!)
+    await expect(selectedFilm).toHaveAttribute('aria-pressed', 'true')
   })
 
   test('shows thumbnail strip with correct count', async ({ page, multiImageEditorPage }) => {
@@ -71,7 +73,7 @@ test.describe('Editor — Multi-Image Navigation', () => {
     await expect(tabs).toHaveCount(2)
 
     // First thumbnail should be selected
-    await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
+    await expect(tablist.getByRole('tab', { name: 'Image 1 of 2: test-image.jpg', exact: true })).toHaveAttribute('aria-selected', 'true')
 
     const actions = page.getByRole('toolbar', { name: 'Desktop editor actions' })
     await expect(actions).toBeVisible()
@@ -84,30 +86,30 @@ test.describe('Editor — Multi-Image Navigation', () => {
     }
   })
 
-  test('clicking thumbnail switches active image', async ({ page, multiImageEditorPage }) => {
-    const tabs = page.locator('[role="tablist"][aria-label="Image thumbnails"] [role="tab"]')
-
-    // Click second thumbnail
-    await tabs.nth(1).click()
-    await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true')
-    await expect(tabs.first()).toHaveAttribute('aria-selected', 'false')
-
-    // Click first thumbnail back
-    await tabs.first().click()
-    await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
+  test('clicking thumbnail restores each photo selection', async ({ page, multiImageEditorPage }) => {
+    const strip = page.getByRole('tablist', { name: 'Image thumbnails', exact: true })
+    const first = strip.getByRole('tab', { name: 'Image 1 of 2: test-image.jpg', exact: true })
+    const second = strip.getByRole('tab', { name: 'Image 2 of 2: test-image-2.jpg', exact: true })
+    await selectBaseFilm(page)
+    await second.click()
+    await expect(second).toHaveAttribute('aria-selected', 'true')
+    await expect(first).toHaveAttribute('aria-selected', 'false')
+    await expect(page.getByRole('button', { name: 'Select Original', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await first.click()
+    await expect(first).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByRole('button', { name: 'Select film Provia', exact: true })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  test('arrow key navigation between images', async ({ page, multiImageEditorPage }) => {
-    const tabs = page.locator('[role="tablist"][aria-label="Image thumbnails"] [role="tab"]')
-
-    await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
-
-    // ArrowRight → second image
+  test('arrow keys navigate between photos', async ({ page, multiImageEditorPage }) => {
+    const strip = page.getByRole('tablist', { name: 'Image thumbnails', exact: true })
+    const first = strip.getByRole('tab', { name: 'Image 1 of 2: test-image.jpg', exact: true })
+    const second = strip.getByRole('tab', { name: 'Image 2 of 2: test-image-2.jpg', exact: true })
+    await expect(first).toHaveAttribute('aria-selected', 'true')
+    // Focus a non-slider surface so arrows execute the editor navigation command.
+    await page.getByRole('button', { name: 'Help', exact: true }).focus()
     await page.keyboard.press('ArrowRight')
-    await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true')
-
-    // ArrowLeft → first image
+    await expect(second).toHaveAttribute('aria-selected', 'true')
     await page.keyboard.press('ArrowLeft')
-    await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
+    await expect(first).toHaveAttribute('aria-selected', 'true')
   })
 })

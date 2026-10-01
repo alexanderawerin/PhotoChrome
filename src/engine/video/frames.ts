@@ -151,7 +151,7 @@ async function extractFrameWithRetry(
   return context.getImageData(0, 0, canvas.width, canvas.height)
 }
 
-export async function seekVideoWithTimeout(
+async function seekVideoWithTimeout(
   video: HTMLVideoElement,
   time: number,
   timeoutMs = SEEK_TIMEOUT_MS

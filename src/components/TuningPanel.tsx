@@ -1,4 +1,4 @@
-import { Check, RotateCcw, Shuffle } from 'lucide-react'
+import { Check, RotateCcw } from 'lucide-react'
 import { Button } from './ui/button'
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group'
 import { Slider } from './ui/slider'
@@ -10,6 +10,7 @@ interface TuningPanelProps {
   onSettingsChange: (settings: RecipeSettings) => void
   onApply: () => void
   onCancel: () => void
+  showActions?: boolean
 }
 
 /** Slider parameter configuration */
@@ -82,7 +83,8 @@ export function TuningPanel({
   customSettings,
   onSettingsChange,
   onApply,
-  onCancel
+  onCancel,
+  showActions = true
 }: TuningPanelProps) {
   
   // Получаем Dynamic Range
@@ -111,7 +113,7 @@ export function TuningPanel({
 
   const handleWBChange = (value: string) => {
     if (value) {
-      onSettingsChange({ ...customSettings, whiteBalance: value as WhiteBalanceValue })
+      onSettingsChange({ ...customSettings, whiteBalance: value as WhiteBalanceValue, whiteBalanceKelvin: undefined })
     }
   }
 
@@ -140,7 +142,7 @@ export function TuningPanel({
   }
 
   const handleKelvinChange = (value: number) => {
-    onSettingsChange({ ...customSettings, whiteBalanceKelvin: value })
+    onSettingsChange({ ...customSettings, whiteBalanceKelvin: value, whiteBalance: undefined })
   }
 
   // Получаем значение слайдера
@@ -187,39 +189,23 @@ export function TuningPanel({
     }
   }
 
-  // Случайные настройки
-  const handleRandomize = () => {
-    const toggleValues: ToggleValue[] = ['off', 'weak', 'strong']
-    const grainSizeValues: GrainSizeValue[] = ['small', 'large']
-    const drValues: DynamicRangeValue[] = ['DR100', 'DR200', 'DR400']
-    const wbValues: WhiteBalanceValue[] = ['auto', 'daylight', 'shade', 'cloudy', 'tungsten', 'fluorescent']
-
-    const randomSettings: RecipeSettings = {
-      highlight: Math.floor(Math.random() * 7) - 2,
-      shadow: Math.floor(Math.random() * 7) - 2,
-      color: Math.floor(Math.random() * 9) - 4,
-      sharpness: Math.floor(Math.random() * 9) - 4,
-      clarity: Math.floor(Math.random() * 11) - 5,
-      wbShiftRed: Math.floor(Math.random() * 19) - 9,
-      wbShiftBlue: Math.floor(Math.random() * 19) - 9,
-      grainEffect: toggleValues[Math.floor(Math.random() * toggleValues.length)],
-      colorChromeEffect: toggleValues[Math.floor(Math.random() * toggleValues.length)],
-      colorChromeFXBlue: toggleValues[Math.floor(Math.random() * toggleValues.length)],
-      grainSize: grainSizeValues[Math.floor(Math.random() * grainSizeValues.length)],
-      dynamicRange: drValues[Math.floor(Math.random() * drValues.length)],
-      whiteBalance: wbValues[Math.floor(Math.random() * wbValues.length)],
-    }
-
-    onSettingsChange(randomSettings)
-  }
-
   const grainEffect = getToggleValue('grainEffect')
 
   const resetSetting = (key: keyof RecipeSettings) => {
     const next = { ...customSettings }
     delete next[key]
+    if (key === 'whiteBalance' || key === 'whiteBalanceKelvin') {
+      delete next.whiteBalance
+      delete next.whiteBalanceKelvin
+    }
     onSettingsChange(next)
   }
+
+  const resetButton = (key: keyof RecipeSettings, label: string) => (
+    <button type="button" onClick={() => resetSetting(key)} className="grid size-11 place-items-center md:size-7 rounded text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200" aria-label={`Reset ${label} to profile`}>
+      <RotateCcw className="size-3" aria-hidden="true" />
+    </button>
+  )
 
   return (
     <div className="h-full flex flex-col bg-black safe-area-inset">
@@ -234,15 +220,7 @@ export function TuningPanel({
               {recipe.name}
             </p>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleRandomize}
-            className="text-zinc-400 hover:text-white"
-            aria-label="Randomize settings"
-          >
-            <Shuffle className="w-4 h-4" />
-          </Button>
+
         </div>
       </div>
 
@@ -262,7 +240,7 @@ export function TuningPanel({
                   </label>
                   <div className="flex items-center gap-1">
                     <span className="w-8 text-right text-sm tabular-nums text-zinc-500" aria-hidden="true">{value > 0 ? `+${value}` : value}</span>
-                    <button type="button" onClick={() => resetSetting(param.key)} className="grid size-7 place-items-center rounded text-zinc-600 hover:bg-zinc-800 hover:text-zinc-200" aria-label={`Reset ${param.label} to preset`}>
+                    <button type="button" onClick={() => resetSetting(param.key)} className="grid size-11 place-items-center md:size-7 rounded text-zinc-600 hover:bg-zinc-800 hover:text-zinc-200" aria-label={`Reset ${param.label} to profile`}>
                       <RotateCcw className="size-3" aria-hidden="true" />
                     </button>
                   </div>
@@ -275,7 +253,7 @@ export function TuningPanel({
                   max={param.max}
                   step={param.step}
                   onValueChange={(values) => handleSliderChange(param.key, values[0])}
-                  className="w-full"
+                  className="h-11 w-full"
                   aria-valuetext={`${value > 0 ? '+' : ''}${value}`}
                 />
               </div>
@@ -291,9 +269,10 @@ export function TuningPanel({
             const labelId = `toggle-label-${param.key}`
             return (
               <div key={param.key} className="space-y-2">
-                <label id={labelId} className="text-sm text-zinc-300 block">
-                  {param.label}
-                </label>
+                <div className="flex items-center justify-between">
+                  <label id={labelId} className="text-sm text-zinc-300">{param.label}</label>
+                  {resetButton(param.key, param.label)}
+                </div>
                 <ToggleGroup
                   type="single"
                   value={value}
@@ -306,7 +285,7 @@ export function TuningPanel({
                       key={option.value}
                       value={option.value}
                       aria-label={option.label}
-                      className="flex-1 text-xs"
+                      className="min-h-11 flex-1 text-xs md:min-h-9"
                     >
                       {option.label}
                     </ToggleGroupItem>
@@ -319,9 +298,10 @@ export function TuningPanel({
           {/* Grain Size - only shown when grain is not off */}
           {grainEffect !== 'off' && (
             <div className="space-y-2 animate-in fade-in duration-200">
-              <label id="toggle-label-grainSize" className="text-sm text-zinc-300 block">
-                Grain Size
-              </label>
+              <div className="flex items-center justify-between">
+                <label id="toggle-label-grainSize" className="text-sm text-zinc-300">Grain Size</label>
+                {resetButton('grainSize', 'Grain Size')}
+              </div>
               <ToggleGroup
                 type="single"
                 value={getGrainSize()}
@@ -334,7 +314,7 @@ export function TuningPanel({
                     key={option.value}
                     value={option.value}
                     aria-label={option.label}
-                    className="flex-1 text-xs"
+                    className="min-h-11 flex-1 text-xs md:min-h-9"
                   >
                     {option.label}
                   </ToggleGroupItem>
@@ -348,9 +328,10 @@ export function TuningPanel({
 
           {/* Dynamic Range */}
           <div className="space-y-2">
-            <label id="toggle-label-dynamicRange" className="text-sm text-zinc-300 block">
-              Dynamic Range
-            </label>
+            <div className="flex items-center justify-between">
+              <label id="toggle-label-dynamicRange" className="text-sm text-zinc-300">Dynamic Range</label>
+              {resetButton('dynamicRange', 'Dynamic Range')}
+            </div>
             <ToggleGroup
               type="single"
               value={getDynamicRange()}
@@ -363,7 +344,7 @@ export function TuningPanel({
                   key={option.value}
                   value={option.value}
                   aria-label={option.label}
-                  className="flex-1 text-xs"
+                  className="min-h-11 flex-1 text-xs md:min-h-9"
                 >
                   {option.label}
                 </ToggleGroupItem>
@@ -374,11 +355,11 @@ export function TuningPanel({
           {/* White Balance */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-zinc-300">White Balance</span>
+              <span className="flex items-center gap-1 text-sm text-zinc-300">White Balance{resetButton('whiteBalance', 'White Balance')}</span>
               <div className="flex rounded-md overflow-hidden border border-zinc-700">
                 <button
                   onClick={() => handleWBModeChange('preset')}
-                  className={`px-2 py-1 text-xs transition-colors ${
+                  className={`min-h-11 min-w-11 px-2 py-1 text-xs transition-colors md:min-h-8 ${
                     getWBMode() === 'preset'
                       ? 'bg-zinc-600 text-white'
                       : 'bg-transparent text-zinc-500 hover:text-zinc-300'
@@ -390,7 +371,7 @@ export function TuningPanel({
                 </button>
                 <button
                   onClick={() => handleWBModeChange('kelvin')}
-                  className={`px-2 py-1 text-xs transition-colors ${
+                  className={`min-h-11 min-w-11 px-2 py-1 text-xs transition-colors md:min-h-8 ${
                     getWBMode() === 'kelvin'
                       ? 'bg-zinc-600 text-white'
                       : 'bg-transparent text-zinc-500 hover:text-zinc-300'
@@ -416,7 +397,7 @@ export function TuningPanel({
                     key={option.value}
                     value={option.value}
                     aria-label={option.label}
-                    className="text-xs w-full"
+                    className="min-h-11 text-xs w-full md:min-h-9"
                   >
                     {option.label}
                   </ToggleGroupItem>
@@ -426,8 +407,9 @@ export function TuningPanel({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label htmlFor="slider-kelvin" className="text-sm text-zinc-500">Temperature</label>
-                  <span className="text-sm text-zinc-500 tabular-nums" aria-hidden="true">
-                    {getKelvinValue()}K
+                  <span className="flex items-center gap-1 text-sm text-zinc-500 tabular-nums">
+                    <span aria-hidden="true">{getKelvinValue()}K</span>
+                    {resetButton('whiteBalanceKelvin', 'Temperature')}
                   </span>
                 </div>
                 <Slider
@@ -437,7 +419,7 @@ export function TuningPanel({
                   max={10000}
                   step={100}
                   onValueChange={(values) => handleKelvinChange(values[0])}
-                  className="w-full"
+                  className="h-11 w-full"
                   aria-label={`White balance ${getKelvinValue()} Kelvin`}
                 />
               </div>
@@ -447,7 +429,7 @@ export function TuningPanel({
       </div>
 
       {/* Footer with action buttons - fixed at bottom */}
-      <div className="flex-shrink-0 px-4 py-4 pb-6 md:pb-4 border-t border-zinc-800 bg-black">
+      {showActions && <div className="flex-shrink-0 px-4 py-4 pb-6 md:pb-4 border-t border-zinc-800 bg-black">
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -467,7 +449,7 @@ export function TuningPanel({
             Cancel
           </Button>
         </div>
-      </div>
+      </div>}
     </div>
   )
 }

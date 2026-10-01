@@ -4,7 +4,7 @@ export interface VideoMuxerAudioConfig {
 }
 
 export interface VideoMuxer {
-  addVideoChunk(chunk: EncodedVideoChunk, metadata?: EncodedVideoChunkMetadata): Promise<void>
+  addVideoChunk(chunk: EncodedVideoChunk, metadata?: EncodedVideoChunkMetadata, duration?: number): Promise<void>
   addAudioChunk(chunk: EncodedAudioChunk, metadata?: EncodedAudioChunkMetadata): Promise<void>
   finalize(): Promise<Blob>
   cancel(): Promise<void>
@@ -36,13 +36,21 @@ export async function createVideoMuxer(
   })
   const videoSource = new EncodedVideoPacketSource('avc')
   const audioSource = audio ? new EncodedAudioPacketSource('aac') : null
-  output.addVideoTrack(videoSource, { frameRate: 30 })
+  output.addVideoTrack(videoSource)
   if (audioSource) output.addAudioTrack(audioSource)
-  await output.start()
+  try {
+    await output.start()
+  } catch (error) {
+    videoSource.close()
+    audioSource?.close()
+    await output.cancel().catch(() => {})
+    throw error
+  }
 
   return {
-    addVideoChunk: async (chunk, metadata) => {
-      await videoSource.add(EncodedPacket.fromEncodedChunk(chunk), metadata)
+    addVideoChunk: async (chunk, metadata, duration) => {
+      const packet = EncodedPacket.fromEncodedChunk(chunk)
+      await videoSource.add(duration === undefined ? packet : packet.clone({ duration: duration / 1_000_000 }), metadata)
     },
     addAudioChunk: async (chunk, metadata) => {
       if (!audioSource) throw new Error('Audio track is not configured')

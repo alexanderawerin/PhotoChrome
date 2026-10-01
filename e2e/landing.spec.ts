@@ -14,10 +14,11 @@ test.describe('Playable demo', () => {
     await expect(page.getByRole('button', { name: 'Upload photos', exact: true })).toBeVisible()
   })
 
-  test('shows real demo photos, presets, compare surface, and a persistent upload CTA', async ({ page, landingPage }) => {
+  test('shows real demo photos, base films, compare surface, and a persistent upload CTA', async ({ page, landingPage }) => {
     await waitForEditor(page)
     await expect(page.getByRole('button', { name: 'Upload photos' })).toBeVisible()
-    await expect(page.locator('[aria-label^="Apply preset"]:visible').first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Select film Provia', exact: true })).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Film selection', exact: true }).getByRole('button')).toHaveCount(11)
     await expect(page.locator('canvas[aria-label="Preview"]')).toBeVisible()
   })
 
@@ -132,7 +133,7 @@ test.describe('Playable demo', () => {
       window.__restoreVideoObjectURL()
     })
     await page.getByRole('button', { name: 'Retry' }).click()
-    await expect(page.getByText('3s • 640×360')).toBeVisible()
+    await expect(page.getByLabel('Video preview', { exact: true })).toBeVisible()
     await expect(page.locator('[data-slot="empty-title"]')).toHaveCount(0)
   })
 

@@ -1,6 +1,7 @@
 import { test, expect } from './helpers/fixtures'
 import { uploadImage, uploadMultipleImages, waitForEditor } from './helpers/upload'
 import type { Locator, Page } from '@playwright/test'
+import { advancedPanel, openAdvanced } from './helpers/advanced'
 
 test.use({ viewport: { width: 393, height: 852 } })
 
@@ -36,24 +37,6 @@ async function readRect(locator: Locator): Promise<Rect> {
       left: rect.left,
       width: rect.width,
       height: rect.height,
-    }
-  })
-}
-
-type AdjustSlotState = {
-  iconOpacity: number
-  valueOpacity: number
-  valueText: string
-}
-
-async function readAdjustSlotState(controls: Locator): Promise<AdjustSlotState> {
-  return controls.locator('div[aria-hidden="true"]').evaluate(slot => {
-    const icon = slot.querySelector('svg')
-    const value = slot.querySelector('span')
-    return {
-      iconOpacity: Number(icon ? getComputedStyle(icon).opacity : 0),
-      valueOpacity: Number(value ? getComputedStyle(value).opacity : 0),
-      valueText: value?.textContent?.trim() ?? '',
     }
   })
 }
@@ -103,7 +86,7 @@ async function visibleLowerControl(page: Page): Promise<Rect> {
   const cropTools = page.getByLabel('Crop tools', { exact: true })
   const cropRegion = page.getByRole('region', { name: 'Crop image', exact: true })
 
-  for (const control of [cropTools, cropRegion]) {
+  for (const control of [cropTools, cropRegion, advancedPanel(page)]) {
     if (await control.isVisible().catch(() => false)) return readRect(control)
   }
 
@@ -126,11 +109,11 @@ async function expectContainedInWorkspace(page: Page): Promise<void> {
   }).toBe(true)
 }
 
-async function selectMobilePreset(page: Page): Promise<void> {
-  const carousel = page.getByRole('region', { name: 'Preset carousel', exact: true })
-  const cards = carousel.locator('[aria-label^="Apply preset"]')
-  await expect(cards.first()).toBeVisible({ timeout: 15_000 })
-  await cards.first().click()
+async function selectMobileFilm(page: Page): Promise<void> {
+  const choice = page.getByRole('group', { name: 'Film selection', exact: true }).getByRole('button', { name: 'Select film Provia', exact: true })
+  await choice.click()
+  await expect(choice).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true }).getByRole('button', { name: 'Advanced', exact: true })).toBeEnabled()
 }
 
 async function expectTouchTarget(locator: Locator): Promise<void> {
@@ -229,9 +212,10 @@ async function expectVisibleButtonTextFits(buttons: Locator): Promise<void> {
 }
 
 async function stressTextSize(page: Page): Promise<void> {
-  await page.locator('header button, nav[aria-label="Editor modes"] button, .mobile-editor-actions button').evaluateAll(elements => {
-    for (const element of elements) {
-      const fontSize = Number.parseFloat(getComputedStyle(element).fontSize)
+  await page.locator('header button, nav[aria-label="Editor modes"] button, .mobile-editor-actions button, section[aria-label="Advanced settings"] button, section[aria-label="Advanced settings"] label, section[aria-label="Advanced settings"] p, section[aria-label="Advanced settings"] h2').evaluateAll(elements => {
+    const sizes = elements.map(element => Number.parseFloat(getComputedStyle(element).fontSize))
+    for (const [index, element] of elements.entries()) {
+      const fontSize = sizes[index]
       if (Number.isFinite(fontSize)) (element as HTMLElement).style.fontSize = `${fontSize * 2}px`
     }
   })
@@ -245,78 +229,57 @@ test.describe('Editor — mobile preview layout', () => {
     await expectFullViewportCover(page)
 
     const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
-    await expect(modes.getByRole('button', { name: /^presets$/i })).toHaveAttribute('aria-current', 'page')
-    await expect(modes.getByRole('button', { name: /^adjust$/i })).toHaveCount(0)
+    await expect(modes.getByRole('button', { name: /^films$/i })).toHaveAttribute('aria-current', 'page')
+    await expect(modes.getByRole('button', { name: /^advanced$/i })).toHaveCount(0)
     await expect(modes.getByRole('button', { name: /^crop$/i })).toHaveCount(0)
     await expect(page.getByRole('button', { name: /Export/ })).toHaveCount(0)
   })
 
   for (const fixture of ['test-image.jpg', 'test-image-2.jpg']) {
-    test(`keeps ${fixture} fullbleed across Presets and Adjust`, async ({ page }) => {
+    test(`keeps ${fixture} fullbleed in Films and contained while Advanced is open`, async ({ page }) => {
       await page.goto('/', { waitUntil: 'domcontentloaded' })
       await uploadImage(page, fixture)
       await waitForEditor(page)
       await waitForPreview(page)
-      await selectMobilePreset(page)
+      await selectMobileFilm(page)
       await expectFullViewportCover(page)
 
       const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
-      await modes.getByRole('button', { name: /^adjust$/i }).click()
-      await expect(modes.getByRole('button', { name: /^adjust$/i })).toHaveAttribute('aria-current', 'page')
-      await expect(page.getByLabel('Adjust tools', { exact: true })).toBeVisible()
+      await modes.getByRole('button', { name: /^advanced$/i }).click()
+      await expect(modes.getByRole('button', { name: /^advanced$/i })).toHaveAttribute('aria-current', 'page')
+      await expect(advancedPanel(page)).toBeVisible()
+      await expectContainedInWorkspace(page)
+      await advancedPanel(page).getByRole('button', { name: 'Cancel', exact: true }).click()
       await expectFullViewportCover(page)
     })
   }
 
-  test('shows Adjust title and value while active, then restores the icon when idle', async ({ page }) => {
-    await page.goto('/', { waitUntil: 'domcontentloaded' })
-    await uploadImage(page, 'test-image.jpg')
-    await waitForEditor(page)
-    await selectMobilePreset(page)
-
-    const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
-    await modes.getByRole('button', { name: /^adjust$/i }).click()
-    await page.getByRole('button', { name: 'Adjust Highlight', exact: true }).click()
-
-    const controls = page.getByLabel('Highlight controls', { exact: true })
-    const slider = controls.getByRole('slider', { name: 'Highlight', exact: true })
-    const valueSlot = controls.locator('[aria-hidden="true"] span')
-    await expect(controls.getByText('Highlight', { exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Reset Highlight to preset', exact: true })).toBeVisible()
-
-    const initialValue = await slider.getAttribute('aria-valuenow')
+  test('Manual exposes the label and value during keyboard and pointer slider changes', async ({ page, editorPage }) => {
+    await selectMobileFilm(page)
+    await openAdvanced(page)
+    const panel = advancedPanel(page)
+    await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
+    const slider = panel.getByRole('slider', { name: 'Highlight', exact: true })
+    await expect(panel.getByText('Highlight', { exact: true })).toBeVisible()
+    await expect(panel.getByRole('button', { name: 'Reset Highlight to profile', exact: true })).toBeVisible()
+    const initial = await slider.getAttribute('aria-valuenow')
     await slider.focus()
     await page.keyboard.down('ArrowRight')
-    await expect(slider).not.toHaveAttribute('aria-valuenow', initialValue ?? '')
-    await expect.poll(() => readAdjustSlotState(controls)).toMatchObject({
-      iconOpacity: 0,
-      valueOpacity: 1,
-    })
-    await expect(valueSlot).toHaveText((await slider.getAttribute('aria-valuetext')) ?? '')
-
+    await expect(slider).not.toHaveAttribute('aria-valuenow', initial!)
+    await expect(slider).toHaveAttribute('aria-valuetext', '+1')
     await page.keyboard.up('ArrowRight')
-    await expect.poll(() => readAdjustSlotState(controls)).toMatchObject({
-      iconOpacity: 1,
-      valueOpacity: 0,
-    })
-
-    const sliderBox = await slider.boundingBox()
-    expect(sliderBox).not.toBeNull()
-    if (!sliderBox) return
-    await page.mouse.move(sliderBox.x + sliderBox.width / 2, sliderBox.y + sliderBox.height / 2)
+    await expect(slider).toHaveAttribute('aria-valuetext', '+1')
+    const root = panel.locator('#slider-highlight')
+    await expectTouchTarget(root)
+    const box = await root.boundingBox()
+    expect(box).not.toBeNull()
+    if (!box) return
+    await page.mouse.move(box.x + box.width * 0.45, box.y + box.height / 2)
     await page.mouse.down()
-    await page.mouse.move(sliderBox.x + sliderBox.width / 2 + 20, sliderBox.y + sliderBox.height / 2)
-    await expect.poll(() => readAdjustSlotState(controls)).toMatchObject({
-      iconOpacity: 0,
-      valueOpacity: 1,
-    })
-    await expect(valueSlot).toHaveText((await slider.getAttribute('aria-valuetext')) ?? '')
-
+    await page.mouse.move(box.x + box.width * 0.7, box.y + box.height / 2)
+    await expect(slider).not.toHaveAttribute('aria-valuenow', initial!)
     await page.mouse.up()
-    await expect.poll(() => readAdjustSlotState(controls)).toMatchObject({
-      iconOpacity: 1,
-      valueOpacity: 0,
-    })
+    await expect(panel.getByText('Highlight', { exact: true })).toBeVisible()
   })
 
   for (const viewport of [
@@ -354,10 +317,10 @@ test.describe('Editor — mobile preview layout', () => {
         await page.goto('/', { waitUntil: 'domcontentloaded' })
         await uploadMultipleImages(page)
         await waitForEditor(page)
-        await selectMobilePreset(page)
+        await selectMobileFilm(page)
 
         const batchActions = page.locator('.mobile-editor-actions:visible')
-        await expect(batchActions.getByRole('button', { name: /Apply current preset to all 2 images/ })).toBeVisible()
+        await expect(batchActions.getByRole('button', { name: /Apply current color to all 2 images/ })).toBeVisible()
         await expect(batchActions.getByRole('button', { name: 'Export all photos', exact: true })).toBeVisible()
         await stressTextSize(page)
         await expectVisibleTouchTargets(batchActions.locator('button:visible'))
@@ -366,69 +329,71 @@ test.describe('Editor — mobile preview layout', () => {
         await expectNoHorizontalOverflow(page)
       })
 
-      test('keeps the circular Adjust tool browser keyboard reachable', async ({ page }) => {
-        await page.goto('/', { waitUntil: 'domcontentloaded' })
-        await uploadImage(page, 'test-image.jpg')
-        await waitForEditor(page)
-        await selectMobilePreset(page)
-
-        const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
-        await modes.getByRole('button', { name: /^adjust$/i }).click()
-        const tools = page.getByLabel('Adjust tools', { exact: true })
-        await expect(tools).toBeVisible()
-        const toolButtons = tools.locator('button:visible')
-        await expect(toolButtons).not.toHaveCount(0)
-        await expectVisibleTouchTargets(toolButtons)
-
-        const highlight = tools.getByRole('button', { name: 'Adjust Highlight', exact: true })
-        await highlight.focus()
-        await expect(highlight).toBeFocused()
+      test('keeps Advanced tabs and Manual controls keyboard reachable and touch-sized', async ({ page, editorPage }) => {
+        await selectMobileFilm(page)
+        await openAdvanced(page)
+        const panel = advancedPanel(page)
+        const manual = panel.getByRole('tab', { name: 'Manual', exact: true })
+        await manual.focus()
         await page.keyboard.press('Enter')
-
-        const controls = page.getByLabel('Highlight controls', { exact: true })
-        const slider = controls.getByRole('slider', { name: 'Highlight', exact: true })
-        const initialValue = await slider.getAttribute('aria-valuenow')
+        await expect(manual).toHaveAttribute('aria-selected', 'true')
+        const slider = panel.getByRole('slider', { name: 'Highlight', exact: true })
+        const initial = await slider.getAttribute('aria-valuenow')
         await slider.focus()
-        await expect(slider).toBeFocused()
         await page.keyboard.press('ArrowRight')
-        await expect(slider).not.toHaveAttribute('aria-valuenow', initialValue ?? '')
-        await expect(controls.getByText('Highlight', { exact: true })).toBeVisible()
-
+        await expect(slider).not.toHaveAttribute('aria-valuenow', initial!)
+        await expectTouchTarget(panel.locator('#slider-highlight'))
+        await expectTouchTarget(panel.getByRole('button', { name: 'Reset Highlight to profile', exact: true }))
+        await expectTouchTarget(panel.getByRole('button', { name: 'Apply', exact: true }))
         await expectNoHorizontalOverflow(page)
+        await stressTextSize(page)
+        await expectNoHorizontalOverflow(page)
+        await expectNonOverlappingVisibleButtons(panel.getByRole('tablist'))
+        await expectVisibleButtonTextFits(panel.getByRole('tab'))
+        await expectVisibleButtonTextFits(panel.getByRole('button', { name: /^(Apply|Cancel)$/ }))
+        await expectContainedInWorkspace(page)
+        await page.keyboard.press('Escape')
+        await expect(panel).toHaveCount(0)
+        await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true }).getByRole('button', { name: 'Advanced', exact: true })).toBeFocused()
       })
     })
   }
 
-  test('restores a canceled Adjust session and keeps a completed one after reopening', async ({ page }) => {
-    await page.goto('/', { waitUntil: 'domcontentloaded' })
-    await uploadImage(page, 'test-image.jpg')
-    await waitForEditor(page)
-    await selectMobilePreset(page)
-
-    const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
-    await modes.getByRole('button', { name: /^adjust$/i }).click()
-    await page.getByRole('button', { name: 'Adjust Highlight', exact: true }).click()
-    const firstSlider = page.getByLabel('Highlight controls', { exact: true }).getByRole('slider', { name: 'Highlight', exact: true })
-    const baseline = await firstSlider.getAttribute('aria-valuenow')
-    await firstSlider.focus()
+  test('restores canceled Manual settings and keeps applied settings after reopening', async ({ page, editorPage }) => {
+    await selectMobileFilm(page)
+    const panel = advancedPanel(page)
+    await openAdvanced(page)
+    await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
+    const slider = panel.getByRole('slider', { name: 'Highlight', exact: true })
+    const baseline = await slider.getAttribute('aria-valuenow')
+    await slider.focus()
     await page.keyboard.press('ArrowRight')
-    const draft = await firstSlider.getAttribute('aria-valuenow')
-    expect(draft).not.toBe(baseline)
-
-    await page.getByRole('button', { name: 'Cancel', exact: true }).click()
-    await expect(page.getByLabel('Adjust tools', { exact: true })).toBeVisible()
-    await page.getByRole('button', { name: 'Adjust Highlight', exact: true }).click()
-    await expect(page.getByLabel('Highlight controls', { exact: true }).getByRole('slider', { name: 'Highlight', exact: true })).toHaveAttribute('aria-valuenow', baseline ?? '')
-
-    const canceledSlider = page.getByLabel('Highlight controls', { exact: true }).getByRole('slider', { name: 'Highlight', exact: true })
-    await canceledSlider.focus()
+    await panel.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await openAdvanced(page)
+    await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
+    await expect(slider).toHaveAttribute('aria-valuenow', baseline!)
+    await slider.focus()
     await page.keyboard.press('ArrowRight')
-    const completedValue = await canceledSlider.getAttribute('aria-valuenow')
-    await page.getByRole('button', { name: 'Done', exact: true }).click()
-    await expect(page.getByLabel('Adjust tools', { exact: true })).toBeVisible()
+    const committed = await slider.getAttribute('aria-valuenow')
+    await panel.getByRole('button', { name: 'Apply', exact: true }).click()
+    await openAdvanced(page)
+    await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
+    await expect(slider).toHaveAttribute('aria-valuenow', committed!)
+  })
 
-    await page.getByRole('button', { name: 'Adjust Highlight', exact: true }).click()
-    await expect(page.getByLabel('Highlight controls', { exact: true }).getByRole('slider', { name: 'Highlight', exact: true })).toHaveAttribute('aria-valuenow', completedValue ?? '')
+  test('resizing across mobile widths preserves the selected film and geometry', async ({ page, editorPage }) => {
+    await selectMobileFilm(page)
+    await page.keyboard.press('r')
+    const canvas = preview(page)
+    await expect.poll(() => canvas.evaluate((element: HTMLCanvasElement) => [element.width, element.height])).toEqual([150, 200])
+    const dimensions = [150, 200]
+    for (const width of [320, 393]) {
+      await page.setViewportSize({ width, height: width === 320 ? 740 : 852 })
+      await expectFullViewportCover(page)
+      await expect(page.getByRole('button', { name: 'Select film Provia', exact: true })).toHaveAttribute('aria-pressed', 'true')
+      await expect.poll(() => canvas.evaluate((element: HTMLCanvasElement) => [element.width, element.height])).toEqual(dimensions)
+      await expectNoHorizontalOverflow(page)
+    }
   })
 
   test('contains a portrait in the Crop workspace before and during a non-modal crop session', async ({ page }) => {

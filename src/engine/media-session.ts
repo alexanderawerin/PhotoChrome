@@ -75,7 +75,7 @@ export class MediaSession {
         if (append && previous?.kind !== 'photos') throw new Error('Open your photos before adding to the batch.')
         const batch = append && previous?.kind === 'photos' ? previous : null
         const existing = batch?.images.map(image => ({
-          file: image.file, width: image.original.width, height: image.original.height,
+          file: image.file, width: image.sourceSize.width, height: image.sourceSize.height,
         })) ?? []
         const images = await this.loaders.photos(request.files, existing, signal)
         media = {

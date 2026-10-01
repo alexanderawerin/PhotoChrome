@@ -1,12 +1,12 @@
 import { test, expect } from './helpers/fixtures'
-import { fixturePath, selectFirstRecipe, uploadVideo, waitForEditor } from './helpers/upload'
+import { fixturePath, selectBaseFilm, uploadVideo, waitForEditor } from './helpers/upload'
 import { readFile } from 'node:fs/promises'
 import { unzipSync } from 'fflate'
 
 const BUDGETS_MS = {
   twoPhotoEditor: 5_000,
-  recipePreview: 2_500,
-  firstTenCards: 5_000,
+  filmPreview: 2_500,
+  tenFilmChoices: 5_000,
   photoExport: 10_000,
   videoExport: 45_000,
   twentyPhotoBatch: 120_000,
@@ -26,28 +26,13 @@ async function mainPreviewSignature(page: import('@playwright/test').Page): Prom
   })
 }
 
-async function renderedCardCount(page: import('@playwright/test').Page): Promise<number> {
-  return page.evaluate(() => {
-    const canvases = document.querySelectorAll<HTMLCanvasElement>('aside [data-recipe-card] canvas')
-    let rendered = 0
-    for (const canvas of canvases) {
-      if (canvas.width === 0 || canvas.height === 0) continue
-      const context = canvas.getContext('2d')
-      if (!context) continue
-      const pixel = context.getImageData(canvas.width >> 1, canvas.height >> 1, 1, 1).data
-      if (pixel[0] > 5 || pixel[1] > 5 || pixel[2] > 5) rendered++
-    }
-    return rendered
-  })
-}
-
 test.describe('Chromium performance budgets', () => {
   test.describe.configure({ mode: 'serial' })
   test.beforeEach(({ browserName }) => {
     test.skip(browserName !== 'chromium', 'Performance budgets are defined for Chromium')
   })
 
-  test('two-photo editor and first ten recipe cards meet readiness budgets', async ({ page, landingPage }) => {
+  test('two-photo editor and ten film choices meet readiness budgets', async ({ page, landingPage }) => {
     const startedAt = performance.now()
     const input = page.locator('input[aria-label="Choose photos or video to edit"]')
     await input.waitFor({ state: 'attached', timeout: 15_000 })
@@ -59,27 +44,27 @@ test.describe('Chromium performance budgets', () => {
     await expect(page.locator('[role="tablist"][aria-label="Image thumbnails"] [role="tab"]')).toHaveCount(2)
     const editorReadyMs = performance.now() - startedAt
 
-    await expect.poll(() => renderedCardCount(page), { timeout: BUDGETS_MS.firstTenCards }).toBeGreaterThanOrEqual(10)
-    const firstTenCardsMs = performance.now() - startedAt
+    await expect(page.getByRole('group', { name: 'Film selection', exact: true }).getByRole('button', { name: /^Select film / })).toHaveCount(10, { timeout: BUDGETS_MS.tenFilmChoices })
+    const tenFilmChoicesMs = performance.now() - startedAt
 
     expect(editorReadyMs).toBeLessThanOrEqual(BUDGETS_MS.twoPhotoEditor)
-    expect(firstTenCardsMs).toBeLessThanOrEqual(BUDGETS_MS.firstTenCards)
+    expect(tenFilmChoicesMs).toBeLessThanOrEqual(BUDGETS_MS.tenFilmChoices)
   })
 
-  test('recipe preview meets its budget', async ({ page, editorPage }) => {
+  test('film preview meets its budget', async ({ page, editorPage }) => {
     const before = await mainPreviewSignature(page)
-    const card = page.locator('aside [aria-label^="Apply preset"]').first()
+    const card = page.getByRole('button', { name: 'Select film Provia', exact: true })
     const startedAt = performance.now()
     await card.click()
-    await expect.poll(() => mainPreviewSignature(page), { timeout: BUDGETS_MS.recipePreview }).not.toBe(before)
-    expect(performance.now() - startedAt).toBeLessThanOrEqual(BUDGETS_MS.recipePreview)
+    await expect.poll(() => mainPreviewSignature(page), { timeout: BUDGETS_MS.filmPreview }).not.toBe(before)
+    expect(performance.now() - startedAt).toBeLessThanOrEqual(BUDGETS_MS.filmPreview)
   })
 
   test('photo export meets its budget', async ({ page, editorPage }) => {
-    await selectFirstRecipe(page)
+    await selectBaseFilm(page)
     const downloadPromise = page.waitForEvent('download')
     const startedAt = performance.now()
-    await page.locator('[aria-label*="Export processed image (Ctrl+S)"]').click()
+    await page.getByRole('button', { name: 'Export processed image (Ctrl+S)', exact: true }).click()
     await downloadPromise
     expect(performance.now() - startedAt).toBeLessThanOrEqual(BUDGETS_MS.photoExport)
   })
@@ -87,10 +72,12 @@ test.describe('Chromium performance budgets', () => {
   test('three-second video export meets its budget', async ({ page, landingPage }) => {
     test.setTimeout(60_000)
     await uploadVideo(page)
-    await selectFirstRecipe(page)
+    await selectBaseFilm(page)
+    const supportsAudio = await page.evaluate(async () => typeof AudioEncoder !== 'undefined' && (await AudioEncoder.isConfigSupported({ codec: 'mp4a.40.2', sampleRate: 48000, numberOfChannels: 1, bitrate: 128000 })).supported === true)
     const downloadPromise = page.waitForEvent('download')
     const startedAt = performance.now()
     await page.getByRole('button', { name: 'Export video' }).click()
+    if (!supportsAudio) await page.getByRole('button', { name: 'Export without sound', exact: true }).click()
     await downloadPromise
     expect(performance.now() - startedAt).toBeLessThanOrEqual(BUDGETS_MS.videoExport)
   })
@@ -106,9 +93,9 @@ test.describe('Chromium performance budgets', () => {
     await input.setInputFiles(photos)
     await waitForEditor(page)
     await expect(page.locator('[role="tablist"][aria-label="Image thumbnails"] [role="tab"]')).toHaveCount(20)
-    await selectFirstRecipe(page)
-    await page.getByRole('button', { name: 'Apply current preset to all 20 images' }).click()
-    await page.waitForTimeout(500)
+    await selectBaseFilm(page)
+    await page.getByRole('button', { name: 'Apply current color to all 20 images' }).click()
+    await expect(page.getByRole('status', { name: 'Applying preset to all images', exact: true })).toBeHidden()
 
     const downloadPromise = page.waitForEvent('download')
     const startedAt = performance.now()

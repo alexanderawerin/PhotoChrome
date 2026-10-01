@@ -1,11 +1,11 @@
 import { test, expect } from './helpers/fixtures'
-import { selectFirstRecipe } from './helpers/upload'
+import { selectBaseFilm } from './helpers/upload'
 
 /**
  * Checks that a canvas element is not entirely black/empty.
  * Samples pixels from the canvas and verifies at least some have non-zero values.
  */
-async function canvasIsNotBlack(page: import('@playwright/test').Page, canvasSelector = 'canvas'): Promise<boolean> {
+async function canvasIsNotBlack(page: import('@playwright/test').Page, canvasSelector = 'canvas[aria-label="Preview"]'): Promise<boolean> {
   return page.evaluate((selector) => {
     const canvas = document.querySelector(selector) as HTMLCanvasElement
     if (!canvas) return false
@@ -146,50 +146,89 @@ test.describe('Editor — Preview Rendering', () => {
     expect(chroma.vivid).toBeGreaterThan(chroma.muted)
   })
 
-  test('main preview is not black after selecting a recipe', async ({ page, editorPage }) => {
-    await selectFirstRecipe(page)
-    // Wait for processing to complete
-    await page.waitForTimeout(1000)
-
-    const isRendered = await canvasIsNotBlack(page)
-    expect(isRendered, 'Main preview canvas should not be black after applying a recipe').toBe(true)
+  test('main preview is not black after selecting a base film', async ({ page, editorPage }) => {
+    await selectBaseFilm(page)
+    await expect.poll(() => canvasIsNotBlack(page), { message: 'Main preview should render the ready base film' }).toBe(true)
   })
 
-  test('recipe card previews are not black', async ({ page, editorPage }) => {
-    const cardCanvases = page.locator('aside [data-recipe-card] canvas')
-    await expect.poll(() => cardCanvases.count(), {
-      timeout: 5_000,
-      message: 'Recipe card previews should finish rendering',
-    }).toBeGreaterThan(0)
-    const count = await cardCanvases.count()
-    expect(count).toBeGreaterThan(0)
+  test('Advanced previews leave offscreen cards idle, render after scrolling, and stop in Manual', async ({ page, editorPage }) => {
+    await selectBaseFilm(page)
+    await page.setViewportSize({ width: 1200, height: 480 })
+    await page.evaluate(async () => {
+      // Instrument the existing processing boundary, without a public editor API.
+      // Use the exact application-loaded URL: a Vite timestamp query creates
+      // a different module identity from importing the bare source path.
+      const processorUrl = performance.getEntriesByType('resource')
+        .map(entry => entry.name)
+        .filter(url => new URL(url).pathname === '/src/engine/processor.ts').at(-1)
+      if (!processorUrl) throw new Error('Application processor module request was not recorded')
+      const { ImageProcessor } = await import(processorUrl)
+      const calls: string[] = []
+      ;(window as unknown as { previewWork: string[] }).previewWork = calls
+      const original = ImageProcessor.process.bind(ImageProcessor)
+      ImageProcessor.process = (image: ImageData, plan: { recipe: { id: string } }) => {
+        if (Math.max(image.width, image.height) <= 250) calls.push(plan.recipe.id)
+        return original(image, plan)
+      }
+    })
+    await page.getByRole('button', { name: 'Open Advanced settings', exact: true }).click()
+    const panel = page.getByRole('region', { name: 'Advanced settings', exact: true })
+    const card = panel.locator('[data-recipe-card]').filter({ has: page.getByRole('button', { name: 'Apply preset Provia Portrait', exact: true }) })
+    const offscreen = panel.locator('[data-recipe-card]').filter({ has: page.getByRole('button', { name: 'Apply preset Provia Afternoon', exact: true }) })
+    await expect(card.locator('canvas')).toHaveCount(1)
+    await expect(offscreen.locator('canvas')).toHaveCount(0)
+    expect(await page.evaluate(() => (window as unknown as { previewWork: string[] }).previewWork)).not.toContain('provia-afternoon')
+    await offscreen.scrollIntoViewIfNeeded()
+    await expect(offscreen.locator('canvas')).toHaveCount(1)
+    expect(await page.evaluate(() => (window as unknown as { previewWork: string[] }).previewWork)).toContain('provia-afternoon')
+    await card.scrollIntoViewIfNeeded()
+    await expect.poll(() => card.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
+      const context = canvas.getContext('2d')
+      if (!context || !canvas.width || !canvas.height) return false
+      const pixel = context.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data
+      return pixel[0] > 5 || pixel[1] > 5 || pixel[2] > 5
+    }), { message: 'Visible Advanced recipe preview should render' }).toBe(true)
+    await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
+    await expect(panel.locator('[data-recipe-card]')).toHaveCount(0)
+    await expect(panel.getByRole('slider', { name: 'Highlight', exact: true })).toBeVisible()
+  })
 
-    // Sample up to 10 cards
-    const sampled = Math.min(count, 10)
-    let renderedCards = 0
-
-    for (let i = 0; i < sampled; i++) {
-      const isRendered = await page.evaluate((index) => {
-        const canvases = document.querySelectorAll('aside [data-recipe-card] canvas')
-        const canvas = canvases[index] as HTMLCanvasElement
-        if (!canvas || canvas.width === 0 || canvas.height === 0) return false
-        const ctx = canvas.getContext('2d')
-        if (!ctx) return false
-
-        // Sample center pixel
-        const pixel = ctx.getImageData(
-          Math.floor(canvas.width / 2),
-          Math.floor(canvas.height / 2),
-          1, 1
-        ).data
-        return pixel[0] > 5 || pixel[1] > 5 || pixel[2] > 5
-      }, i)
-
-      if (isRendered) renderedCards++
+  test('photo strip processes display-sized previews and preserves visible film thumbnails', async ({ page, multiImageEditorPage }) => {
+    await page.evaluate(async () => {
+      // Use the exact application-loaded URL: a Vite timestamp query creates
+      // a different module identity from importing the bare source path.
+      const processorUrl = performance.getEntriesByType('resource')
+        .map(entry => entry.name)
+        .filter(url => new URL(url).pathname === '/src/engine/processor.ts').at(-1)
+      if (!processorUrl) throw new Error('Application processor module request was not recorded')
+      const { ImageProcessor } = await import(processorUrl)
+      const dimensions: number[][] = []
+      ;(window as unknown as { stripWork: number[][] }).stripWork = dimensions
+      const original = ImageProcessor.process.bind(ImageProcessor)
+      ImageProcessor.process = (image: ImageData, plan: unknown) => {
+        dimensions.push([image.width, image.height])
+        return original(image, plan)
+      }
+    })
+    await selectBaseFilm(page)
+    const strip = page.getByRole('tablist', { name: 'Image thumbnails', exact: true })
+    const first = strip.getByRole('tab', { name: 'Image 1 of 2: test-image.jpg', exact: true }).locator('canvas')
+    const second = strip.getByRole('tab', { name: 'Image 2 of 2: test-image-2.jpg', exact: true }).locator('canvas')
+    for (const thumbnail of [first, second]) {
+      await expect.poll(() => thumbnail.evaluate((canvas: HTMLCanvasElement) => {
+        const context = canvas.getContext('2d')
+        if (!context || canvas.width <= 1 || canvas.height <= 1) return false
+        const data = context.getImageData(0, 0, canvas.width, canvas.height).data
+        return data.some((value, index) => index % 4 !== 3 && value > 5)
+      })).toBe(true)
+      const size = await thumbnail.evaluate((canvas: HTMLCanvasElement) => ({ width: canvas.width, height: canvas.height }))
+      expect(size.width).toBeLessThanOrEqual(80)
+      expect(size.height).toBeLessThanOrEqual(80)
     }
-
-    // At least 80% of sampled cards should have rendered previews
-    const ratio = renderedCards / sampled
-    expect(ratio, `${renderedCards}/${sampled} recipe cards rendered — expected >= 80%`).toBeGreaterThanOrEqual(0.8)
+    const processingSizes = await page.evaluate(() => (window as unknown as { stripWork: number[][] }).stripWork)
+    expect(processingSizes.length).toBeGreaterThan(0)
+    for (const dimensions of processingSizes) expect(Math.max(...dimensions)).toBeLessThanOrEqual(80)
+    await expect(strip.getByRole('tab', { name: 'Image 1 of 2: test-image.jpg', exact: true })).toHaveAttribute('aria-selected', 'true')
   })
+
 })

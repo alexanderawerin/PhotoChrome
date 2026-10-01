@@ -1,5 +1,6 @@
 import { ImageProcessor, type ExifInfo } from './processor'
 import type { ProcessingPlan } from './types'
+import { prepareProcessingPlanResources } from './processing-plan'
 
 type PhotoExportErrorCode = 'processing-failed' | 'encoding-failed' | 'download-failed'
 
@@ -50,9 +51,10 @@ export async function createExportPreview(blob: Blob, fileName: string): Promise
 export async function exportPhoto(request: PhotoExportRequest): Promise<PhotoExportResult> {
   let phase: PhotoExportErrorCode = 'processing-failed'
   try {
+    const plan = await prepareProcessingPlanResources(request.plan, { signal: request.signal })
     const processed = await ImageProcessor.processAsync(
       request.imageData,
-      request.plan,
+      plan,
       { signal: request.signal }
     )
 
@@ -69,6 +71,7 @@ export async function exportPhoto(request: PhotoExportRequest): Promise<PhotoExp
       anchor.download = request.fileName
       document.body.appendChild(anchor)
       try {
+        request.signal?.throwIfAborted()
         anchor.click()
       } finally {
         anchor.remove()
