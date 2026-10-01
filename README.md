@@ -2,7 +2,7 @@
 
 Edit photos and videos up to 30 seconds in your browser. Start with Original, choose one of ten Fujifilm-inspired base films, optionally crop or rotate, then export. Advanced settings keeps all 100 existing recipes and manual color controls available within their film. Media processing runs locally on your device, without uploading files to a processing server.
 
-The current delivery and remaining verification gates are tracked in the [project roadmap](docs/ROADMAP.md). Earlier maintenance evidence is recorded in the [audit fix plan](docs/audit-2026-07-02-fix-plan-ru.md).
+Implementation evidence and remaining browser/device gates are recorded in the [acceptance report](docs/film-first-acceptance.md) and [project roadmap](docs/ROADMAP.md). Measured preview and memory results, raw trials and reproduction instructions are in the [performance report](docs/film-first-performance.md). Earlier maintenance evidence is recorded in the [audit fix plan](docs/audit-2026-07-02-fix-plan-ru.md).
 
 ## Features
 
@@ -16,6 +16,12 @@ The current delivery and remaining verification gates are tracked in the [projec
 - **Video sound**: Preserve source audio when the actual browser export configuration supports it. Otherwise, silent output requires an explicit **Export without sound** choice; Cancel leaves the edit available. MP4 support is checked at runtime.
 - **Local processing**: CPU/worker processing for photos and WebGL2 for video and eligible photo previews. Required film resources must be ready before applying or exporting a processed result.
 - **EXIF and feedback**: JPEG export metadata and GitHub feedback from Help remain available.
+
+## Large photos and export quality
+
+Editing keeps your source files and smaller previews rather than retaining decoded full-resolution originals for every photo. Geometry previews stay reversible; each export decodes its source on demand and applies the approved color and composition at full resolution. ZIP export processes photos sequentially. Smaller strip/recipe previews do not reduce saved JPEG dimensions.
+
+The existing photo limits remain **20 files, 25 MiB per file, 64 megapixels per file and 200 megapixels in total**. A rejected append or replacement preserves the previous working session. These are upload limits, not a guarantee of a safe peak memory footprint on every device. The [measured comparison](docs/film-first-performance.md) documents the tested four-photo workload and its browser/device limitations.
 
 ## Getting Started
 
@@ -104,7 +110,7 @@ src/
 
 ## How Film Simulations Work
 
-Committed photo color and geometry live in each `ImageItem`; video retains its own committed color and transform. The shared editor-session contract owns one temporary Advanced or Crop draft bound to its media and committed profile. Apply commits the complete draft, while Cancel or changing ownership discards it. Export snapshots the applied state and is unavailable during a draft. Retry reuses the failed request rather than reading a newly selected profile or export mode. Preview caches use immutable `ImageData` identity.
+Committed photo color and geometry, the source `File`, source dimensions and preview buffers live in each `ImageItem`; video retains its own committed color and transform. The shared editor-session contract owns one temporary Advanced or Crop draft bound to its media and committed profile. Apply commits the complete draft, while Cancel or changing ownership discards it. Export snapshots the applied state and is unavailable during a draft. Retry reuses the failed request rather than reading a newly selected profile or export mode. Current photo preview work runs in the existing worker, coalesces frequent changes and rejects obsolete results. Recipe previews run when needed/visible, strip previews are reduced before processing, and bounded caches and processors are released on disposal. Preview caches use immutable `ImageData` identity.
 
 `MediaSession` owns loading, exact-request Retry and loaded media. A pending or failed replacement retains the previous editor; cancellation and operation identity reject stale decoder results. Video URLs and decoder/encoder resources are released when ownership ends. `useMediaSession` connects loading to React, while `useVideoExport` owns video export cancellation and explicit sound consent.
 
