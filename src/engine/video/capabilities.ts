@@ -38,7 +38,7 @@ export function isSafari(): boolean {
   return userAgent.includes('Safari') && !userAgent.includes('Chrome') && !userAgent.includes('Chromium')
 }
 
-export async function isVideoCodecSupported(
+async function isVideoCodecSupported(
   codec = 'avc1.42002a',
   requirements: VideoCodecRequirements = {}
 ): Promise<boolean> {

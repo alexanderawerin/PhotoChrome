@@ -1,9 +1,9 @@
 import { ImageProcessor, type ExifInfo } from './processor'
 import type { ProcessingPlan } from './types'
 
-export type PhotoExportErrorCode = 'processing-failed' | 'encoding-failed' | 'download-failed'
+type PhotoExportErrorCode = 'processing-failed' | 'encoding-failed' | 'download-failed'
 
-export const EXPORT_PREVIEW_MAX_SIZE = 480
+const EXPORT_PREVIEW_MAX_SIZE = 480
 
 export interface ExportPreview {
   fileName: string

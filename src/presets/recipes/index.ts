@@ -291,7 +291,7 @@ function loadRecipes(): Record<string, Recipe> {
 export const RECIPES: Record<string, Recipe> = loadRecipes()
 
 // Названия симуляций для отображения
-export const SIMULATION_NAMES: Record<string, string> = {
+const SIMULATION_NAMES: Record<string, string> = {
   // Цветные позитивные
   'provia': 'Provia',
   'velvia': 'Velvia',
@@ -310,7 +310,7 @@ export const SIMULATION_NAMES: Record<string, string> = {
 }
 
 // Порядок отображения групп
-export const SIMULATION_ORDER = [
+const SIMULATION_ORDER = [
   // Цветные позитивные (Reversal)
   'provia',
   'velvia', 
@@ -337,7 +337,7 @@ export interface RecipeGroup {
 // Категории использования
 export type UseCase = 'portrait' | 'landscape' | 'street' | 'cinema' | 'bw' | 'everyday'
 
-export const USE_CASE_NAMES: Record<UseCase, string> = {
+const USE_CASE_NAMES: Record<UseCase, string> = {
   'portrait': 'Portrait',
   'landscape': 'Landscape',
   'street': 'Street',
@@ -346,7 +346,7 @@ export const USE_CASE_NAMES: Record<UseCase, string> = {
   'everyday': 'Everyday',
 }
 
-export const USE_CASE_ORDER: UseCase[] = [
+const USE_CASE_ORDER: UseCase[] = [
   'portrait',
   'landscape', 
   'street',
@@ -537,7 +537,7 @@ export const getRecipesGroupedByUseCase = (): UseCaseGroup[] => {
 }
 
 // Curated top 10 — ordered by popularity and source recognition
-export const EDITORS_CHOICE: readonly string[] = [
+const EDITORS_CHOICE: readonly string[] = [
   'classic-color',
   'velvia-vivid',
   'kodak-portra-800',

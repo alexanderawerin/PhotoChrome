@@ -35,6 +35,12 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Unused code and dependencies
+        run: npm run check:unused
+
+      - name: E2E types
+        run: npm run test:e2e:types
+
       - name: Unit tests
         run: npm test
 

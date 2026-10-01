@@ -33,21 +33,18 @@ export interface AdjustSession {
   kind: 'adjust'
   owner: EditOwner
   tool: AdjustTool
-  before: RecipeSettings
   draft: RecipeSettings
 }
 
 export interface CropSession {
   kind: 'crop'
   owner: EditOwner
-  before: ImageTransformState
   draft: ImageTransformState
 }
 
 export interface TuningSession {
   kind: 'tuning'
   owner: EditOwner
-  before: RecipeSettings
   draft: RecipeSettings
 }
 
@@ -77,7 +74,7 @@ export function editorSessionChanges(
 }
 
 export function beginTuningSession(owner: EditOwner, settings: RecipeSettings): TuningSession {
-  return { kind: 'tuning', owner, before: cloneSettings(settings), draft: cloneSettings(settings) }
+  return { kind: 'tuning', owner, draft: cloneSettings(settings) }
 }
 
 export function updateTuningSession(session: TuningSession, settings: RecipeSettings): TuningSession {
@@ -87,7 +84,7 @@ export function updateTuningSession(session: TuningSession, settings: RecipeSett
 const cloneSettings = (settings: RecipeSettings): RecipeSettings => ({ ...settings })
 
 export function beginAdjustSession(owner: EditOwner, tool: AdjustTool, settings: RecipeSettings): AdjustSession {
-  return { kind: 'adjust', owner, tool, before: cloneSettings(settings), draft: cloneSettings(settings) }
+  return { kind: 'adjust', owner, tool, draft: cloneSettings(settings) }
 }
 
 /** Generates only values accepted by the existing processing pipeline. */
@@ -137,7 +134,7 @@ export function resetAdjustSession(session: AdjustSession, recipe: Recipe): Adju
 }
 
 export function beginCropSession(owner: EditOwner, transform: ImageTransformState): CropSession {
-  return { kind: 'crop', owner, before: cloneTransform(transform), draft: cloneTransform(transform) }
+  return { kind: 'crop', owner, draft: cloneTransform(transform) }
 }
 
 export function updateCropSession(
@@ -150,7 +147,7 @@ export function updateCropSession(
   }
 }
 
-export function normalizeTransform(transform: ImageTransformState): ImageTransformState {
+function normalizeTransform(transform: ImageTransformState): ImageTransformState {
   return {
     ...transform,
     fineAngle: clampFineAngle(transform.fineAngle),

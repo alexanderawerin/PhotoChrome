@@ -7,9 +7,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "check:unused": "knip",
     "preview": "vite preview",
     "process-cards": "node scripts/process-card-images.mjs",
     "generate-seo": "node scripts/generate-seo-assets.mjs",
+    "convert-luts": "node scripts/convert-haldclut.mjs",
+    "generate-fixtures": "node e2e/fixtures/generate.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:chromium": "playwright test --project=chromium",
@@ -45,12 +48,13 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.16",
     "globals": "^15.14.0",
-    "postcss": "^8.5.16",
-    "sharp": "^0.34.5",
+    "knip": "^6.39.0",
+    "postcss": "^8.5.28",
+    "sharp": "^0.35.5",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.18.2",
     "vite": "^6.0.5",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.11"
   }
 }

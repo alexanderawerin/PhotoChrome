@@ -23,6 +23,7 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 720 },
         launchOptions: {
+          executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined,
           args: process.env.CI
             ? ['--disable-gpu', '--use-gl=swiftshader']
             : [],
@@ -41,6 +42,9 @@ export default defineConfig({
       testMatch: /(landing|editor-smart-picks|editor-mobile-header|editor-mobile-presets|editor-mobile-layout|editor-mobile-crop|editor-completion)\.spec\.ts/,
       use: {
         ...devices['Pixel 7'],
+        launchOptions: {
+          executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined,
+        },
       },
     },
   ],

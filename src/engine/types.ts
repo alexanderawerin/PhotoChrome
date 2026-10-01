@@ -11,7 +11,7 @@ export interface CurvePoints {
   points: [number, number][]
 }
 
-export interface ColorBalance {
+interface ColorBalance {
   r: number
   g: number
   b: number
@@ -67,7 +67,7 @@ export interface ProcessingTargetSize {
   height: number
 }
 
-export interface ProcessingRecipeIdentity {
+interface ProcessingRecipeIdentity {
   id: string
   name: string
   simulationId: string

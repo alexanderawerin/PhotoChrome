@@ -1,6 +1,6 @@
 # Photochrome
 
-Apply legendary Fujifilm film simulations to your photos and videos right in the browser. Photo and video processing runs locally on your device, without uploading media to a processing server.
+Edit photos and short videos with 10 Fujifilm-inspired film simulations and 100 presets right in the browser. Try the three-photo demo, save favorite presets, get local Smart Picks, and export individual photos, photo ZIPs, or processed video. Media processing runs locally on your device, without uploading files to a processing server.
 
 Development toward Photochrome 2.0 is tracked in the [project roadmap](docs/ROADMAP.md). Technical health work and the latest maintenance check are tracked in the [audit fix plan](docs/audit-2026-07-02-fix-plan-ru.md).
 
@@ -17,7 +17,7 @@ Development toward Photochrome 2.0 is tracked in the [project roadmap](docs/ROAD
 - **Live preview**: Instant preview of all presets on your photo
 - **Editing tools**: Rotate, crop with draggable frame, fine-tune any parameter
 - **Video support**: Apply simulations to videos up to 30 seconds
-- **GPU-accelerated**: WebGL2 with 3D LUT lookup for fast processing
+- **Hybrid processing**: CPU LUT processing for photos, Web Workers for photo export, and WebGL2 for video and eligible curve-based photo previews
 - **EXIF metadata**: Recipe settings saved in exported JPEG
 - **Privacy-first**: All processing happens in the browser, your photos never leave your device
 
@@ -41,8 +41,9 @@ Build output is written to `out/`. Use `npm run preview` to serve the build loca
 ## Asset maintenance
 
 - `npm run process-cards` regenerates `public/cards/` from the JPEG sources in `img/` with randomized grading. Those source photos are still needed by the generator.
-- `npm run generate-seo` regenerates favicons and replaces `public/og-image.jpg` with a template using photos from `public/cards/`. This template does not reproduce the currently committed custom artwork. That artwork still says “60+ recipes”; update its editable source or explicitly choose the generated template before publishing a refreshed social image. HTML metadata and the generator use the current count of 100.
-- `node scripts/convert-haldclut.mjs` is an optional source-asset tool. It requires Level 12 RGB PNGs in `src/presets/simulations/lut-originals/`, which are not included in this repository, and overwrites matching Level 8 PNGs in `src/presets/simulations/lut/`. Normal builds use the committed Level 8 assets and do not need this step.
+- `npm run generate-seo` regenerates favicons and `public/og-image.jpg` using the template in `scripts/generate-seo-assets.mjs` and sorted photos from `public/cards/`. The recipe count is read from the JSON presets; the committed social image uses this template.
+- `npm run convert-luts` is an optional source-asset tool. It requires Level 12 RGB PNGs in `src/presets/simulations/lut-originals/`, which are not included in this repository, and overwrites matching Level 8 PNGs in `src/presets/simulations/lut/`. Normal builds use the committed Level 8 assets and do not need this step.
+- `npm run generate-fixtures` regenerates the committed E2E JPEGs and MP4. It requires `ffmpeg` (or `FFMPEG_PATH`) for the H.264/AAC video. Browser tests use the committed fixtures and do not need this step.
 
 ## Testing
 
@@ -50,6 +51,7 @@ Checks that do not launch a browser:
 
 ```bash
 npm run lint
+npm run check:unused                   # Unused files, exports, types, and dependencies
 npm run test:e2e:types                  # Type-check E2E helpers, specs, and config
 npm test                               # Engine and preset unit tests
 npm run build
@@ -64,7 +66,15 @@ npm run test:e2e:chromium                # Desktop Chromium, matching main CI
 npm run test:e2e:ui                      # Interactive UI mode
 ```
 
-Main CI runs lint, unit tests, build, and desktop Chromium E2E. Firefox and the selected mobile specs run in a separate weekly/manual workflow. `mobile-chrome` emulates a Pixel 7; it does not verify real mobile hardware. WebKit/Safari is not configured. `test:e2e:types` is a separate local check and does not run browser tests.
+Main CI runs lint, unused-code analysis, E2E type checks, unit tests, build, and desktop Chromium E2E. Firefox and the selected mobile specs run in a separate weekly/manual workflow. `mobile-chrome` emulates a Pixel 7; it does not verify real mobile hardware. WebKit/Safari is not configured. `test:e2e:types` checks types without launching browsers.
+
+Playwright uses its managed Chromium by default. To use an existing installation for the Chromium projects, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to its absolute path, for example:
+
+```bash
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:e2e:chromium -- --workers=1
+```
+
+`npm run check:unused` uses Knip. Package scripts declare the asset/fixture generators as entry points, and `knip.json` resolves the Vite `/src/` imports used by browser tests. No unused-code categories are suppressed.
 
 The app has a web manifest but no service worker, offline support, or OS share-target handler. Add files through the app's upload controls.
 
@@ -106,7 +116,7 @@ Smart Picks analyzes photo pixels in a Web Worker and caches recommendations by 
 
 Photochrome uses a **hybrid processing pipeline** that combines 3D color lookup tables with parametric effects:
 
-1. **Color transform (HaldCLUT)** — A [HaldCLUT](https://rawpedia.rawtherapee.com/Film_Simulation) is a PNG image that encodes a complete 3D color lookup table. Each input RGB color maps to an output RGB color through trilinear interpolation. Our HaldCLUTs are Level 8 (512x512 PNG, 64 colors per channel) converted from Level 12 originals sourced from real Fujifilm XTrans III camera profiles. On the GPU, the HaldCLUT is repacked into a WebGL2 3D texture (`sampler3D`) with hardware trilinear interpolation.
+1. **Color transform (HaldCLUT)** — A [HaldCLUT](https://rawpedia.rawtherapee.com/Film_Simulation) is a PNG image that encodes a complete 3D color lookup table. Each input RGB color maps to an output RGB color through trilinear interpolation. Our HaldCLUTs are Level 8 (512x512 PNG, 64 colors per channel) converted from Level 12 originals sourced from real Fujifilm XTrans III camera profiles. Photo previews use CPU LUT lookup; full-size photo export runs the CPU pipeline in a Web Worker. Video uses the LUT as a WebGL2 3D texture (`sampler3D`) with hardware trilinear interpolation. Eligible curve-based photo previews also use WebGL2, with a CPU fallback.
 
 2. **Parametric effects** — Applied on top of the LUT: highlight/shadow recovery, white balance shift, color chrome, grain, clarity, sharpness. These remain adjustable per-recipe.
 

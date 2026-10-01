@@ -1,5 +1,6 @@
 /**
- * Generate SEO assets: OG image and favicon variants
+ * Generate SEO assets: OG image and favicon variants.
+ * Recipe count comes from the committed JSON presets.
  * Run: node scripts/generate-seo-assets.mjs
  */
 
@@ -8,6 +9,7 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const PUBLIC_DIR = './public';
+const RECIPE_DIR = './src/presets/recipes';
 
 // Camera icon SVG for favicon
 const CAMERA_SVG = `
@@ -89,11 +91,12 @@ async function generateFavicons() {
 async function generateOgImage() {
   const width = 1200;
   const height = 630;
+  const recipeCount = (await fs.readdir(RECIPE_DIR)).filter(file => file.endsWith('.json')).length;
   
   // Get sample card images
   const cardsDir = path.join(PUBLIC_DIR, 'cards');
   const cardFiles = await fs.readdir(cardsDir);
-  const jpgCards = cardFiles.filter(f => f.endsWith('.jpg')).slice(0, 6);
+  const jpgCards = cardFiles.filter(f => f.endsWith('.jpg')).sort().slice(0, 6);
   
   // Load and resize card images
   const cardSize = 180;
@@ -144,9 +147,9 @@ async function generateOgImage() {
       <!-- Title -->
       <text x="${width/2}" y="220" text-anchor="middle" class="title" font-size="64">Photochrome</text>
       <!-- Subtitle -->
-      <text x="${width/2}" y="270" text-anchor="middle" class="subtitle" font-size="24">Fujifilm film simulations for your photos</text>
+      <text x="${width/2}" y="270" text-anchor="middle" class="subtitle" font-size="24">Fujifilm film simulations for your photos and videos</text>
       <!-- Features -->
-      <text x="${width/2}" y="560" text-anchor="middle" class="badge" font-size="16">Provia • Velvia • Classic Chrome • Classic Neg • 100 Recipes</text>
+      <text x="${width/2}" y="560" text-anchor="middle" class="badge" font-size="16">Provia • Velvia • Classic Chrome • Classic Neg • ${recipeCount} Recipes</text>
       <!-- URL -->
       <text x="${width/2}" y="600" text-anchor="middle" class="badge" font-size="14">photochrome.netdesigner.ru</text>
     </svg>
@@ -193,4 +196,3 @@ async function main() {
 }
 
 main();
-

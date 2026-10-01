@@ -27,7 +27,7 @@ export interface MediaSelectionItem {
   height?: number
 }
 
-export type MediaValidationErrorCode =
+type MediaValidationErrorCode =
   | 'empty-selection'
   | 'too-many-files'
   | 'unsupported-type'

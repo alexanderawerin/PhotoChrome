@@ -8,7 +8,6 @@ interface LandingScreenProps {
   onFileSelect: (files: File | File[], type: 'image' | 'video') => void
 }
 
-/** Accepted image MIME types */
 /** Accepted video MIME types */
 const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/mov']
 
