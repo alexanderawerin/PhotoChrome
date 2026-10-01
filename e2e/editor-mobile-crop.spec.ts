@@ -1,5 +1,7 @@
 import { test, expect } from './helpers/fixtures'
 import type { Locator, Page } from '@playwright/test'
+import { advancedPanel, openAdvanced } from './helpers/advanced'
+import { selectBaseFilm } from './helpers/upload'
 
 test.use({ viewport: { width: 393, height: 852 } })
 
@@ -56,7 +58,7 @@ async function openCropSession(page: Page): Promise<Locator> {
 
 async function openRatioChooser(region: Locator): Promise<Locator> {
   await region.getByRole('button', { name: 'Choose crop ratio', exact: true }).click()
-  const ratios = region.getByRole('group', { name: 'Crop ratios', exact: true })
+  const ratios = region.page().getByRole('group', { name: 'Crop ratios', exact: true })
   await expect(ratios).toBeVisible()
   return ratios
 }
@@ -240,9 +242,9 @@ test.describe('Editor — mobile Crop session', () => {
     await angle.focus()
     await page.keyboard.press('ArrowRight')
 
-    await modes(page).getByRole('button', { name: /^presets$/i }).click()
+    await modes(page).getByRole('button', { name: /^films$/i }).click()
     await expect(region).toBeHidden()
-    await expect(modes(page).getByRole('button', { name: /^presets$/i })).toHaveAttribute('aria-current', 'page')
+    await expect(modes(page).getByRole('button', { name: /^films$/i })).toHaveAttribute('aria-current', 'page')
 
     await modes(page).getByRole('button', { name: /^crop$/i }).click()
     await cropTools(page).getByRole('button', { name: 'Open crop session', exact: true }).click()
@@ -252,36 +254,36 @@ test.describe('Editor — mobile Crop session', () => {
     await expect(region.getByRole('slider', { name: 'Crop angle', exact: true })).toHaveAttribute('aria-valuenow', baselineAngle ?? '0')
   })
 
-  test('opens Crop with C after blurring an unfinished Adjust tool and restores its draft', async ({ page, editorPage }) => {
-    await page.getByRole('region', { name: 'Preset carousel', exact: true }).locator('[aria-label^="Apply preset"]').first().click()
-    await modes(page).getByRole('button', { name: /^adjust$/i }).click()
-    await page.getByRole('button', { name: 'Adjust Highlight', exact: true }).click()
-
-    const adjustControls = page.getByLabel('Highlight controls', { exact: true })
-    const slider = adjustControls.getByRole('slider', { name: 'Highlight', exact: true })
+  test('keeps C restricted during an Advanced draft and restores color after switching to Crop', async ({ page, editorPage }) => {
+    await selectBaseFilm(page)
+    await openAdvanced(page)
+    const panel = advancedPanel(page)
+    await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
+    const slider = panel.getByRole('slider', { name: 'Highlight', exact: true })
     const baseline = await slider.getAttribute('aria-valuenow')
     await slider.focus()
     await page.keyboard.press('ArrowRight')
-    await expect(slider).not.toHaveAttribute('aria-valuenow', baseline ?? '')
-
-    // Blur through a passive header label so the C shortcut reaches the editor.
+    await expect(slider).not.toHaveAttribute('aria-valuenow', baseline!)
     await page.locator('header:visible p:visible').filter({ hasText: 'test-image.jpg' }).click()
     await page.keyboard.press('c')
-    await expect(modes(page).getByRole('button', { name: /^crop$/i })).toHaveAttribute('aria-current', 'page')
-    const crop = cropRegion(page)
-    await expect(crop).toBeVisible()
+    await expect(panel).toBeVisible()
+    await expect(cropRegion(page)).toHaveCount(0)
 
+    await modes(page).getByRole('button', { name: 'Crop', exact: true }).click()
+    await expect(panel).toHaveCount(0)
+    await cropTools(page).getByRole('button', { name: 'Open crop session', exact: true }).click()
+    await expect(cropRegion(page)).toBeVisible()
     await actionZone(page).getByRole('button', { name: 'Cancel', exact: true }).click()
-    await modes(page).getByRole('button', { name: /^adjust$/i }).click()
-    await page.getByRole('button', { name: 'Adjust Highlight', exact: true }).click()
-    await expect(page.getByLabel('Highlight controls', { exact: true }).getByRole('slider', { name: 'Highlight', exact: true })).toHaveAttribute('aria-valuenow', baseline ?? '0')
+    await openAdvanced(page)
+    await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
+    await expect(slider).toHaveAttribute('aria-valuenow', baseline!)
   })
 
   test('does not expose Crop when C is pressed in the playable demo', async ({ page, landingPage }) => {
     await page.keyboard.press('c')
     await expect(cropRegion(page)).toHaveCount(0)
-    await expect(modes(page).getByRole('button', { name: /^presets$/i })).toHaveAttribute('aria-current', 'page')
-    await expect(modes(page).getByRole('button', { name: /^adjust$/i })).toHaveCount(0)
+    await expect(modes(page).getByRole('button', { name: /^films$/i })).toHaveAttribute('aria-current', 'page')
+    await expect(modes(page).getByRole('button', { name: /^advanced$/i })).toHaveCount(0)
     await expect(modes(page).getByRole('button', { name: /^crop$/i })).toHaveCount(0)
   })
 })

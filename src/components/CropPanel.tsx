@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Check } from 'lucide-react'
 import { Button } from './ui/button'
 import { Slider } from './ui/slider'
@@ -37,14 +38,32 @@ export function CropPanel({
   const [isChangingAngle, setIsChangingAngle] = useState(false)
   const ratioControlRef = useRef<HTMLDivElement>(null)
   const ratioButtonRef = useRef<HTMLButtonElement>(null)
+  const ratioPopupRef = useRef<HTMLDivElement>(null)
+  const [ratioPosition, setRatioPosition] = useState({ top: 8, left: 8, maxHeight: 320 })
+
+  useLayoutEffect(() => {
+    if (!isRatioOpen) return
+    const position = () => {
+      const anchor = ratioButtonRef.current?.getBoundingClientRect()
+      if (!anchor) return
+      const height = Math.min(320, window.innerHeight - 16)
+      const above = anchor.top - height - 8
+      const top = above >= 8 ? above : Math.min(anchor.bottom + 8, window.innerHeight - height - 8)
+      setRatioPosition({ top: Math.max(8, top), left: Math.max(8, Math.min(anchor.left, window.innerWidth - 184)), maxHeight: height })
+    }
+    position()
+    window.addEventListener('resize', position)
+    document.addEventListener('scroll', position, true)
+    return () => { window.removeEventListener('resize', position); document.removeEventListener('scroll', position, true) }
+  }, [isRatioOpen])
   const ratioListId = useId()
   const ratioLabel = MOBILE_CROP_RATIOS.find(ratio => ratio.value === cropRatio)?.label ?? cropRatio
 
   useEffect(() => {
     if (!isRatioOpen) return
-    ratioControlRef.current?.querySelector<HTMLButtonElement>('[aria-pressed="true"]')?.focus()
+    ratioPopupRef.current?.querySelector<HTMLButtonElement>('[aria-pressed="true"]')?.focus()
     const dismissOutside = (event: PointerEvent) => {
-      if (event.target instanceof Node && !ratioControlRef.current?.contains(event.target)) setIsRatioOpen(false)
+      if (event.target instanceof Node && !ratioControlRef.current?.contains(event.target) && !ratioPopupRef.current?.contains(event.target)) setIsRatioOpen(false)
     }
     document.addEventListener('pointerdown', dismissOutside)
     return () => document.removeEventListener('pointerdown', dismissOutside)
@@ -71,7 +90,7 @@ export function CropPanel({
             ref={ratioControlRef}
             className="relative shrink-0"
             onBlur={event => {
-              if (!event.currentTarget.contains(event.relatedTarget)) setIsRatioOpen(false)
+              if (!event.currentTarget.contains(event.relatedTarget) && !ratioPopupRef.current?.contains(event.relatedTarget)) setIsRatioOpen(false)
             }}
             onKeyDown={event => {
               if (event.key === 'Escape' && isRatioOpen) {
@@ -96,8 +115,8 @@ export function CropPanel({
               <span className={`transition-opacity duration-150 motion-reduce:transition-none ${isChangingAngle ? 'opacity-0' : 'opacity-100'}`}>{ratioLabel}</span>
               <span aria-hidden="true" className={`absolute transition-opacity duration-150 motion-reduce:transition-none ${isChangingAngle ? 'opacity-100' : 'opacity-0'}`}>{fineAngle.toFixed(1)}°</span>
             </Button>
-            {isRatioOpen && (
-              <div id={ratioListId} className="absolute bottom-full left-0 z-30 mb-2 grid max-h-[50dvh] w-44 grid-cols-2 gap-1 overflow-y-auto rounded-xl border border-white/15 bg-zinc-900 p-2 shadow-xl" role="group" aria-label="Crop ratios">
+            {isRatioOpen && createPortal(
+              <div ref={ratioPopupRef} id={ratioListId} style={ratioPosition} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget) && !ratioControlRef.current?.contains(event.relatedTarget)) setIsRatioOpen(false) }} className="fixed z-[250] grid w-44 grid-cols-2 gap-1 overflow-y-auto rounded-xl border border-white/15 bg-zinc-900 p-2 shadow-xl" role="group" aria-label="Crop ratios">
                 {MOBILE_CROP_RATIOS.map(ratio => (
                   <Button
                     key={ratio.value}
@@ -114,7 +133,7 @@ export function CropPanel({
                     {ratio.label}
                   </Button>
                 ))}
-              </div>
+              </div>, document.body
             )}
           </div>
           <div className="relative min-w-0 flex-1">

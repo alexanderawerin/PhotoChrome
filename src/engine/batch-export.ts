@@ -1,9 +1,8 @@
 import { APP_URL } from '../constants'
-import { createProcessingPlan } from './processing-plan'
+import { prepareProcessingPlan } from './processing-plan'
 import { ImageProcessor } from './processor'
 import { createExportPreview, type ExportPreview } from './photo-export'
 import type { ImageItem } from './types'
-import { loadSimulationLUT } from '../presets/simulations'
 
 export interface BatchExportProgress {
   current: number
@@ -114,6 +113,7 @@ export async function exportPhotoBatch(
   images: readonly ImageItem[],
   options: BatchExportOptions = {}
 ): Promise<BatchExportResult> {
+  images = images.map(image => ({ ...image, recipe: image.recipe ? structuredClone(image.recipe) : null, customSettings: { ...image.customSettings } }))
   const { Zip, ZipPassThrough, strToU8 } = await import('fflate')
   const chunks: Uint8Array[] = []
   let completeZip: ((blob: Blob) => void) | null = null
@@ -151,19 +151,13 @@ export async function exportPhotoBatch(
     for (let index = 0; index < images.length; index++) {
       if (options.signal?.aborted) throw new DOMException('Batch export cancelled', 'AbortError')
       const image = images[index]
-      if (!image.recipe) {
-        skipped.push({ fileName: image.fileName, reason: 'No recipe selected' })
-        progress(index + 1, image.fileName)
-        continue
-      }
-
       progress(index, image.fileName)
       try {
-        await loadSimulationLUT(image.recipe.filmSimulation)
-        const plan = createProcessingPlan(
+        const plan = await prepareProcessingPlan(
           image.recipe,
           image.transformedOriginal,
-          image.customSettings
+          image.customSettings,
+          { signal: options.signal }
         )
         const processed = await ImageProcessor.processAsync(
           image.transformedOriginal,
@@ -173,18 +167,20 @@ export async function exportPhotoBatch(
         if (options.signal?.aborted) throw new DOMException('Batch export cancelled', 'AbortError')
         const watermarked = ImageProcessor.addWatermark(processed, APP_URL)
         const blob = await ImageProcessor.imageDataToBlob(watermarked, 0.95, {
-          recipeName: image.recipe.name,
-          recipeId: image.recipe.id,
+          recipeName: plan.recipe.name,
+          recipeId: plan.recipe.id,
           settings: plan.settings,
         })
         options.signal?.throwIfAborted()
         const name = createUniqueFileName(
-          createBatchPhotoName(image.fileName, image.recipe.id),
+          createBatchPhotoName(image.fileName, plan.recipe.id),
           usedNames
         )
+        const bytes = new Uint8Array(await blob.arrayBuffer())
+        options.signal?.throwIfAborted()
         const entry = new ZipPassThrough(name)
         zip.add(entry)
-        entry.push(new Uint8Array(await blob.arrayBuffer()), true)
+        entry.push(bytes, true)
         exported++
         if (previews.length < 4) {
           const preview = await createExportPreview(blob, name)
@@ -200,6 +196,10 @@ export async function exportPhotoBatch(
       progress(index + 1, image.fileName)
     }
 
+    if (options.signal?.aborted) throw new DOMException('Batch export cancelled', 'AbortError')
+    if (exported === 0) {
+      throw new Error(`No photos were exported.${errors.length ? ` ${errors.map(issue => `${issue.fileName}: ${issue.reason}`).join('; ')}` : ''}`)
+    }
     const report = skipped.length > 0 || errors.length > 0
       ? createBatchExportReport(exported, skipped, errors)
       : null
@@ -227,6 +227,7 @@ export async function exportPhotoBatch(
   } catch (error) {
     zip.terminate()
     chunks.length = 0
+    previews.length = 0
     if (isAbortError(error, options.signal)) {
       return { status: 'cancelled', exported, skipped: skipped.length, errors: errors.length }
     }

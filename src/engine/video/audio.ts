@@ -1,114 +1,86 @@
-import { VIDEO_AUDIO_BITRATE, VIDEO_AUDIO_SAMPLE_RATE } from '../../constants'
+import { ALL_FORMATS, AudioSampleSink, BlobSource, Input, type InputAudioTrack } from 'mediabunny'
+import { VIDEO_AUDIO_BITRATE } from '../../constants'
 import { closeCodecSafely, ExportCancelledError } from './errors'
 
-export async function extractAudioData(
-  videoSrc: string,
-  onProgress?: (status: string) => void
-): Promise<AudioBuffer | null> {
+export interface SourceAudio {
+  track: InputAudioTrack | null
+  config: AudioEncoderConfig | null
+  dispose(): void
+}
+
+/** Track presence is metadata, never inferred from whether decoding/encoding succeeds. */
+export async function inspectSourceAudio(videoSrc: string): Promise<SourceAudio> {
+  const response = await fetch(videoSrc)
+  if (!response.ok) throw new Error('Unable to read source audio')
+  const input = new Input({ source: new BlobSource(await response.blob()), formats: ALL_FORMATS })
   try {
-    onProgress?.('Extracting audio...')
-    const response = await fetch(videoSrc)
-    const arrayBuffer = await response.arrayBuffer()
-    const audioContext = new AudioContext({ sampleRate: VIDEO_AUDIO_SAMPLE_RATE })
-    try {
-      return await audioContext.decodeAudioData(arrayBuffer)
-    } catch {
-      console.log('No audio track found or unsupported audio format')
-      return null
-    } finally {
-      await audioContext.close()
-    }
+    const track = await input.getPrimaryAudioTrack()
+    const config = track ? {
+      codec: 'mp4a.40.2',
+      sampleRate: await track.getSampleRate(),
+      numberOfChannels: await track.getNumberOfChannels(),
+      bitrate: VIDEO_AUDIO_BITRATE,
+    } : null
+    return { track, config, dispose: () => input.dispose() }
   } catch (error) {
-    console.warn('Failed to extract audio:', error)
-    return null
+    input.dispose()
+    throw error
   }
 }
 
-function createPlanarAudioBuffer(
-  channels: Float32Array[],
-  startSample: number,
-  frameSamples: number,
-  numberOfChannels: number
-): ArrayBuffer {
-  const buffer = new ArrayBuffer(frameSamples * numberOfChannels * 4)
-  const view = new Float32Array(buffer)
-  for (let channel = 0; channel < numberOfChannels; channel++) {
-    const offset = channel * frameSamples
-    for (let index = 0; index < frameSamples; index++) {
-      view[offset + index] = channels[channel][startSample + index] ?? 0
-    }
+export async function supportsAudioEncoding(config: AudioEncoderConfig): Promise<boolean> {
+  if (typeof AudioEncoder === 'undefined' || typeof AudioData === 'undefined') return false
+  try {
+    return (await AudioEncoder.isConfigSupported(config)).supported === true
+  } catch {
+    return false
   }
-  return buffer
 }
 
+/** Decode timed source samples instead of flattening away track offsets/priming. */
 export async function encodeAudio(
-  audioBuffer: AudioBuffer,
+  source: SourceAudio,
   onChunk: (chunk: EncodedAudioChunk, metadata?: EncodedAudioChunkMetadata) => void | Promise<void>,
   isCancelled?: () => boolean
 ): Promise<void> {
-  const numberOfChannels = Math.min(audioBuffer.numberOfChannels, 2)
-  const sampleRate = audioBuffer.sampleRate
-  let packetWrites = Promise.resolve()
-  let packetWriteError: Error | null = null
-  const encoder = new AudioEncoder({
-    output: (chunk, metadata) => {
-      packetWrites = packetWrites
-        .then(() => onChunk(chunk, metadata ?? undefined))
-        .catch(error => {
-          packetWriteError = error instanceof Error ? error : new Error(String(error))
-        })
-    },
-    error: error => console.error('Audio encoder error:', error),
-  })
-  encoder.configure({
-    codec: 'mp4a.40.2',
-    sampleRate,
-    numberOfChannels,
-    bitrate: VIDEO_AUDIO_BITRATE,
-  })
-
-  const samplesPerFrame = 1024
-  const totalSamples = audioBuffer.length
-  const channels = Array.from(
-    { length: numberOfChannels },
-    (_, channel) => audioBuffer.getChannelData(channel)
-  )
-  for (let frame = 0; frame < Math.ceil(totalSamples / samplesPerFrame); frame++) {
-    if (isCancelled?.()) {
-      closeCodecSafely(encoder)
-      throw new ExportCancelledError()
-    }
-    const startSample = frame * samplesPerFrame
-    const frameSamples = Math.min(startSample + samplesPerFrame, totalSamples) - startSample
-    const audioData = new AudioData({
-      format: 'f32-planar',
-      sampleRate,
-      numberOfFrames: frameSamples,
-      numberOfChannels,
-      timestamp: (startSample / sampleRate) * 1_000_000,
-      data: createPlanarAudioBuffer(channels, startSample, frameSamples, numberOfChannels),
-    })
-    encoder.encode(audioData)
-    audioData.close()
-    if (frame % 100 === 0) await new Promise(resolve => setTimeout(resolve, 0))
+  if (!source.track || !source.config) return
+  let encoder: AudioEncoder | null = null
+  let writes = Promise.resolve()
+  let failure: Error | null = null
+  const check = () => {
+    if (isCancelled?.()) throw new ExportCancelledError()
+    if (failure) throw failure
   }
-  await encoder.flush()
-  await packetWrites
-  closeCodecSafely(encoder)
-  if (packetWriteError) throw packetWriteError
-}
-
-export async function supportsAudioEncoding(): Promise<boolean> {
-  if (typeof AudioEncoder === 'undefined') return false
   try {
-    const support = await AudioEncoder.isConfigSupported({
-      codec: 'mp4a.40.2',
-      sampleRate: VIDEO_AUDIO_SAMPLE_RATE,
-      numberOfChannels: 2,
-      bitrate: VIDEO_AUDIO_BITRATE,
+    encoder = new AudioEncoder({
+      output: (chunk, metadata) => {
+        writes = writes.then(() => { check(); return onChunk(chunk, metadata) }).catch(error => {
+          failure = error instanceof Error ? error : new Error(String(error))
+        })
+      },
+      error: error => { failure = error },
     })
-    return support.supported === true
-  } catch {
-    return false
+    encoder.configure(source.config)
+    for await (const sample of new AudioSampleSink(source.track).samples()) {
+      let data: AudioData | null = null
+      try {
+        check()
+        data = sample.toAudioData()
+        encoder.encode(data)
+      } finally {
+        data?.close()
+        sample.close()
+      }
+      while (encoder.encodeQueueSize > 4) {
+        await new Promise(resolve => setTimeout(resolve, 0))
+        check()
+      }
+    }
+    check()
+    await encoder.flush()
+    await writes
+    check()
+  } finally {
+    if (encoder) closeCodecSafely(encoder)
   }
 }

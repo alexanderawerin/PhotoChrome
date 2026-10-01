@@ -1,7 +1,6 @@
 import { ImageProcessor } from './processor'
 import { ImageItem } from './types'
 import { THUMBNAIL_MAX_SIZE } from '../constants'
-import { extractExif } from './exif'
 import {
   validateMediaSelection,
   type MediaSelectionItem,
@@ -44,15 +43,12 @@ export async function decodeImages(
 
       try {
         signal?.throwIfAborted()
-        const [{ original, thumbnail }, exif] = await Promise.all([
-          ImageProcessor.decodeImagePair(file, THUMBNAIL_MAX_SIZE, (width, height) => {
-            signal?.throwIfAborted()
-            decodedItems[existingCount + index] = { file, width, height }
-            const validation = validateMediaSelection(decodedItems)
-            if (!validation.valid) throw new Error(validation.error.message)
-          }),
-          extractExif(file),
-        ])
+        const { original, thumbnail } = await ImageProcessor.decodeImagePair(file, THUMBNAIL_MAX_SIZE, (width, height) => {
+          signal?.throwIfAborted()
+          decodedItems[existingCount + index] = { file, width, height }
+          const validation = validateMediaSelection(decodedItems)
+          if (!validation.valid) throw new Error(validation.error.message)
+        })
 
         signal?.throwIfAborted()
         loadedImages[index] = {
@@ -61,7 +57,6 @@ export async function decodeImages(
           fileName: file.name,
           original,
           thumbnail,
-          exif,
           recipe: null,
           customSettings: {},
           transformedOriginal: original,

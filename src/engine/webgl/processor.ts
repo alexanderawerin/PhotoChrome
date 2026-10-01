@@ -8,12 +8,11 @@ import { ProcessingPlan, RecipeSettings, CurvePoints } from '../types'
 import type { HaldCLUT } from '../haldclut'
 import { grainEffectToStrength, grainSizeToNumber } from '../grain'
 import { kelvinToRGBScale } from '../whitebalance'
-import { assertProcessingTarget } from '../processing-plan'
+import { assertProcessingResourcesReady, assertProcessingTarget } from '../processing-plan'
 
 // Import shaders as raw strings
 import baseVert from './shaders/base.vert?raw'
 import filmFrag from './shaders/film.frag?raw'
-import blurFrag from './shaders/blur.frag?raw'
 import sharpenFrag from './shaders/sharpen.frag?raw'
 
 interface WebGLResources {
@@ -22,7 +21,6 @@ interface WebGLResources {
   outputCanvas: HTMLCanvasElement  // 2D canvas for correct orientation
   outputCtx: CanvasRenderingContext2D
   filmProgram: WebGLProgram
-  blurProgram: WebGLProgram
   sharpenProgram: WebGLProgram
   quadBuffer: WebGLBuffer
   frameBuffer: WebGLFramebuffer
@@ -40,16 +38,17 @@ function createShader(
   const shader = gl.createShader(type)
   if (!shader) throw new Error('Failed to create shader')
 
-  gl.shaderSource(shader, source)
-  gl.compileShader(shader)
-
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    const info = gl.getShaderInfoLog(shader)
+  try {
+    gl.shaderSource(shader, source)
+    gl.compileShader(shader)
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      throw new Error(`Shader compilation failed: ${gl.getShaderInfoLog(shader)}`)
+    }
+    return shader
+  } catch (error) {
     gl.deleteShader(shader)
-    throw new Error(`Shader compilation failed: ${info}`)
+    throw error
   }
-
-  return shader
 }
 
 /**
@@ -60,27 +59,28 @@ function createProgram(
   vertSource: string,
   fragSource: string
 ): WebGLProgram {
-  const vertShader = createShader(gl, gl.VERTEX_SHADER, vertSource)
-  const fragShader = createShader(gl, gl.FRAGMENT_SHADER, fragSource)
-
-  const program = gl.createProgram()
-  if (!program) throw new Error('Failed to create program')
-
-  gl.attachShader(program, vertShader)
-  gl.attachShader(program, fragShader)
-  gl.linkProgram(program)
-
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    const info = gl.getProgramInfoLog(program)
-    gl.deleteProgram(program)
-    throw new Error(`Program linking failed: ${info}`)
+  let vertShader: WebGLShader | null = null
+  let fragShader: WebGLShader | null = null
+  let program: WebGLProgram | null = null
+  try {
+    vertShader = createShader(gl, gl.VERTEX_SHADER, vertSource)
+    fragShader = createShader(gl, gl.FRAGMENT_SHADER, fragSource)
+    program = gl.createProgram()
+    if (!program) throw new Error('Failed to create program')
+    gl.attachShader(program, vertShader)
+    gl.attachShader(program, fragShader)
+    gl.linkProgram(program)
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      throw new Error(`Program linking failed: ${gl.getProgramInfoLog(program)}`)
+    }
+    return program
+  } catch (error) {
+    if (program) gl.deleteProgram(program)
+    throw error
+  } finally {
+    if (vertShader) gl.deleteShader(vertShader)
+    if (fragShader) gl.deleteShader(fragShader)
   }
-
-  // Clean up shaders (they're now part of the program)
-  gl.deleteShader(vertShader)
-  gl.deleteShader(fragShader)
-
-  return program
 }
 
 /**
@@ -90,19 +90,24 @@ function createQuadBuffer(gl: WebGL2RenderingContext): WebGLBuffer {
   const buffer = gl.createBuffer()
   if (!buffer) throw new Error('Failed to create buffer')
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
-    new Float32Array([
-      -1, -1,
-       1, -1,
-      -1,  1,
-       1,  1,
-    ]),
-    gl.STATIC_DRAW
-  )
+  try {
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([
+        -1, -1,
+         1, -1,
+        -1,  1,
+         1,  1,
+      ]),
+      gl.STATIC_DRAW
+    )
 
-  return buffer
+    return buffer
+  } catch (error) {
+    gl.deleteBuffer(buffer)
+    throw error
+  }
 }
 
 /**
@@ -324,6 +329,7 @@ export class WebGLProcessor {
   private width = 0
   private height = 0
   private contextLost = false
+  private originalImageData: ImageData | null = null
   private lutTextureCache = new Map<string, WebGLTexture>()
 
   /**
@@ -344,15 +350,15 @@ export class WebGLProcessor {
     // Handle context loss events
     canvas.addEventListener('webglcontextlost', (e) => {
       e.preventDefault()
+      if (this.resources?.canvas !== canvas) return
       this.contextLost = true
       console.warn('WebGL context lost')
     })
 
     canvas.addEventListener('webglcontextrestored', () => {
-      console.log('WebGL context restored')
-      this.contextLost = false
-      // Will need to reinitialize on next processFrame call
-      this.resources = null
+      if (this.resources?.canvas !== canvas) return
+      // Rebuild invalidated resources on the next init without losing ownership.
+      this.contextLost = true
     })
 
     const gl = canvas.getContext('webgl2', {
@@ -367,47 +373,65 @@ export class WebGLProcessor {
       throw new Error('WebGL2 not supported')
     }
 
-    // Create output canvas for correct orientation (WebGL renders bottom-up)
-    const outputCanvas = document.createElement('canvas')
-    outputCanvas.width = width
-    outputCanvas.height = height
-    const outputCtx = outputCanvas.getContext('2d')
-    if (!outputCtx) {
-      throw new Error('Failed to get 2D context')
+    let filmProgram: WebGLProgram | null = null
+    let sharpenProgram: WebGLProgram | null = null
+    let quadBuffer: WebGLBuffer | null = null
+    let frameBuffer: WebGLFramebuffer | null = null
+    let dummy3DTexture: WebGLTexture | null = null
+    try {
+      // Create output canvas for correct orientation (WebGL renders bottom-up)
+      const outputCanvas = document.createElement('canvas')
+      outputCanvas.width = width
+      outputCanvas.height = height
+      const outputCtx = outputCanvas.getContext('2d')
+      if (!outputCtx) {
+        throw new Error('Failed to get 2D context')
+      }
+
+      filmProgram = createProgram(gl, baseVert, filmFrag)
+      sharpenProgram = createProgram(gl, baseVert, sharpenFrag)
+      quadBuffer = createQuadBuffer(gl)
+
+      frameBuffer = gl.createFramebuffer()
+      if (!frameBuffer) throw new Error('Failed to create framebuffer')
+
+      // Create a reusable 1x1x1 dummy 3D texture for when HaldCLUT is not used.
+      // Prevents "two textures of different types on same sampler" error.
+      dummy3DTexture = gl.createTexture()
+      if (!dummy3DTexture) throw new Error('Failed to create dummy 3D texture')
+      gl.bindTexture(gl.TEXTURE_3D, dummy3DTexture)
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
+      gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGB8, 1, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0]))
+      gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+      gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+
+      this.resources = {
+        gl,
+        canvas,
+        outputCanvas,
+        outputCtx,
+        filmProgram,
+        sharpenProgram,
+        quadBuffer,
+        frameBuffer,
+        dummy3DTexture,
+      }
+      this.width = width
+      this.height = height
+    } catch (error) {
+      if (dummy3DTexture) gl.deleteTexture(dummy3DTexture)
+      if (frameBuffer) gl.deleteFramebuffer(frameBuffer)
+      if (quadBuffer) gl.deleteBuffer(quadBuffer)
+      if (sharpenProgram) gl.deleteProgram(sharpenProgram)
+      if (filmProgram) gl.deleteProgram(filmProgram)
+      gl.getExtension('WEBGL_lose_context')?.loseContext()
+      this.resources = null
+      this.originalImageData = null
+      this.width = 0
+      this.height = 0
+      this.contextLost = false
+      throw error
     }
-
-    const filmProgram = createProgram(gl, baseVert, filmFrag)
-    const blurProgram = createProgram(gl, baseVert, blurFrag)
-    const sharpenProgram = createProgram(gl, baseVert, sharpenFrag)
-    const quadBuffer = createQuadBuffer(gl)
-
-    const frameBuffer = gl.createFramebuffer()
-    if (!frameBuffer) throw new Error('Failed to create framebuffer')
-
-    // Create a reusable 1x1x1 dummy 3D texture for when HaldCLUT is not used.
-    // Prevents "two textures of different types on same sampler" error.
-    const dummy3DTexture = gl.createTexture()
-    if (!dummy3DTexture) throw new Error('Failed to create dummy 3D texture')
-    gl.bindTexture(gl.TEXTURE_3D, dummy3DTexture)
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
-    gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGB8, 1, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0]))
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-
-    this.resources = {
-      gl,
-      canvas,
-      outputCanvas,
-      outputCtx,
-      filmProgram,
-      blurProgram,
-      sharpenProgram,
-      quadBuffer,
-      frameBuffer,
-      dummy3DTexture,
-    }
-    this.width = width
-    this.height = height
   }
 
   /**
@@ -419,6 +443,7 @@ export class WebGLProcessor {
     time: number = 0
   ): HTMLCanvasElement {
     assertProcessingTarget(plan, this.width, this.height)
+    if (plan.colorMode !== 'original') assertProcessingResourcesReady(plan)
     if (this.contextLost) {
       throw new WebGLContextLostError()
     }
@@ -427,8 +452,20 @@ export class WebGLProcessor {
       throw new Error('WebGL processor not initialized')
     }
 
-    const { gl, canvas, outputCanvas, outputCtx, filmProgram, blurProgram, sharpenProgram, quadBuffer, dummy3DTexture } = this.resources
+    const { gl, canvas, outputCanvas, outputCtx, filmProgram, sharpenProgram, quadBuffer, dummy3DTexture } = this.resources
     const { simulation, settings, lut } = plan
+    this.originalImageData = null
+    if (plan.colorMode === 'original') {
+      if (source instanceof ImageData) {
+        this.originalImageData = new ImageData(new Uint8ClampedArray(source.data), source.width, source.height)
+        outputCtx.putImageData(this.originalImageData, 0, 0)
+      } else {
+        outputCtx.clearRect(0, 0, this.width, this.height)
+        outputCtx.drawImage(source, 0, 0, this.width, this.height)
+        this.originalImageData = outputCtx.getImageData(0, 0, this.width, this.height)
+      }
+      return outputCanvas
+    }
 
     // Create source texture
     const sourceTexture = createTexture(gl, source)
@@ -516,11 +553,12 @@ export class WebGLProcessor {
     if (needsSharpness && renderTarget) {
       currentTexture = this.applySharpness(
         gl,
-        blurProgram,
         sharpenProgram,
         quadBuffer,
         renderTarget.texture,
-        sharpnessAmount
+        sharpnessAmount,
+        settings,
+        time
       )
     }
 
@@ -670,7 +708,7 @@ export class WebGLProcessor {
     const grainSize = settings?.grainSize
       ? grainSizeToNumber(settings.grainSize)
       : 1.0
-    gl.uniform1f(gl.getUniformLocation(program, 'uGrainStrength'), grainStrength)
+    gl.uniform1f(gl.getUniformLocation(program, 'uGrainStrength'), settings?.sharpness ? 0 : grainStrength)
     gl.uniform1f(gl.getUniformLocation(program, 'uGrainSize'), grainSize)
     gl.uniform1f(gl.getUniformLocation(program, 'uTime'), time)
   }
@@ -680,38 +718,14 @@ export class WebGLProcessor {
    */
   private applySharpness(
     gl: WebGL2RenderingContext,
-    blurProgram: WebGLProgram,
     sharpenProgram: WebGLProgram,
     quadBuffer: WebGLBuffer,
     sourceTexture: WebGLTexture,
-    amount: number
+    amount: number,
+    settings: RecipeSettings | undefined,
+    time: number
   ): WebGLTexture {
-    // Create intermediate render targets
-    const blurTarget = createRenderTarget(gl, this.width, this.height)
-
-    // Pass 1: Blur
-    gl.bindFramebuffer(gl.FRAMEBUFFER, blurTarget.framebuffer)
-    gl.viewport(0, 0, this.width, this.height)
-    gl.useProgram(blurProgram)
-
-    const blurPosLoc = gl.getAttribLocation(blurProgram, 'position')
-    gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer)
-    gl.enableVertexAttribArray(blurPosLoc)
-    gl.vertexAttribPointer(blurPosLoc, 2, gl.FLOAT, false, 0, 0)
-
-    gl.activeTexture(gl.TEXTURE0)
-    gl.bindTexture(gl.TEXTURE_2D, sourceTexture)
-    gl.uniform1i(gl.getUniformLocation(blurProgram, 'uTexture'), 0)
-    gl.uniform2f(
-      gl.getUniformLocation(blurProgram, 'uResolution'),
-      this.width,
-      this.height
-    )
-    gl.uniform2f(gl.getUniformLocation(blurProgram, 'uDirection'), 1, 1)
-
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-
-    // Pass 2: Sharpen (render to screen)
+    // Sharpen the quantized film output, then apply grain.
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
     gl.viewport(0, 0, this.width, this.height)
     gl.useProgram(sharpenProgram)
@@ -725,17 +739,13 @@ export class WebGLProcessor {
     gl.bindTexture(gl.TEXTURE_2D, sourceTexture)
     gl.uniform1i(gl.getUniformLocation(sharpenProgram, 'uTexture'), 0)
 
-    gl.activeTexture(gl.TEXTURE1)
-    gl.bindTexture(gl.TEXTURE_2D, blurTarget.texture)
-    gl.uniform1i(gl.getUniformLocation(sharpenProgram, 'uBlurred'), 1)
-
+    gl.uniform2f(gl.getUniformLocation(sharpenProgram, 'uResolution'), this.width, this.height)
     gl.uniform1f(gl.getUniformLocation(sharpenProgram, 'uAmount'), amount)
+    gl.uniform1f(gl.getUniformLocation(sharpenProgram, 'uGrainStrength'), grainEffectToStrength(settings?.grainEffect ?? 'off'))
+    gl.uniform1f(gl.getUniformLocation(sharpenProgram, 'uGrainSize'), grainSizeToNumber(settings?.grainSize ?? 'small'))
+    gl.uniform1f(gl.getUniformLocation(sharpenProgram, 'uTime'), time)
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-
-    // Clean up
-    gl.deleteFramebuffer(blurTarget.framebuffer)
-    gl.deleteTexture(blurTarget.texture)
 
     return sourceTexture
   }
@@ -744,6 +754,7 @@ export class WebGLProcessor {
    * Get the result as ImageData
    */
   getImageData(): ImageData {
+    if (this.originalImageData) return new ImageData(new Uint8ClampedArray(this.originalImageData.data), this.width, this.height)
     if (!this.resources) {
       throw new Error('WebGL processor not initialized')
     }
@@ -771,13 +782,13 @@ export class WebGLProcessor {
   dispose(): void {
     if (!this.resources) return
 
-    const { gl, filmProgram, blurProgram, sharpenProgram, quadBuffer, frameBuffer } = this.resources
+    const { gl, filmProgram, sharpenProgram, quadBuffer, frameBuffer, dummy3DTexture } = this.resources
 
     gl.deleteProgram(filmProgram)
-    gl.deleteProgram(blurProgram)
     gl.deleteProgram(sharpenProgram)
     gl.deleteBuffer(quadBuffer)
     gl.deleteFramebuffer(frameBuffer)
+    gl.deleteTexture(dummy3DTexture)
 
     // Clean up cached LUT textures
     for (const tex of this.lutTextureCache.values()) {
@@ -790,22 +801,10 @@ export class WebGLProcessor {
     if (ext) ext.loseContext()
 
     this.resources = null
+    this.originalImageData = null
     this.width = 0
     this.height = 0
   }
-}
-
-// Singleton instance for video processing
-let processorInstance: WebGLProcessor | null = null
-
-/**
- * Get or create the WebGL processor instance (for video)
- */
-export function getWebGLProcessor(): WebGLProcessor {
-  if (!processorInstance) {
-    processorInstance = new WebGLProcessor()
-  }
-  return processorInstance
 }
 
 // Separate singleton for photo processing (avoids conflicts with video pipeline)

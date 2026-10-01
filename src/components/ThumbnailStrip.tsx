@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react'
 import { Film } from 'lucide-react'
 import { ImageItem, Recipe, RecipeSettings } from '../engine/types'
 import { ImageProcessor } from '../engine/processor'
-import { createProcessingPlan } from '../engine/processing-plan'
+import { prepareProcessingPlan } from '../engine/processing-plan'
 
 interface ThumbnailStripProps {
   images: ImageItem[]
@@ -102,18 +102,24 @@ function ThumbnailPreview({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Применяем рецепт, если он есть
-    let processedData = imageData
-    if (recipe) {
-      processedData = ImageProcessor.process(
-        imageData,
-        createProcessingPlan(recipe, imageData, customSettings)
-      )
+    const controller = new AbortController()
+    // An empty thumbnail while waiting cannot be mistaken for an applied film.
+    canvas.width = imageData.width
+    canvas.height = imageData.height
+    const render = async () => {
+      try {
+        const plan = recipe
+          ? await prepareProcessingPlan(recipe, imageData, customSettings, { signal: controller.signal })
+          : null
+        if (controller.signal.aborted) return
+        const processedData = plan ? ImageProcessor.process(imageData, plan) : imageData
+        ctx.putImageData(processedData, 0, 0)
+      } catch {
+        // Main preview owns actionable resource errors and Retry.
+      }
     }
-
-    canvas.width = processedData.width
-    canvas.height = processedData.height
-    ctx.putImageData(processedData, 0, 0)
+    void render()
+    return () => controller.abort()
   }, [imageData, recipe, customSettings])
 
   return (

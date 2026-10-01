@@ -127,6 +127,20 @@ export function renderImageTransform(
   ))
 }
 
+/** Exact integer dimensions produced by renderImageTransform, without allocating pixels. */
+export function getImageTransformSize(width: number, height: number, state: ImageTransformState): { width: number; height: number } {
+  if (state.quarterTurns === 90 || state.quarterTurns === 270) [width, height] = [height, width]
+  if (state.cropRatio === 'original') return { width, height }
+  const area = state.cropRatio === 'free' ? {
+    x: state.cropRect.x * width,
+    y: state.cropRect.y * height,
+    width: state.cropRect.width * width,
+    height: state.cropRect.height * height,
+  } : calculateCropAreaWithOffset(width, height, state.cropRatio, state.cropOffset.x, state.cropOffset.y)
+  const validated = validateCropArea(area, width, height)
+  return { width: validated.width, height: validated.height }
+}
+
 function renderFineTransform(imageData: ImageData, state: ImageTransformState): ImageData {
   const canvas = document.createElement('canvas')
   canvas.width = imageData.width

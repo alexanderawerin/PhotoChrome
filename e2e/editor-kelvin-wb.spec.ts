@@ -1,13 +1,14 @@
 import { test, expect } from './helpers/fixtures'
-import { selectFirstRecipe } from './helpers/upload'
+import { selectBaseFilm, selectAdvancedRecipe } from './helpers/upload'
 
 test.describe('Editor — Kelvin White Balance', () => {
   const tuningOverlay = (page: import('@playwright/test').Page) =>
-    page.getByRole('complementary', { name: 'Editing inspector' })
+    page.getByRole('region', { name: 'Advanced settings', exact: true })
 
   const selectAndOpen = async (page: import('@playwright/test').Page) => {
-    await selectFirstRecipe(page)
-    await page.getByRole('button', { name: 'Open Adjust inspector' }).click()
+    await selectBaseFilm(page)
+    await page.getByRole('button', { name: 'Open Advanced settings' }).click()
+    await tuningOverlay(page).getByRole('tab', { name: 'Manual', exact: true }).click()
   }
 
   test('WB section shows Preset/Kelvin toggle', async ({ page, editorPage }) => {
@@ -41,14 +42,9 @@ test.describe('Editor — Kelvin White Balance', () => {
   })
 
   test('recipe with kelvin WB: switching to preset mode disables kelvin', async ({ page, editorPage }) => {
-    // Select Classic Color — a recipe that has whiteBalanceKelvin: 5300
-    // Scope to the curated section because this preset also appears by film.
-    const classicColorCard = page.getByRole('complementary', { name: 'Preset browser' })
-      .getByRole('region', { name: "Editor's Choice presets", exact: true })
-      .getByRole('button', { name: /^Apply preset Classic Color(?:, selected)?$/ })
-    await classicColorCard.click()
-    await expect(classicColorCard).toHaveAttribute('aria-label', 'Apply preset Classic Color, selected')
-    await page.getByRole('button', { name: 'Open Adjust inspector' }).click()
+    await selectBaseFilm(page, 'Classic Chrome')
+    await selectAdvancedRecipe(page, 'Classic Color', false)
+    await tuningOverlay(page).getByRole('tab', { name: 'Manual', exact: true }).click()
 
     const panel = tuningOverlay(page)
 

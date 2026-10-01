@@ -1,11 +1,11 @@
 import { test, expect } from './helpers/fixtures'
-import { selectFirstRecipe } from './helpers/upload'
+import { selectBaseFilm } from './helpers/upload'
 
 /**
  * Checks that a canvas element is not entirely black/empty.
  * Samples pixels from the canvas and verifies at least some have non-zero values.
  */
-async function canvasIsNotBlack(page: import('@playwright/test').Page, canvasSelector = 'canvas'): Promise<boolean> {
+async function canvasIsNotBlack(page: import('@playwright/test').Page, canvasSelector = 'canvas[aria-label="Preview"]'): Promise<boolean> {
   return page.evaluate((selector) => {
     const canvas = document.querySelector(selector) as HTMLCanvasElement
     if (!canvas) return false
@@ -146,50 +146,25 @@ test.describe('Editor — Preview Rendering', () => {
     expect(chroma.vivid).toBeGreaterThan(chroma.muted)
   })
 
-  test('main preview is not black after selecting a recipe', async ({ page, editorPage }) => {
-    await selectFirstRecipe(page)
-    // Wait for processing to complete
-    await page.waitForTimeout(1000)
-
-    const isRendered = await canvasIsNotBlack(page)
-    expect(isRendered, 'Main preview canvas should not be black after applying a recipe').toBe(true)
+  test('main preview is not black after selecting a base film', async ({ page, editorPage }) => {
+    await selectBaseFilm(page)
+    await expect.poll(() => canvasIsNotBlack(page), { message: 'Main preview should render the ready base film' }).toBe(true)
   })
 
-  test('recipe card previews are not black', async ({ page, editorPage }) => {
-    const cardCanvases = page.locator('aside [data-recipe-card] canvas')
-    await expect.poll(() => cardCanvases.count(), {
-      timeout: 5_000,
-      message: 'Recipe card previews should finish rendering',
-    }).toBeGreaterThan(0)
-    const count = await cardCanvases.count()
-    expect(count).toBeGreaterThan(0)
-
-    // Sample up to 10 cards
-    const sampled = Math.min(count, 10)
-    let renderedCards = 0
-
-    for (let i = 0; i < sampled; i++) {
-      const isRendered = await page.evaluate((index) => {
-        const canvases = document.querySelectorAll('aside [data-recipe-card] canvas')
-        const canvas = canvases[index] as HTMLCanvasElement
-        if (!canvas || canvas.width === 0 || canvas.height === 0) return false
-        const ctx = canvas.getContext('2d')
-        if (!ctx) return false
-
-        // Sample center pixel
-        const pixel = ctx.getImageData(
-          Math.floor(canvas.width / 2),
-          Math.floor(canvas.height / 2),
-          1, 1
-        ).data
-        return pixel[0] > 5 || pixel[1] > 5 || pixel[2] > 5
-      }, i)
-
-      if (isRendered) renderedCards++
-    }
-
-    // At least 80% of sampled cards should have rendered previews
-    const ratio = renderedCards / sampled
-    expect(ratio, `${renderedCards}/${sampled} recipe cards rendered — expected >= 80%`).toBeGreaterThanOrEqual(0.8)
+  test('Advanced recipe previews render on demand and stop when Manual opens', async ({ page, editorPage }) => {
+    await selectBaseFilm(page)
+    await page.getByRole('button', { name: 'Open Advanced settings', exact: true }).click()
+    const panel = page.getByRole('region', { name: 'Advanced settings', exact: true })
+    const card = panel.locator('[data-recipe-card]').filter({ has: page.getByRole('button', { name: 'Apply preset Provia Daylight', exact: true }) })
+    await card.scrollIntoViewIfNeeded()
+    await expect.poll(() => card.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
+      const context = canvas.getContext('2d')
+      if (!context || !canvas.width || !canvas.height) return false
+      const pixel = context.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data
+      return pixel[0] > 5 || pixel[1] > 5 || pixel[2] > 5
+    }), { message: 'Visible Advanced recipe preview should render' }).toBe(true)
+    await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
+    await expect(panel.locator('[data-recipe-card]')).toHaveCount(0)
+    await expect(panel.getByRole('slider', { name: 'Highlight', exact: true })).toBeVisible()
   })
 })

@@ -1,10 +1,24 @@
+import type { RecipeSettings } from '../src/engine/types'
 import { test, expect } from './helpers/fixtures'
 
+const cases: { name: string; settings: RecipeSettings; realLut?: boolean; original?: boolean }[] = [
+  { name: 'Original ignores stale nonneutral effects', original: true, settings: { sharpness: 4, clarity: 5, color: 4, highlight: 4, dynamicRange: 'DR400', whiteBalanceKelvin: 2500 } },
+  { name: 'combined curve', settings: { dynamicRange: 'DR200', whiteBalance: 'cloudy', highlight: 1, shadow: -1, color: 1, wbShiftRed: 1, wbShiftBlue: -1, colorChromeEffect: 'weak', colorChromeFXBlue: 'weak' } },
+  { name: 'sharpness maximum', settings: { sharpness: 4 } },
+  { name: 'sharpness minimum', settings: { sharpness: -4 } },
+  { name: 'clarity maximum', settings: { clarity: 5 } },
+  { name: 'clarity minimum', settings: { clarity: -5 } },
+  { name: 'tone saturation WB extremes', settings: { highlight: 4, shadow: -2, color: 4, wbShiftRed: -9, wbShiftBlue: 9 } },
+  { name: 'Kelvin minimum', settings: { whiteBalanceKelvin: 2500, color: -4, highlight: -2, shadow: 4 } },
+  { name: 'Kelvin maximum and DR400', settings: { whiteBalanceKelvin: 10000, dynamicRange: 'DR400' } },
+  { name: 'real Provia LUT combined effects', realLut: true, settings: { sharpness: 4, clarity: -5, colorChromeEffect: 'strong', colorChromeFXBlue: 'strong', highlight: 4, shadow: -2, color: 4, whiteBalance: 'tungsten', wbShiftRed: -9, wbShiftBlue: 9, dynamicRange: 'DR400' } },
+]
+
 test.describe('Processing engine golden parity', () => {
-  test('CPU, worker, and WebGL preserve geometry, orientation, alpha, and pixel parity', async ({ page, landingPage, browserName }) => {
+  for (const fixture of cases) test(`CPU, worker, WebGL: ${fixture.name}`, async ({ page, landingPage, browserName }) => {
     test.skip(browserName !== 'chromium', 'WebGL golden parity is verified in Chromium')
 
-    const result = await page.evaluate(async () => {
+    const result = await page.evaluate(async ({ settings, realLut, original }) => {
       // @ts-expect-error Vite browser module path is unavailable to the Node compiler.
       const { ImageProcessor } = await import('/src/engine/processor.ts')
       // @ts-expect-error Vite browser module path is unavailable to the Node compiler.
@@ -21,7 +35,7 @@ test.describe('Processing engine golden parity', () => {
           pixels[offset] = 20 + x * 9
           pixels[offset + 1] = 15 + y * 17
           pixels[offset + 2] = 10 + ((x * 3 + y * 5) % 18) * 11
-          pixels[offset + 3] = 128 + ((x * 7 + y * 13) % 128)
+          pixels[offset + 3] = (x * 7 + y * 13) % 256
         }
       }
       const source = new ImageData(pixels, width, height)
@@ -37,28 +51,27 @@ test.describe('Processing engine golden parity', () => {
           },
           saturation: 0.08,
         },
-        settings: {
-          dynamicRange: 'DR200',
-          whiteBalance: 'cloudy',
-          highlight: 1,
-          shadow: -1,
-          color: 1,
-          wbShiftRed: 1,
-          wbShiftBlue: -1,
-          colorChromeEffect: 'weak',
-          colorChromeFXBlue: 'weak',
-        },
+        settings: { ...settings, grainEffect: 'off' },
         targetSize: { width, height },
       })
 
+      if (realLut) {
+        // @ts-expect-error Vite browser module path is unavailable to the Node compiler.
+        const { getSimulation, loadSimulationLUT } = await import('/src/presets/simulations/index.ts')
+        plan.simulation = structuredClone(getSimulation('provia'))
+        plan.recipe.simulationId = 'provia'
+        plan.lut = await loadSimulationLUT('provia')
+        if (!plan.lut) throw new Error('Real Provia LUT unavailable')
+      }
+
+      if (original) plan.colorMode = 'original'
       const cpu = ImageProcessor.processOnCPU(source, plan)
       const worker = await ImageProcessor.processAsync(source, plan)
       const webglProcessor = new WebGLProcessor()
       webglProcessor.init(width, height)
-      const webglCanvas = webglProcessor.processFrame(source, plan)
-      const context = webglCanvas.getContext('2d')
-      if (!context) throw new Error('2D output context unavailable')
-      const webgl = context.getImageData(0, 0, width, height)
+      webglProcessor.processFrame(source, plan)
+      // Raw engine readback precedes Canvas/JPEG transparency flattening.
+      const webgl = webglProcessor.getImageData()
       webglProcessor.dispose()
 
       const compare = (actual: ImageData, expected: ImageData) => {
@@ -95,6 +108,7 @@ test.describe('Processing engine golden parity', () => {
       return {
         dimensions: [cpu, worker, webgl].map(image => [image.width, image.height]),
         cpuWorker: compare(worker, cpu),
+        originalSource: original ? compare(cpu, source) : null,
         cpuWebgl: compare(webgl, cpu),
         orientations: {
           none: compareOrientation(false, false),
@@ -105,9 +119,11 @@ test.describe('Processing engine golden parity', () => {
         // The asymmetric top-left sample catches vertical/horizontal inversion explicitly.
         topLeft: [cpu, worker, webgl].map((image: ImageData) => Array.from(image.data.slice(0, 4))),
       }
-    })
+    }, fixture)
+    console.log(`${fixture.name}: ${JSON.stringify(result.cpuWebgl)}`)
 
     expect(result.dimensions).toEqual([[17, 11], [17, 11], [17, 11]])
+    if (fixture.original) expect(result.originalSource).toEqual({ maxRgbDelta: 0, changedRgbChannels: 0, alphaMismatches: 0 })
     expect(result.cpuWorker).toEqual({ maxRgbDelta: 0, changedRgbChannels: 0, alphaMismatches: 0 })
     expect(result.cpuWebgl.alphaMismatches).toBe(0)
     expect(result.cpuWebgl.maxRgbDelta).toBeLessThanOrEqual(12)

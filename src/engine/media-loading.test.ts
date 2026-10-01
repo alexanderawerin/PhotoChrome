@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { decodeImages, decodeVideo, loadDemoImages } from './media-loading'
 import { ImageProcessor } from './processor'
-import * as exif from './exif'
 import * as frames from './video/frames'
 
 const pixels = { width: 4, height: 3, data: new Uint8ClampedArray(48) } as ImageData
@@ -15,7 +14,6 @@ afterEach(() => {
 describe('atomic photo decoding', () => {
   it('rejects a canceled decode even if the native bitmap operation completes', async () => {
     const controller = new AbortController()
-    vi.spyOn(exif, 'extractExif').mockResolvedValue({})
     vi.spyOn(ImageProcessor, 'decodeImagePair').mockImplementation(async () => {
       controller.abort()
       return { original: pixels, thumbnail: pixels, width: pixels.width, height: pixels.height }
@@ -25,7 +23,6 @@ describe('atomic photo decoding', () => {
   })
 
   it('validates added dimensions against the retained batch before accepting any new photo', async () => {
-    vi.spyOn(exif, 'extractExif').mockResolvedValue({})
     vi.spyOn(ImageProcessor, 'decodeImagePair').mockImplementation(async (_file, _size, validate) => {
       validate?.(8_000, 8_000)
       return { original: pixels, thumbnail: pixels, width: pixels.width, height: pixels.height }
@@ -36,7 +33,6 @@ describe('atomic photo decoding', () => {
   })
 
   it('does not accept a partial result when one file in a selection fails', async () => {
-    vi.spyOn(exif, 'extractExif').mockResolvedValue({})
     const decode = vi.spyOn(ImageProcessor, 'decodeImagePair')
       .mockResolvedValueOnce({ original: pixels, thumbnail: pixels, width: pixels.width, height: pixels.height })
       .mockRejectedValueOnce(new Error('Corrupt second file'))

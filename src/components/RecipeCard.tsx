@@ -5,8 +5,7 @@ import { Card } from './ui/card'
 import { Recipe } from '../engine/types'
 import { ImageProcessor } from '../engine/processor'
 import { getImageKey } from '../engine/image-identity'
-import { loadSimulationLUT } from '../presets/simulations'
-import { createProcessingPlan } from '../engine/processing-plan'
+import { prepareProcessingPlan } from '../engine/processing-plan'
 import { 
   RECIPE_CARD_PREVIEW_SIZE, 
   PREVIEW_GENERATION_DELAY,
@@ -129,6 +128,7 @@ function RecipeCardComponent({
 
   useEffect(() => {
     let cancelled = false
+    const controller = new AbortController()
 
     const generatePreview = async () => {
       if (cancelled) return
@@ -153,12 +153,12 @@ function RecipeCardComponent({
           return
         }
 
-        await loadSimulationLUT(recipe.filmSimulation)
+        const plan = await prepareProcessingPlan(recipe, smallImage, {}, { signal: controller.signal })
         if (cancelled) return
 
         const processed = ImageProcessor.process(
           smallImage,
-          createProcessingPlan(recipe, smallImage)
+          plan
         )
 
         if (!cancelled) {
@@ -172,7 +172,7 @@ function RecipeCardComponent({
           setPreviewData(processed)
         }
       } catch (err) {
-        console.error('Ошибка генерации превью:', err)
+        if (!cancelled) console.error('Ошибка генерации превью:', err)
       } finally {
         if (!cancelled) {
           setIsGenerating(false)
@@ -185,6 +185,7 @@ function RecipeCardComponent({
 
     return () => {
       cancelled = true
+      controller.abort()
       clearTimeout(timeoutId)
     }
   }, [recipe, sourceImage])

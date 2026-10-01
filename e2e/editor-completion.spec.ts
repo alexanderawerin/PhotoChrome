@@ -6,7 +6,7 @@ import type { Locator, Page } from '@playwright/test'
 import { test, expect } from './helpers/fixtures'
 import {
   fixturePath,
-  selectFirstRecipe,
+  selectBaseFilm,
   uploadMultipleImages,
   waitForEditor,
 } from './helpers/upload'
@@ -14,7 +14,7 @@ import {
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 
 function currentExportButton(page: Page): Locator {
-  return page.locator('button[aria-label^="Export processed image"]:visible').first()
+  return page.getByRole('button', { name: /^Export processed image/ })
 }
 
 function completionDialog(page: Page, name = 'Export complete'): Locator {
@@ -36,6 +36,17 @@ async function canvasDataUrl(canvas: Locator): Promise<string> {
   return canvas.evaluate(element => {
     if (!(element instanceof HTMLCanvasElement)) throw new Error('Completion preview is not a canvas')
     return element.toDataURL('image/png')
+  })
+}
+
+async function canvasPixelHash(canvas: Locator): Promise<string> {
+  return canvas.evaluate(async element => {
+    if (!(element instanceof HTMLCanvasElement)) throw new Error('Expected preview canvas')
+    const context = element.getContext('2d')
+    if (!context) throw new Error('Preview canvas context unavailable')
+    const pixels = context.getImageData(0, 0, element.width, element.height).data
+    const digest = await crypto.subtle.digest('SHA-256', new Uint8Array(pixels))
+    return Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, '0')).join('')
   })
 }
 
@@ -93,18 +104,18 @@ async function installProcessorMock(
   mode: 'fail-all' | 'fail-second-call'
 ): Promise<void> {
   await page.evaluate(async (mockMode) => {
-    // @ts-expect-error Vite browser module path is unavailable to the Node compiler.
-    const { ImageProcessor } = await import('/src/engine/processor.ts')
-    const original = ImageProcessor.processAsync
+    // The browser encoder is shared by every GPU/CPU export path. Importing a
+    // Vite source module can instead patch a second module instance after HMR.
+    const original = HTMLCanvasElement.prototype.toBlob
     let calls = 0
     // @ts-expect-error Test-only restoration hook.
-    window.__restoreCompletionProcessor = () => { ImageProcessor.processAsync = original }
-    ImageProcessor.processAsync = (imageData: ImageData, plan: unknown, options: unknown) => {
+    window.__restoreCompletionEncoder = () => { HTMLCanvasElement.prototype.toBlob = original }
+    HTMLCanvasElement.prototype.toBlob = function (callback: BlobCallback, type?: string, quality?: unknown) {
       calls++
       if (mockMode === 'fail-all' || (mockMode === 'fail-second-call' && calls === 2)) {
-        return Promise.reject(new Error('Forced completion export failure'))
+        throw new Error('Forced completion export failure')
       }
-      return original.call(ImageProcessor, imageData, plan, options)
+      return original.call(this, callback, type, quality)
     }
   }, mode)
 }
@@ -112,7 +123,7 @@ async function installProcessorMock(
 async function restoreProcessorMock(page: Page): Promise<void> {
   await page.evaluate(() => {
     // @ts-expect-error Test-only restoration hook.
-    window.__restoreCompletionProcessor?.()
+    window.__restoreCompletionEncoder?.()
   })
 }
 
@@ -123,16 +134,14 @@ async function uploadNamedBatch(page: Page): Promise<void> {
   await input.setInputFiles([
     { name: 'success.jpg', mimeType: 'image/jpeg', buffer: landscape },
     { name: 'failed.jpg', mimeType: 'image/jpeg', buffer: portrait },
-    { name: 'skipped.jpg', mimeType: 'image/jpeg', buffer: landscape },
+    { name: 'original.jpg', mimeType: 'image/jpeg', buffer: landscape },
   ])
 }
 
-async function selectMobilePreset(page: Page): Promise<void> {
-  await page
-    .getByRole('region', { name: 'Preset carousel', exact: true })
-    .locator('[aria-label^="Apply preset"]')
-    .first()
-    .click()
+async function selectMobileFilm(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Films', exact: true }).click()
+  await page.getByRole('button', { name: 'Select film Provia', exact: true }).click()
+  await expect(currentExportButton(page)).toBeEnabled()
 }
 
 async function expectTouchTarget(locator: Locator): Promise<void> {
@@ -150,10 +159,10 @@ test.describe('Editor — Export completion', () => {
     await uploadMultipleImages(page)
     await waitForEditor(page)
 
-    const thumbnails = page.locator('[role="tablist"][aria-label="Image thumbnails"] [role="tab"]')
-    await thumbnails.nth(1).click()
-    await expect(thumbnails.nth(1)).toHaveAttribute('aria-selected', 'true')
-    await selectFirstRecipe(page)
+    const photo = page.getByRole('tab', { name: 'Image 2 of 2: test-image-2.jpg', exact: true })
+    await photo.click()
+    await expect(photo).toHaveAttribute('aria-selected', 'true')
+    await selectBaseFilm(page)
 
     const downloadPromise = page.waitForEvent('download')
     const exportButton = currentExportButton(page)
@@ -168,22 +177,21 @@ test.describe('Editor — Export completion', () => {
     await expect(dialog).toContainText('1 photo exported')
     const previews = completionPreviews(dialog)
     await expect(previews).toHaveCount(1)
-    await expect(previews.first()).toHaveAttribute('aria-label', `Exported photo: ${fileName}`)
-    await expect(previews.first()).toHaveAttribute('role', 'img')
+    const savedPreview = dialog.getByRole('img', { name: `Exported photo: ${fileName}`, exact: true })
+    await expect(savedPreview).toBeVisible()
 
     const downloadPath = await download.path()
     if (!downloadPath) throw new Error('Downloaded photo path unavailable')
-    await expectDownloadedPixelsMatchPreview(await readFile(downloadPath), previews.first())
+    await expectDownloadedPixelsMatchPreview(await readFile(downloadPath), savedPreview)
   })
 
-  test('batch completion includes only successful archive entries and keeps skip/error counts', async ({ page, landingPage }) => {
+  test('batch completion includes only successful archive entries and accurate error counts', async ({ page, landingPage }) => {
     await uploadNamedBatch(page)
     await waitForEditor(page)
-    await selectFirstRecipe(page)
+    await selectBaseFilm(page)
 
-    const thumbnails = page.locator('[role="tablist"][aria-label="Image thumbnails"] [role="tab"]')
-    await thumbnails.nth(1).click()
-    await selectFirstRecipe(page)
+    await page.getByRole('tab', { name: 'Image 2 of 3: failed.jpg', exact: true }).click()
+    await selectBaseFilm(page)
     await installProcessorMock(page, 'fail-second-call')
 
     try {
@@ -195,47 +203,39 @@ test.describe('Editor — Export completion', () => {
 
       const entries = unzipSync(new Uint8Array(await readFile(archivePath)))
       const jpegNames = Object.keys(entries).filter(name => name.endsWith('.jpg'))
-      expect(jpegNames).toHaveLength(1)
-      expect(jpegNames[0]).toContain('success')
+      expect(jpegNames).toHaveLength(2)
+      expect(jpegNames.some(name => name.includes('success'))).toBe(true)
+      expect(jpegNames.some(name => name.includes('original'))).toBe(true)
       expect(strFromU8(entries['export-report.txt'])).toContain('failed.jpg: Forced completion export failure')
-      expect(strFromU8(entries['export-report.txt'])).toContain('skipped.jpg: No recipe selected')
+      expect(strFromU8(entries['export-report.txt'])).toContain('Skipped: 0')
 
       const dialog = completionDialog(page)
       await expect(dialog).toBeVisible()
-      await expect(dialog).toContainText('1 exported · 1 skipped · 1 error')
+      await expect(dialog).toContainText('2 exported · 1 error')
       const previews = completionPreviews(dialog)
-      await expect(previews).toHaveCount(1)
-      await expect(previews.first()).toHaveAttribute('aria-label', `Exported photo: ${jpegNames[0]}`)
-      await expect(previews.first()).not.toHaveAttribute('aria-label', /failed\.jpg/)
-
-      await expectDownloadedPixelsMatchPreview(Buffer.from(entries[jpegNames[0]]), previews.first())
+      await expect(previews).toHaveCount(2)
+      for (const name of jpegNames) {
+        const savedPreview = dialog.getByRole('img', { name: `Exported photo: ${name}`, exact: true })
+        await expectDownloadedPixelsMatchPreview(Buffer.from(entries[name]), savedPreview)
+      }
+      await expect(dialog.getByRole('img', { name: /failed\.jpg/ })).toHaveCount(0)
     } finally {
       await restoreProcessorMock(page)
     }
   })
 
-  test('zero-success batch uses empty completion wording and has no previews', async ({ page, landingPage }) => {
+  test('zero-success batch reports failure without a download or success completion', async ({ page, landingPage }) => {
     await uploadMultipleImages(page)
     await waitForEditor(page)
-    await selectFirstRecipe(page)
-    await page.getByRole('button', { name: 'Apply current preset to all 2 images' }).click()
     await installProcessorMock(page, 'fail-all')
-
+    let downloads = 0
+    page.on('download', () => { downloads++ })
     try {
-      const downloadPromise = page.waitForEvent('download')
-      await page.getByRole('button', { name: 'Export all photos' }).click()
-      const download = await downloadPromise
-      const archivePath = await download.path()
-      if (!archivePath) throw new Error('Batch download path unavailable')
-
-      const entries = unzipSync(new Uint8Array(await readFile(archivePath)))
-      expect(Object.keys(entries).filter(name => name.endsWith('.jpg'))).toHaveLength(0)
-
-      const dialog = completionDialog(page, 'No photos exported')
-      await expect(dialog).toBeVisible()
-      await expect(dialog).toContainText('0 exported · 2 errors')
-      await expect(dialog).not.toContainText('0 skipped')
-      await expect(completionPreviews(dialog)).toHaveCount(0)
+      await page.getByRole('button', { name: 'Export all photos', exact: true }).click()
+      await expect(page.getByRole('alert')).toContainText('No photos were exported')
+      await expect(completionDialog(page)).toHaveCount(0)
+      await expect(page.getByRole('group', { name: 'Exported photos', exact: true })).toHaveCount(0)
+      expect(downloads).toBe(0)
     } finally {
       await restoreProcessorMock(page)
     }
@@ -243,23 +243,27 @@ test.describe('Editor — Export completion', () => {
 
   test('traps focus, blocks editor shortcuts, and restores export focus on Escape', async ({ page, editorPage }) => {
     const preview = page.locator('canvas[aria-label="Preview"]:visible')
-    const beforeRecipe = await canvasDataUrl(preview)
-    await selectFirstRecipe(page)
-    await expect.poll(() => canvasDataUrl(preview)).not.toBe(beforeRecipe)
+    const beforeRecipe = await canvasPixelHash(preview)
+    await selectBaseFilm(page)
+    await expect.poll(() => canvasPixelHash(preview)).not.toBe(beforeRecipe)
     await expect(page.getByText('Processing...', { exact: true })).toHaveCount(0)
-    const processedPreview = await canvasDataUrl(preview)
+    const processedPreview = await canvasPixelHash(preview)
     const exportButton = currentExportButton(page)
 
     let downloads = 0
     page.on('download', () => { downloads++ })
     const downloadPromise = page.waitForEvent('download')
+    await page.evaluate(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    })
     await page.keyboard.down('Space')
-    await expect.poll(() => canvasDataUrl(preview)).not.toBe(processedPreview)
+    await expect.poll(() => canvasPixelHash(preview)).toBe(beforeRecipe)
     await exportButton.click()
     await downloadPromise
 
     const dialog = completionDialog(page)
     await expect(dialog).toBeVisible()
+    await expect.poll(() => canvasPixelHash(preview)).toBe(processedPreview)
     const before = await preview.evaluate((element: HTMLCanvasElement) => ({ width: element.width, height: element.height }))
 
     const focusIsInside = () => dialog.evaluate(element => element.contains(document.activeElement))
@@ -282,13 +286,13 @@ test.describe('Editor — Export completion', () => {
     await page.keyboard.press('Escape')
     await expect(dialog).toBeHidden()
     await expect(exportButton).toBeFocused()
-    await expect.poll(() => canvasDataUrl(preview)).toBe(processedPreview)
+    await expect.poll(() => canvasPixelHash(preview)).toBe(processedPreview)
   })
 
   test('preserves editing on Back to editor and returns to the demo on New edit', async ({ page, editorPage }) => {
-    await selectFirstRecipe(page)
-    const selected = page.locator('aside [aria-label^="Apply preset"][aria-label$=", selected"]')
-    await expect(selected.first()).toBeVisible()
+    await selectBaseFilm(page)
+    const selected = page.getByRole('button', { name: 'Select film Provia', exact: true })
+    await expect(selected).toHaveAttribute('aria-pressed', 'true')
 
     const exportButton = currentExportButton(page)
     const downloadPromise = page.waitForEvent('download')
@@ -297,19 +301,19 @@ test.describe('Editor — Export completion', () => {
 
     const dialog = completionDialog(page)
     await expect(dialog).toBeVisible()
-    const actions = dialog.locator('button')
+    const actions = dialog.getByRole('button')
     await expect(actions).toHaveCount(2)
-    await expect(actions.nth(0)).toHaveText('New edit')
-    await expect(actions.nth(1)).toHaveText('Back to editor')
-    const newEditBox = await actions.nth(0).boundingBox()
-    const backBox = await actions.nth(1).boundingBox()
+    const newEdit = dialog.getByRole('button', { name: 'New edit', exact: true })
+    const back = dialog.getByRole('button', { name: 'Back to editor', exact: true })
+    const newEditBox = await newEdit.boundingBox()
+    const backBox = await back.boundingBox()
     expect(newEditBox).not.toBeNull()
     expect(backBox).not.toBeNull()
     if (newEditBox && backBox) expect(newEditBox.x).toBeLessThan(backBox.x)
 
-    await actions.nth(1).click()
+    await back.click()
     await expect(dialog).toBeHidden()
-    await expect(selected.first()).toBeVisible()
+    await expect(selected).toHaveAttribute('aria-pressed', 'true')
     await expect(exportButton).toBeEnabled()
 
     const secondDownloadPromise = page.waitForEvent('download')
@@ -333,7 +337,7 @@ for (const viewport of [
     test.use({ viewport })
 
     test('keeps actions touch-sized, traps focus, and has no detected WCAG A/AA violations', async ({ page, editorPage }) => {
-      await selectMobilePreset(page)
+      await selectMobileFilm(page)
       const exportButton = currentExportButton(page)
       const downloadPromise = page.waitForEvent('download')
       await exportButton.click()

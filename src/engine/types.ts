@@ -1,6 +1,5 @@
 // Типы для движка обработки изображений
 
-import type { ExifSubset } from './exif'
 import type { HaldCLUT } from './haldclut'
 import type { ImageTransformState } from './transform'
 
@@ -51,6 +50,8 @@ export interface RecipeSettings {
 }
 
 export interface Recipe {
+  /** Base film adapter; detailed catalog recipes leave this absent. */
+  profileKind?: 'base'
   id: string
   name: string
   author?: string
@@ -79,11 +80,15 @@ interface ProcessingRecipeIdentity {
  */
 export interface ProcessingPlan {
   version: 1
+  /** Absent on older film plans; Original explicitly bypasses color processing. */
+  colorMode?: 'film' | 'original'
   recipe: ProcessingRecipeIdentity
   simulation: FilmSimulation
   settings: RecipeSettings
   lut: HaldCLUT | null
   targetSize: ProcessingTargetSize
+  /** Immutable video geometry snapshot; color selection never changes composition. */
+  geometry?: ImageTransformState
 }
 
 /**
@@ -101,8 +106,6 @@ export interface ImageItem {
   original: ImageData
   /** Превью для быстрой обработки */
   thumbnail: ImageData
-  /** EXIF для рекомендаций; текущий загрузчик извлекает только ISO. */
-  exif?: ExifSubset
 
   /** Выбранный рецепт для этого изображения */
   recipe: Recipe | null

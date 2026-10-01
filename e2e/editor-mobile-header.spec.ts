@@ -1,5 +1,6 @@
 import { test, expect } from './helpers/fixtures'
-import { fixturePath } from './helpers/upload'
+import { fixturePath, selectBaseFilm } from './helpers/upload'
+import { advancedPanel } from './helpers/advanced'
 
 test.use({ viewport: { width: 393, height: 852 } })
 
@@ -28,25 +29,26 @@ test.describe('Editor — mobile header', () => {
     await expect(page.getByRole('tab', { name: 'Shortcuts' })).toHaveCount(0)
   })
 
-  test('keeps primary tabs visible and cancels an unfinished Adjust tool on tab change', async ({ page, editorPage }) => {
-    const modes = page.getByRole('navigation', { name: 'Editor modes' })
-    await expect(modes.getByRole('button', { name: 'Presets' })).toHaveAttribute('aria-current', 'page')
-
-    await page.getByRole('region', { name: 'Preset carousel' }).locator('[aria-label^="Apply preset"]').first().click()
-    await modes.getByRole('button', { name: 'Adjust' }).click()
-    await page.getByRole('button', { name: 'Adjust Highlight' }).click()
-
-    const slider = page.getByRole('slider', { name: 'Highlight' })
+  test('keeps primary tabs visible and cancels unfinished Advanced color on tab change', async ({ page, editorPage }) => {
+    const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
+    await expect(modes.getByRole('button', { name: 'Films', exact: true })).toHaveAttribute('aria-current', 'page')
+    await selectBaseFilm(page)
+    await modes.getByRole('button', { name: 'Advanced', exact: true }).click()
+    const panel = advancedPanel(page)
+    await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
+    const slider = panel.getByRole('slider', { name: 'Highlight', exact: true })
     const initialValue = await slider.getAttribute('aria-valuenow')
     await slider.focus()
     await page.keyboard.press('ArrowRight')
-    await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Done' })).toBeVisible()
-
-    await modes.getByRole('button', { name: 'Crop' }).click()
-    await modes.getByRole('button', { name: 'Adjust' }).click()
-    await page.getByRole('button', { name: 'Adjust Highlight' }).click()
-    await expect(page.getByRole('slider', { name: 'Highlight' })).toHaveAttribute('aria-valuenow', initialValue ?? '0')
+    await expect(slider).not.toHaveAttribute('aria-valuenow', initialValue!)
+    await expect(panel.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible()
+    await expect(panel.getByRole('button', { name: 'Apply', exact: true })).toBeVisible()
+    await expect(modes).toBeVisible()
+    await modes.getByRole('button', { name: 'Crop', exact: true }).click()
+    await expect(panel).toHaveCount(0)
+    await modes.getByRole('button', { name: 'Advanced', exact: true }).click()
+    await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
+    await expect(slider).toHaveAttribute('aria-valuenow', initialValue!)
   })
 
   test('opens a reversible Crop session with all ratios, angle, zoom, rotate, and flip', async ({ page, editorPage }) => {
@@ -64,7 +66,7 @@ test.describe('Editor — mobile header', () => {
 
     const ratioTrigger = cropRegion.getByRole('button', { name: 'Choose crop ratio', exact: true })
     await ratioTrigger.click()
-    const ratios = cropRegion.getByRole('group', { name: 'Crop ratios', exact: true })
+    const ratios = page.getByRole('group', { name: 'Crop ratios', exact: true })
     await expect(ratios.getByRole('button', { name: 'Original', exact: true })).toBeVisible()
     await expect(ratios.getByRole('button', { name: 'Free', exact: true })).toBeVisible()
     await expect(ratios.getByRole('button', { name: '9:16', exact: true })).toBeVisible()

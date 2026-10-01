@@ -71,6 +71,30 @@ function generateTestVideo() {
       `Failed to generate test-video.mp4. Install ffmpeg or set FFMPEG_PATH.\n${result.error?.message || result.stderr}`
     )
   }
+  const silent = join(__dirname, 'test-video-silent.mp4')
+  for (const args of [
+    ['-i', output, '-c:v', 'copy', '-an', silent],
+    ['-i', silent, '-itsoffset', '0.4', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000:duration=2.3',
+      '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '128k', '-t', '3', join(__dirname, 'test-video-offset-audio.mp4')],
+  ]) {
+    const variant = spawnSync(ffmpeg, ['-v', 'error', '-y', ...args], { encoding: 'utf8' })
+    if (variant.error || variant.status !== 0) throw new Error(`Failed to generate audio fixture: ${variant.error?.message || variant.stderr}`)
+  }
+
+  const asymmetric = join(__dirname, 'test-video-asymmetric-24.mp4')
+  const variants = [
+    ['-f', 'lavfi', '-i', 'color=c=red:size=320x180:rate=24:duration=2.125', '-f', 'lavfi', '-i', 'color=c=white:size=24x16:rate=24:duration=2.125', '-filter_complex',
+      '[0:v]drawbox=x=160:y=0:w=160:h=90:color=lime:t=fill,drawbox=x=0:y=90:w=160:h=90:color=blue:t=fill,drawbox=x=160:y=90:w=160:h=90:color=yellow:t=fill[bg];[bg][1:v]overlay=x=24+mod(t*64\\,72):y=24:shortest=1',
+      '-c:v', 'libx264', '-profile:v', 'baseline', '-pix_fmt', 'yuv420p', '-video_track_timescale', '12000', asymmetric],
+    ['-i', asymmetric, '-vf', 'setpts=PTS+floor(N/12)*0.025/TB', '-fps_mode', 'vfr',
+      '-c:v', 'libx264', '-profile:v', 'baseline', '-pix_fmt', 'yuv420p', '-video_track_timescale', '12000', join(__dirname, 'test-video-asymmetric-vfr.mp4')],
+    ['-display_rotation', '90', '-i', asymmetric, '-c', 'copy', join(__dirname, 'test-video-rotated-24.mp4')],
+  ]
+  for (const args of variants) {
+    const variant = spawnSync(ffmpeg, ['-v', 'error', '-y', ...args], { encoding: 'utf8' })
+    if (variant.error || variant.status !== 0) throw new Error(`Failed to generate geometry fixture: ${variant.error?.message || variant.stderr}`)
+  }
+
 }
 
 await generateTestImages()

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { ImageItem, RecipeSettings } from '../engine/types'
+import type { ImageItem, Recipe, RecipeSettings } from '../engine/types'
 import {
   activeEditorSession,
   beginAdjustSession,
@@ -12,6 +12,8 @@ import {
   updateAdjustSession,
   updateCropSession,
   updateTuningSession,
+  selectTuningProfile,
+  restoreTuningBase,
   type AdjustTool,
   type EditorSession,
 } from '../engine/editor-sessions'
@@ -30,6 +32,7 @@ export function useEditorSession(
   const owner = editOwner(image)
   const session = activeEditorSession(draft, owner)
   const settings = session && session.kind !== 'crop' ? session.draft : image.customSettings
+  const profile = session?.kind === 'tuning' ? session.profile : image.recipe
   const transformState = session?.kind === 'crop' ? session.draft : image.transform
   const transformedThumbnail = useMemo(() => (
     transformState === image.transform
@@ -82,6 +85,7 @@ export function useEditorSession(
   return {
     session,
     settings,
+    profile,
     transformState,
     transformedThumbnail,
     cancel,
@@ -95,10 +99,19 @@ export function useEditorSession(
       const current = activeEditorSession(previous, owner)
       return current?.kind === 'adjust' && image.recipe ? resetAdjustSession(current, image.recipe) : current
     }),
-    openTuning: () => setDraft(beginTuningSession(owner, image.customSettings)),
+    openTuning: () => { if (image.recipe) setDraft(beginTuningSession(owner, image.customSettings, image.recipe)) },
+    selectDraftProfile: (next: Recipe) => setDraft(previous => {
+      const current = activeEditorSession(previous, owner)
+      return current?.kind === 'tuning' ? selectTuningProfile(current, next) : current
+    }),
+    restoreDraftBase: () => setDraft(previous => {
+      const current = activeEditorSession(previous, owner)
+      return current?.kind === 'tuning' ? restoreTuningBase(current) : current
+    }),
     changeSettings: (next: RecipeSettings) => setDraft(previous => {
       const current = activeEditorSession(previous, owner)
-      const tuning = current?.kind === 'tuning' ? current : beginTuningSession(owner, image.customSettings)
+      if (!image.recipe) return current
+      const tuning = current?.kind === 'tuning' ? current : beginTuningSession(owner, image.customSettings, image.recipe)
       return updateTuningSession(tuning, next)
     }),
     openCrop: () => setDraft(beginCropSession(owner, image.transform)),
@@ -111,6 +124,7 @@ export function useEditorSession(
     /** Export the visible draft without silently committing it to the photo. */
     exportImage: (): ImageItem => ({
       ...image,
+      recipe: profile,
       customSettings: settings,
       transform: transformState,
       transformedThumbnail,

@@ -1,3 +1,10 @@
+export class AudioPreservationError extends Error {
+  constructor() {
+    super('Sound cannot be preserved in this browser. Choose Export without sound, or try another browser to keep the audio.')
+    this.name = 'AudioPreservationError'
+  }
+}
+
 export class ExportCancelledError extends Error {
   constructor() {
     super('Export cancelled')

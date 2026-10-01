@@ -33,17 +33,11 @@ export const RECIPE_CARD_PREVIEW_SIZE = 250
 /** Maximum video duration in seconds */
 export const VIDEO_MAX_DURATION = 30
 
-/** Video export FPS */
-export const VIDEO_EXPORT_FPS = 30
-
 /** Video export bitrate (5 Mbps) */
 export const VIDEO_EXPORT_BITRATE = 5_000_000
 
 /** Audio export bitrate (128 kbps) */
 export const VIDEO_AUDIO_BITRATE = 128_000
-
-/** Audio export sample rate (48 kHz - standard for video) */
-export const VIDEO_AUDIO_SAMPLE_RATE = 48_000
 
 // ============================================================================
 // UI Timing

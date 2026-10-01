@@ -36,7 +36,7 @@ export async function uploadVideo(page: Page, filename = 'test-video.mp4') {
   const input = mediaInput(page)
   await input.waitFor({ state: 'attached', timeout: 15_000 })
   await input.setInputFiles(fixturePath(filename))
-  await page.getByText('3s • 640×360').waitFor({ state: 'visible', timeout: 15_000 })
+  await page.locator('canvas[aria-label="Video preview"]').waitFor({ state: 'visible', timeout: 15_000 })
 }
 
 /** Wait for the editor to be fully loaded after image upload. */
@@ -49,13 +49,22 @@ export async function waitForEditor(page: Page) {
   await page.locator('canvas[aria-label="Preview"]').waitFor({ state: 'visible', timeout: 15_000 })
 }
 
-/** Select the first Editor's Choice recipe in the desktop preset browser. */
-export async function selectFirstRecipe(page: Page) {
-  // A stable curated section is unaffected by asynchronous Smart Picks.
-  const card = page.getByRole('complementary', { name: 'Preset browser' })
-    .getByRole('region', { name: "Editor's Choice presets", exact: true })
-    .getByRole('button', { name: /^Apply preset / }).first()
-  await card.click()
-  // Wait for card to become selected
-  await expect(card).toHaveAttribute('aria-label', /, selected$/)
+/** Select a deterministic neutral base film through the main editor. */
+export async function selectBaseFilm(page: Page, name = 'Provia') {
+  const film = page.getByRole('button', { name: `Select film ${name}`, exact: true })
+  await film.click()
+  await expect(film).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('p:visible').filter({ hasText: /^Processing\.\.\.$/ })).toHaveCount(0)
+  await expect(page.getByLabel('Applied color', { exact: true })).not.toContainText(/Preparing:|Unavailable:/)
+}
+
+/** Choose a detailed recipe in the active film's reversible Advanced draft. */
+export async function selectAdvancedRecipe(page: Page, recipeName: string, apply = true) {
+  const panel = page.getByRole('region', { name: 'Advanced settings', exact: true })
+  if (!await panel.isVisible()) await page.getByRole('button', { name: /^(Open Advanced settings|Advanced settings|Advanced)$/ }).click()
+  await panel.getByRole('tab', { name: 'Recipes', exact: true }).click()
+  const escaped = recipeName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  await panel.getByRole('button', { name: new RegExp(`^Apply preset ${escaped}(?:, selected)?$`) }).click()
+  await expect(panel.getByRole('button', { name: 'Apply', exact: true })).toBeEnabled()
+  if (apply) await panel.getByRole('button', { name: 'Apply', exact: true }).click()
 }

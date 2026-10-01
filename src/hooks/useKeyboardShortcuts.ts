@@ -1,13 +1,12 @@
 import { useEffect, useCallback } from 'react'
-import { Recipe } from '../engine/types'
+import type { EditorCommands } from '../engine/editor-commands'
 
 interface KeyboardShortcutsConfig {
+  commands: EditorCommands
   /** Режим обрезки активен */
   isCropping: boolean
   /** Режим тюнинга активен */
   isTuning: boolean
-  /** Активный рецепт */
-  activeRecipe: Recipe | null
   /** Общее количество изображений */
   totalImages?: number
 }
@@ -68,9 +67,9 @@ export function useKeyboardShortcuts(
   enabled = true
 ): void {
   const {
+    commands,
     isCropping,
     isTuning,
-    activeRecipe,
     totalImages = 1,
   } = config
 
@@ -93,6 +92,7 @@ export function useKeyboardShortcuts(
   } = handlers
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.defaultPrevented) return
     // Игнорируем если фокус в текстовом поле
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
       return
@@ -100,10 +100,11 @@ export function useKeyboardShortcuts(
 
     const key = e.key.toLowerCase()
     const isSliderFocused = e.target instanceof HTMLElement && e.target.closest('[role="slider"]') !== null
+    if ((key === 'enter' || key === ' ') && e.target instanceof HTMLElement && e.target.closest('button, [role="button"], [role="tab"]')) return
 
     switch (key) {
       case 'r':
-        if (!isCropping && !isTuning) {
+        if (commands.geometry) {
           if (e.shiftKey) {
             onRotateCounterClockwise()
           } else {
@@ -113,32 +114,32 @@ export function useKeyboardShortcuts(
         break
 
       case 'c':
-        if (!e.metaKey && !e.ctrlKey && !isCropping && !isTuning) {
+        if (!e.metaKey && !e.ctrlKey && commands.geometry) {
           onCropOpen()
         }
         break
 
       case 'f':
-        if (!e.metaKey && !e.ctrlKey && !isCropping && !isTuning) {
+        if (!e.metaKey && !e.ctrlKey && commands.geometry) {
           onFlipHorizontal()
         }
         break
 
       case 't':
-        if (!e.metaKey && !e.ctrlKey && !isCropping && activeRecipe) {
+        if (!e.metaKey && !e.ctrlKey && commands.advanced) {
           onTuningToggle()
         }
         break
 
       case 'p':
-        if (!e.metaKey && !e.ctrlKey) {
+        if (!e.metaKey && !e.ctrlKey && commands.panel) {
           onPanelToggle()
         }
         break
 
       case 'arrowleft':
         // Навигация к предыдущему изображению
-        if (!isSliderFocused && !isCropping && !isTuning && totalImages > 1 && onPreviousImage) {
+        if (!isSliderFocused && commands.navigate && totalImages > 1 && onPreviousImage) {
           e.preventDefault()
           onPreviousImage()
         }
@@ -146,13 +147,14 @@ export function useKeyboardShortcuts(
 
       case 'arrowright':
         // Навигация к следующему изображению
-        if (!isSliderFocused && !isCropping && !isTuning && totalImages > 1 && onNextImage) {
+        if (!isSliderFocused && commands.navigate && totalImages > 1 && onNextImage) {
           e.preventDefault()
           onNextImage()
         }
         break
 
       case 'escape':
+        if (!commands.editDraft) break
         if (isCropping) {
           onCropCancel()
         } else if (isTuning) {
@@ -161,6 +163,7 @@ export function useKeyboardShortcuts(
         break
 
       case 'enter':
+        if (!commands.editDraft || isSliderFocused) break
         if (isCropping) {
           onCropApply()
         } else if (isTuning) {
@@ -169,23 +172,23 @@ export function useKeyboardShortcuts(
         break
 
       case ' ':
-        if (activeRecipe && !isCropping && !isTuning) {
+        if (commands.compare) {
           e.preventDefault()
           onCompareStart()
         }
         break
 
       case 's':
-        if ((e.metaKey || e.ctrlKey) && activeRecipe) {
+        if (e.metaKey || e.ctrlKey) {
           e.preventDefault()
-          onExport()
+          if (commands.export) onExport()
         }
         break
     }
   }, [
+    commands,
     isCropping,
     isTuning,
-    activeRecipe,
     onRotateClockwise,
     onRotateCounterClockwise,
     onFlipHorizontal,
@@ -211,17 +214,19 @@ export function useKeyboardShortcuts(
 
   useEffect(() => {
     // Pausing shortcuts must also release a held before/after comparison.
-    if (!enabled) onCompareEnd()
-  }, [enabled, onCompareEnd])
+    if (!enabled || !commands.compare) onCompareEnd()
+  }, [enabled, commands.compare, onCompareEnd])
 
   useEffect(() => {
     if (!enabled) return
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)
+    window.addEventListener('blur', onCompareEnd)
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
+      window.removeEventListener('blur', onCompareEnd)
     }
-  }, [enabled, handleKeyDown, handleKeyUp])
+  }, [enabled, handleKeyDown, handleKeyUp, onCompareEnd])
 }

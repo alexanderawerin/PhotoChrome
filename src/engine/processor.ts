@@ -1,22 +1,7 @@
 import { ProcessingPlan, RecipeSettings } from './types'
-import { applyHaldCLUT } from './haldclut'
-import { createCurveLUT, applyCurve } from './curves'
-import {
-  applyColorBalance,
-  applySaturation,
-  applyWhiteBalanceShift,
-  applyToneAdjustment,
-} from './color'
-import { applyPreprocessSettings } from './preprocess'
-import { applyGrain, grainEffectToStrength, grainSizeToNumber } from './grain'
-import {
-  applyClarity,
-  applySharpness,
-  applyColorChrome,
-  applyColorChromeFXBlue
-} from './effects'
+import { processOnCPU } from './cpu'
 import { getPhotoWebGLProcessor } from './webgl/processor'
-import { assertProcessingTarget } from './processing-plan'
+import { assertProcessingResourcesReady, assertProcessingTarget } from './processing-plan'
 
 // Maximum image dimension for WebGL processing (texture size limit)
 const WEBGL_MAX_DIMENSION = 4096
@@ -93,6 +78,8 @@ export class ImageProcessor {
     plan: ProcessingPlan
   ): ImageData {
     assertProcessingTarget(plan, imageData.width, imageData.height)
+    assertProcessingResourcesReady(plan)
+    if (plan.colorMode === 'original') return this.processOnCPU(imageData, plan)
     // 1. HaldCLUT simulations use CPU (reliable trilinear interpolation).
     //    WebGL sampler3D is unstable across browsers — CPU LUT is ~50ms for 1600px thumbnails.
     const { lut } = plan
@@ -125,10 +112,8 @@ export class ImageProcessor {
     try {
       const processor = getPhotoWebGLProcessor()
       processor.init(imageData.width, imageData.height)
-      const resultCanvas = processor.processFrame(imageData, plan, 0)
-      const ctx = resultCanvas.getContext('2d')
-      if (!ctx) return null
-      return ctx.getImageData(0, 0, resultCanvas.width, resultCanvas.height)
+      processor.processFrame(imageData, plan, 0)
+      return processor.getImageData()
     } catch {
       return null
     }
@@ -142,37 +127,8 @@ export class ImageProcessor {
     plan: ProcessingPlan
   ): ImageData {
     assertProcessingTarget(plan, imageData.width, imageData.height)
-    const processed = new ImageData(
-      new Uint8ClampedArray(imageData.data),
-      imageData.width,
-      imageData.height
-    )
-
-    const { simulation, settings, lut } = plan
-
-    applyPreprocessSettings(processed, settings)
-
-    // HaldCLUT path: single 3D LUT lookup replaces curve + colorBalance + saturation
-    if (lut) {
-      applyHaldCLUT(processed, lut)
-    } else {
-      // Fallback: curve-based approach
-      if (simulation.curve) {
-        const curveLUT = createCurveLUT(simulation.curve)
-        applyCurve(processed, curveLUT, 'rgb')
-      }
-      if (simulation.colorBalance) {
-        applyColorBalance(processed, simulation.colorBalance)
-      }
-      if (simulation.saturation !== undefined) {
-        applySaturation(processed, simulation.saturation)
-      }
-    }
-    if (settings) {
-      this.applyRecipeSettings(processed, settings)
-    }
-
-    return processed
+    assertProcessingResourcesReady(plan)
+    return processOnCPU(imageData, plan)
   }
 
   /**
@@ -185,6 +141,7 @@ export class ImageProcessor {
     options: ProcessAsyncOptions = {}
   ): Promise<ImageData> {
     assertProcessingTarget(plan, imageData.width, imageData.height)
+    assertProcessingResourcesReady(plan)
     const timeoutMs = options.timeoutMs ?? DEFAULT_PROCESSING_TIMEOUT_MS
     if (!Number.isFinite(timeoutMs) || timeoutMs < 0) {
       return Promise.reject(new Error('Processing timeout must be a non-negative finite number'))
@@ -364,55 +321,6 @@ export class ImageProcessor {
       })
     }
     return this.processingWorker
-  }
-
-  /**
-   * Применяет настройки рецепта.
-   * Примечание: dynamicRange и whiteBalance уже обработаны в process() как pre-step.
-   */
-  private static applyRecipeSettings(
-    imageData: ImageData,
-    settings: RecipeSettings
-  ): void {
-    if (settings.highlight !== undefined || settings.shadow !== undefined) {
-      applyToneAdjustment(
-        imageData,
-        settings.highlight ?? 0,
-        settings.shadow ?? 0
-      )
-    }
-
-    if (settings.color !== undefined) {
-      applySaturation(imageData, settings.color / 10)
-    }
-
-    if (settings.wbShiftRed !== undefined || settings.wbShiftBlue !== undefined) {
-      applyWhiteBalanceShift(
-        imageData,
-        settings.wbShiftRed ?? 0,
-        settings.wbShiftBlue ?? 0
-      )
-    }
-
-    if (settings.colorChromeEffect) {
-      applyColorChrome(imageData, settings.colorChromeEffect)
-    }
-    if (settings.colorChromeFXBlue) {
-      applyColorChromeFXBlue(imageData, settings.colorChromeFXBlue)
-    }
-
-    if (settings.clarity !== undefined && settings.clarity !== 0) {
-      applyClarity(imageData, settings.clarity)
-    }
-    if (settings.sharpness !== undefined && settings.sharpness !== 0) {
-      applySharpness(imageData, settings.sharpness)
-    }
-
-    if (settings.grainEffect && settings.grainEffect !== 'off') {
-      const strength = grainEffectToStrength(settings.grainEffect)
-      const size = settings.grainSize ? grainSizeToNumber(settings.grainSize) : 1.0
-      applyGrain(imageData, strength, size)
-    }
   }
 
   /**

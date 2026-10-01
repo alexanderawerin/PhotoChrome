@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react'
 import { ProcessingPlan } from '../engine/types'
-import { getWebGLProcessor } from '../engine/webgl/processor'
+import { WebGLProcessor } from '../engine/webgl/processor'
+import { createDefaultTransformState, type ImageTransformState } from '../engine/transform'
+import { getVideoOutputSize, renderVideoTransform } from '../engine/video/geometry'
+import { CropOverlay } from './CropOverlay'
 import { Button } from './ui/button'
 
 interface VideoPreviewProps {
@@ -9,6 +12,12 @@ interface VideoPreviewProps {
   video: HTMLVideoElement
   /** Shared processing plan */
   processingPlan: ProcessingPlan | null
+  transform?: ImageTransformState
+  cropMode?: boolean
+  onTransformChange?: (changes: Partial<ImageTransformState>) => void
+  cropGridActive?: boolean
+  onProcessingError?: (message: string | null) => void
+  retryKey?: number
   /** Pause playback rendering while another process owns the video element. */
   isSuspended?: boolean
   /** Alt text for accessibility */
@@ -28,12 +37,30 @@ interface VideoPreviewProps {
 export function VideoPreview({
   video,
   processingPlan,
+  transform,
+  cropMode = false,
+  onTransformChange,
+  cropGridActive = false,
+  onProcessingError,
+  retryKey = 0,
   isSuspended = false,
   alt = 'Video preview',
   onMouseDown,
   onMouseUp,
   onMouseLeave,
 }: VideoPreviewProps) {
+  const fullTransform = transform ?? processingPlan?.geometry ?? createDefaultTransformState()
+  const visibleTransform = cropMode ? { ...fullTransform, cropRatio: 'original' as const } : fullTransform
+  const outputSize = getVideoOutputSize(video.videoWidth, video.videoHeight, visibleTransform)
+  const transformRef = useRef(visibleTransform)
+  transformRef.current = visibleTransform
+  const errorCallbackRef = useRef(onProcessingError)
+  errorCallbackRef.current = onProcessingError
+  const processorRef = useRef<WebGLProcessor | null>(null)
+  const transformedCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const failedRef = useRef(false)
+  const [processingError, setProcessingError] = useState<string | null>(null)
+  const pinchRef = useRef<{ distance: number; scale: number } | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const animationRef = useRef<number>(0)
@@ -56,16 +83,16 @@ export function VideoPreview({
   useEffect(() => {
     if (!video || video.videoWidth === 0) return
 
-    try {
-      const processor = getWebGLProcessor()
-      processor.init(video.videoWidth, video.videoHeight)
-      setIsReady(true)
-    } catch (err) {
-      console.error('Failed to initialize WebGL processor:', err)
-      setIsReady(true) // Still allow fallback rendering
-    }
-
+    setIsReady(true)
+    failedRef.current = false
     return () => {
+      processorRef.current?.dispose()
+      processorRef.current = null
+      if (transformedCanvasRef.current) {
+        transformedCanvasRef.current.width = 0
+        transformedCanvasRef.current.height = 0
+        transformedCanvasRef.current = null
+      }
       isRunningRef.current = false
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
@@ -89,7 +116,7 @@ export function VideoPreview({
       const rect = wrapper.getBoundingClientRect()
       if (rect.width === 0 || rect.height === 0) return
 
-      const videoAspect = video.videoWidth / video.videoHeight
+      const videoAspect = outputSize.width / outputSize.height
       const containerAspect = rect.width / rect.height
 
       let displayWidth: number
@@ -120,7 +147,7 @@ export function VideoPreview({
       clearTimeout(timeoutId)
       resizeObserver.disconnect()
     }
-  }, [video, video?.videoWidth, video?.videoHeight])
+  }, [video, outputSize.width, outputSize.height])
 
   /**
    * Render a single frame to canvas
@@ -135,27 +162,29 @@ export function VideoPreview({
 
     const plan = processingPlanRef.current
 
+    if (failedRef.current) return
     try {
-      if (plan) {
-        // Use WebGL processor for filtered output
-        const processor = getWebGLProcessor()
-        
-        // Ensure processor is initialized with correct dimensions
-        processor.init(video.videoWidth, video.videoHeight)
-        
-        const outputCanvas = processor.processFrame(video, plan, video.currentTime)
-        ctx.drawImage(outputCanvas, 0, 0, canvas.width, canvas.height)
-      } else {
-        // No filter - draw video directly
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      const transformed = renderVideoTransform(video, video.videoWidth, video.videoHeight,
+        transformRef.current, transformedCanvasRef.current ?? undefined)
+      transformedCanvasRef.current = transformed
+      let output = transformed
+      if (plan && plan.colorMode !== 'original') {
+        const processor = processorRef.current ?? new WebGLProcessor()
+        processorRef.current = processor
+        processor.init(transformed.width, transformed.height)
+        output = processor.processFrame(transformed, { ...plan, targetSize: { width: transformed.width, height: transformed.height } }, video.currentTime)
       }
-    } catch {
-      // Fallback to unfiltered video on error
-      try {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-      } catch {
-        // Video might not be ready
-      }
+      if (canvas.width !== output.width) canvas.width = output.width
+      if (canvas.height !== output.height) canvas.height = output.height
+      ctx.drawImage(output, 0, 0)
+      setProcessingError(null)
+      errorCallbackRef.current?.(null)
+    } catch (error) {
+      failedRef.current = true
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      const message = error instanceof Error ? error.message : 'Video preview processing failed. Please retry.'
+      setProcessingError(message)
+      errorCallbackRef.current?.(message)
     }
   }, [video])
 
@@ -297,14 +326,18 @@ export function VideoPreview({
   useEffect(() => {
     if (!isReady || !video) return
     
-    // Render current frame with new filter
+    failedRef.current = false
+    if (retryKey) {
+      processorRef.current?.dispose()
+      processorRef.current = null
+    }
     renderFrame()
     
     // If playing, make sure loop is running
     if (!video.paused) {
       startLoop()
     }
-  }, [processingPlan, isReady, video, renderFrame, startLoop])
+  }, [processingPlan, transform, cropMode, retryKey, isReady, video, renderFrame, startLoop])
 
   /**
    * Auto-play on mount
@@ -356,11 +389,22 @@ export function VideoPreview({
     <div
       ref={wrapperRef}
       className="w-full h-full flex items-center justify-center select-none overflow-hidden"
-      onMouseDown={onMouseDown}
-      onMouseUp={onMouseUp}
-      onMouseLeave={onMouseLeave}
-      onTouchStart={onMouseDown}
-      onTouchEnd={onMouseUp}
+      onMouseDown={cropMode ? undefined : onMouseDown}
+      onMouseUp={cropMode ? undefined : onMouseUp}
+      onMouseLeave={cropMode ? undefined : onMouseLeave}
+      onTouchStart={event => {
+        if (!cropMode) { onMouseDown?.(); return }
+        if (event.touches.length === 2) pinchRef.current = {
+          distance: Math.hypot(event.touches[0].clientX - event.touches[1].clientX, event.touches[0].clientY - event.touches[1].clientY),
+          scale: fullTransform.cropScale,
+        }
+      }}
+      onTouchMove={event => {
+        if (!cropMode || event.touches.length !== 2 || !pinchRef.current) return
+        const distance = Math.hypot(event.touches[0].clientX - event.touches[1].clientX, event.touches[0].clientY - event.touches[1].clientY)
+        onTransformChange?.({ cropScale: Math.max(1, Math.min(3, pinchRef.current.scale * distance / pinchRef.current.distance)) })
+      }}
+      onTouchEnd={() => { pinchRef.current = null; if (!cropMode) onMouseUp?.() }}
     >
       <div
         className="relative group"
@@ -371,14 +415,29 @@ export function VideoPreview({
       >
         <canvas
           ref={canvasRef}
-          width={video.videoWidth}
-          height={video.videoHeight}
+          width={outputSize.width}
+          height={outputSize.height}
           className="block w-full h-full rounded-lg shadow-2xl bg-black"
           aria-label={alt}
         />
 
+        {processingError && <div className="absolute inset-0 flex items-center justify-center bg-black/75 p-4 text-sm text-white">{processingError}</div>}
+        {cropMode && <div className="absolute inset-0 rounded-lg overflow-hidden">
+          <CropOverlay
+            imageWidth={outputSize.width}
+            imageHeight={outputSize.height}
+            aspectRatio={fullTransform.cropRatio}
+            offsetX={fullTransform.cropOffset.x}
+            offsetY={fullTransform.cropOffset.y}
+            onOffsetChange={cropOffset => onTransformChange?.({ cropOffset })}
+            cropRect={fullTransform.cropRect}
+            onCropRectChange={cropRect => onTransformChange?.({ cropRect })}
+            gridActive={cropGridActive}
+          />
+        </div>}
+
         {/* Play/Pause overlay */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className={`${cropMode ? 'hidden' : ''} absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200`}>
           <Button
             variant="ghost"
             size="icon"
@@ -395,8 +454,8 @@ export function VideoPreview({
         </div>
 
         {/* Controls bar */}
-        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-b-lg">
-          <div className="flex items-center justify-between">
+        <div className={`${cropMode ? 'hidden' : ''} absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-b-lg`}>
+          <div className="flex items-center justify-between" role="toolbar" aria-label="Video playback">
             <Button
               variant="ghost"
               size="icon"
