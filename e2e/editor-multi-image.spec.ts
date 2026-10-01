@@ -7,7 +7,7 @@ test.describe('Editor — Multi-Image Navigation', () => {
     await selectBaseFilm(page)
     await page.getByRole('button', { name: 'Open Advanced settings', exact: true }).click()
     await page.getByRole('region', { name: 'Advanced settings', exact: true }).getByRole('tab', { name: 'Manual', exact: true }).click()
-    const inspector = page.getByRole('complementary', { name: 'Editing inspector', exact: true })
+    const inspector = page.getByRole('region', { name: 'Advanced settings', exact: true })
     const highlight = inspector.getByRole('slider', { name: 'Highlight', exact: true })
     const baseline = await highlight.getAttribute('aria-valuenow')
     await highlight.focus()
@@ -75,15 +75,10 @@ test.describe('Editor — Multi-Image Navigation', () => {
     // First thumbnail should be selected
     await expect(tablist.getByRole('tab', { name: 'Image 1 of 2: test-image.jpg', exact: true })).toHaveAttribute('aria-selected', 'true')
 
-    const actions = page.getByRole('toolbar', { name: 'Desktop editor actions' })
+    const actions = page.getByRole('toolbar', { name: 'Editor actions' })
     await expect(actions).toBeVisible()
-    const thumbnailsBox = await tablist.boundingBox()
-    const actionsBox = await actions.boundingBox()
-    expect(thumbnailsBox).toBeTruthy()
-    expect(actionsBox).toBeTruthy()
-    if (thumbnailsBox && actionsBox) {
-      expect(actionsBox.y).toBeGreaterThanOrEqual(thumbnailsBox.y + thumbnailsBox.height)
-    }
+    await expect(page.getByRole('complementary', { name: 'Editor controls', exact: true })).toHaveCount(1)
+    await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true })).toHaveCount(1)
   })
 
   test('clicking thumbnail restores each photo selection', async ({ page, multiImageEditorPage }) => {

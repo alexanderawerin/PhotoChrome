@@ -12,7 +12,7 @@ interface FilmSelectorProps {
 export function FilmSelector({ activeRecipe, onSelect, disabled, horizontal = false, className = '' }: FilmSelectorProps) {
   const choices = [null, ...getBaseFilms()]
   return (
-    <div role="group" aria-label="Film selection" className={`${horizontal ? 'flex gap-2 overflow-x-auto pb-2' : 'grid grid-cols-2 gap-2'} ${className}`}>
+    <div role="group" aria-label="Film selection" className={`${horizontal ? 'flex gap-2 overflow-x-auto pb-2 md:grid md:grid-cols-2 md:overflow-visible' : 'grid grid-cols-2 gap-2'} ${className}`}>
       {choices.map(profile => {
         const active = profile ? activeRecipe?.filmSimulation === profile.filmSimulation : activeRecipe === null
         return (

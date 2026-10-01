@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from 'react'
-import { Crop, FlipHorizontal2, Layers, Plus, RotateCw, Settings2, Share, HelpCircle } from 'lucide-react'
+import { Layers, Plus, Share, HelpCircle } from 'lucide-react'
 import { APP_VERSION, APP_URL } from '../constants'
 import { Button } from './ui/button'
 import { Spinner } from './ui/spinner'
@@ -7,7 +7,7 @@ import { Preview } from './Preview'
 import { FilmSelector } from './FilmSelector'
 import { getBaseFilm, hasModifiedSettings, isBaseProfile } from '../engine/film-profiles'
 import { AdvancedPanel } from './AdvancedPanel'
-import { CropPanel } from './CropPanel'
+import { EditorHeader, EditorModes, EditorActions, EditorControlDock, CropTools, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
 import { HelpDialog } from './HelpDialog'
 import { ExportCompletion, type ExportCompletionState } from './ExportCompletion'
 import { ThumbnailStrip } from './ThumbnailStrip'
@@ -78,7 +78,6 @@ export function Editor({
   const [isExporting, setIsExporting] = useState(false)
   const [isApplyingToAll, setIsApplyingToAll] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
-  const [isPanelOpen, setIsPanelOpen] = useState(false)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [hasUnreadHelp, setHasUnreadHelp] = useState(() => {
     try {
@@ -87,7 +86,7 @@ export function Editor({
       return true
     }
   })
-  const [mobileMode, setMobileMode] = useState<'presets' | 'adjust' | 'crop'>('presets')
+  const [mode, setMode] = useState<EditorMode>('films')
   const [isCropControlActive, setIsCropControlActive] = useState(false)
   const [exportError, setExportError] = useState<Extract<PhotoExportResult, { status: 'error' }>['error'] | null>(null)
   const exportAbortControllerRef = useRef<AbortController | null>(null)
@@ -191,8 +190,7 @@ export function Editor({
       customSettings: {} // Сброс настроек при смене рецепта
     })
     edit.cancel()
-    setIsPanelOpen(false)
-    setMobileMode('presets')
+    setMode('films')
   }, [currentImage.id, onImageUpdate, edit, commands.selectColor])
 
   /**
@@ -231,8 +229,7 @@ export function Editor({
     if (apply && !isPreviewReady) return
     if (apply) edit.commit()
     else edit.cancel()
-    setIsPanelOpen(false)
-    setMobileMode('presets')
+    setMode('films')
     restoreAdvancedFocus.current = true
   }, [edit, isPreviewReady])
 
@@ -256,37 +253,27 @@ export function Editor({
     if (!commands.advanced) return
     advancedFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     edit.openTuning()
-    setIsPanelOpen(true)
-    if (!isMdUp) setMobileMode('adjust')
-  }, [isTuning, commands.advanced, edit, isMdUp, closeAdvanced])
+    setMode('advanced')
+  }, [isTuning, commands.advanced, edit, closeAdvanced])
 
   const handleCropClick = useCallback(() => {
     if (!commands.geometry) return
-    setIsPanelOpen(false)
-    if (!isMdUp) setMobileMode('crop')
-    // Desktop Apply preserves its established panel behavior. A mobile tool
-    // is canceled when leaving it; openCrop replaces that draft atomically.
+    setMode('crop')
     edit.openCrop()
-  }, [isMdUp, edit, commands.geometry])
+  }, [edit, commands.geometry])
 
-  const changeMobileMode = (mode: 'presets' | 'adjust' | 'crop') => {
-    if (mode === 'adjust') {
-      if (!isTuning) handleTuningOpen()
+  const changeMode = (next: EditorMode) => {
+    if (next === 'advanced') {
+      handleTuningOpen()
       return
     }
-    if (!commands.selectColor || (demoMode && mode !== 'presets')) return
+    if (!commands.selectColor || (demoMode && next !== 'films')) return
     edit.cancel()
-    setIsPanelOpen(false)
-    setMobileMode(mode)
+    setMode(next)
   }
 
   useEffect(() => {
-    if (!isTuning) setIsPanelOpen(false)
-  }, [isTuning])
-
-  useEffect(() => {
-    setIsPanelOpen(false)
-    setMobileMode('presets')
+    setMode('films')
     restoreAdvancedFocus.current = false
   }, [currentImage.id])
 
@@ -480,34 +467,73 @@ export function Editor({
   // ============================================================================
 
   const displayImage = showOriginal || preview.imageId !== currentImage.id ? transformedThumbnail : preview.data
-  const mobileCover = !isMdUp && mobileMode !== 'crop' && !isCropping && !isTuning
+  const mobileCover = !isMdUp && mode !== 'crop' && !isCropping && !isTuning
+
+  const actions: EditorAction[] = demoMode ? [{
+    id: 'upload', label: 'Upload photos', ariaLabel: 'Upload photos',
+    onClick: () => demoUploadRef.current?.click(), disabled: !commands.add,
+  }] : isTuning ? [] : isCropping ? [{
+    id: 'cancel-crop', label: 'Cancel', variant: 'outline', onClick: edit.cancel, disabled: !commands.cancelDraft,
+  }, {
+    id: 'apply-crop', label: 'Done', onClick: edit.commit, disabled: !commands.editDraft,
+  }] : [
+    ...(totalImages > 1 ? [{
+      id: 'apply-all', label: 'Apply to all', ariaLabel: `Apply current color to all ${totalImages} images`,
+      icon: <Layers className="size-4" aria-hidden="true" />, variant: 'outline' as const,
+      onClick: handleApplyToAll, disabled: !commands.applyToAll,
+    }, {
+      id: 'export-all', label: 'Export all', ariaLabel: 'Export all photos',
+      icon: <Layers className="size-4" aria-hidden="true" />, onClick: () => { void handleExportAll() },
+      disabled: !canExportAll || !commands.export, busy: isBatchExporting,
+    }] : []),
+    {
+      id: 'export', label: isExporting ? 'Exporting…' : 'Export', ariaLabel: 'Export processed image (Ctrl+S)',
+      icon: isExporting ? <Spinner className="size-4" randomColor /> : <Share className="size-4" aria-hidden="true" />,
+      onClick: () => { void handleExport() }, disabled: !commands.export, busy: isExporting, desktopOnly: totalImages > 1,
+    },
+  ]
 
   return (
     <div 
       className="flex flex-col md:flex-row overflow-hidden"
       style={{ height: getViewportHeightStyle(viewportHeight) }}
     >
-      {isMdUp && (
-        <aside className="flex h-full w-[208px] shrink-0 flex-col overflow-y-auto border-r border-zinc-800 bg-black p-3 xl:w-[224px]" aria-label="Film browser">
-          <FilmSelector activeRecipe={currentImage.recipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor} />
-        </aside>
-      )}
-
       {/* Главный блок: фото + toolbar */}
-      <div ref={editorStageRef} className="mobile-editor-stage relative isolate flex-1 bg-zinc-950 min-w-0 min-h-0 overflow-hidden md:flex md:flex-col">
+      <div ref={editorStageRef} className="editor-stage mobile-editor-stage relative isolate flex-1 bg-zinc-950 min-w-0 min-h-0 overflow-hidden">
         <div className="mobile-editor-header mobile-editor-surface relative z-20 flex-shrink-0">
-        {/* Header */}
-        <Header 
-          compact={isTuning && !isMdUp}
+        <input
+          ref={demoUploadRef}
+          type="file"
+          accept={demoMode ? 'image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime' : 'image/jpeg,image/png,image/webp,image/gif'}
+          multiple
+          className="sr-only"
+          aria-label={demoMode ? 'Choose photos or video to edit' : 'Add photos to current batch'}
+          onChange={event => {
+            const files = Array.from(event.target.files ?? [])
+            event.target.value = ''
+            if (!commands.add) return
+            const type = files.length === 1 && files[0].type.startsWith('video/') ? 'video' : 'image'
+            if (demoMode && onMediaSelect) void onMediaSelect(files, type)
+            else void onAddImages(files)
+          }}
+        />
+        <EditorHeader
+          compact={isTuning}
           fileName={currentImage.fileName}
-          currentIndex={currentIndex}
-          totalImages={totalImages}
-          onAddImages={onAddImages}
-          onHelp={() => { if (commands.help) setIsHelpOpen(true) }}
-          hasUnreadHelp={hasUnreadHelp}
-          actionsDisabled={!commands.add}
-          demoMode={demoMode}
-          onDemoUpload={() => demoUploadRef.current?.click()}
+          details={totalImages > 1 ? `${currentIndex + 1} of ${totalImages}` : undefined}
+          leading={!demoMode && (
+            <Button variant="ghost" size="sm" onClick={() => demoUploadRef.current?.click()} disabled={!commands.add}
+              className="mobile-glass-control h-11 min-w-11 gap-1 rounded-full px-2 text-zinc-300" aria-label="Add photos">
+              <Plus className="size-4" aria-hidden="true" /> Add
+            </Button>
+          )}
+          trailing={(
+            <Button variant="ghost" size="sm" onClick={() => { if (commands.help) setIsHelpOpen(true) }} disabled={!commands.help}
+              className="mobile-glass-control relative h-11 min-w-11 gap-1 rounded-full px-2 text-zinc-300" aria-label="Help">
+              <HelpCircle className="size-4" aria-hidden="true" /> Help
+              {hasUnreadHelp && <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-white" aria-hidden="true" />}
+            </Button>
+          )}
         />
 
         <div className="mx-3 mb-2 flex items-center gap-2 text-xs text-zinc-400" aria-label="Applied color">
@@ -599,202 +625,46 @@ export function Editor({
           )}
         </div>
 
-        {!demoMode && (
-          <div className={`flex-shrink-0 flex-wrap items-center justify-center gap-3 border-t border-zinc-800 bg-black px-4 py-3 ${isCropping ? 'hidden' : 'hidden md:flex'}`} role="toolbar" aria-label="Desktop editor actions">
-              <Button variant="outline" onClick={handleTuningOpen} disabled={!commands.advanced} aria-label={isPanelOpen ? 'Close Advanced settings' : 'Open Advanced settings'} aria-expanded={isPanelOpen}>
-                <Settings2 className="size-4" aria-hidden="true" /> Advanced
-              </Button>
-            <Button variant="outline" onClick={handleCropClick} disabled={!commands.geometry} aria-label="Open Crop inspector">
-              <Crop className="size-4" aria-hidden="true" /> Crop
-            </Button>
-            {totalImages > 1 && (
-              <Button variant="outline" onClick={handleApplyToAll} disabled={!commands.applyToAll} aria-label={`Apply current color to all ${totalImages} images`}>
-                <Layers className="size-4" aria-hidden="true" /> Apply to all
-              </Button>
-            )}
-            {totalImages > 1 && (
-              <Button variant="outline" onClick={() => handleExportAll()} disabled={!canExportAll || !commands.export} aria-label="Export all photos">
-                <Layers className="size-4" aria-hidden="true" /> Export all
-              </Button>
-            )}
-            <Button onClick={() => handleExport()} disabled={!commands.export} aria-label="Export processed image (Ctrl+S)">
-              {isExporting ? <Spinner className="size-4" randomColor /> : <Share className="size-4" aria-hidden="true" />}
-              {isExporting ? 'Exporting…' : 'Export'}
-            </Button>
-          </div>
-        )}
-
-        <div className={`hidden flex-shrink-0 border-t border-zinc-800 bg-black md:block ${isCropping ? '' : 'md:hidden'}`}>
-          <div className="flex justify-center gap-2 border-b border-zinc-800 px-4 py-2">
-            <Button variant="outline" size="sm" onClick={() => { if (commands.cropGeometry) edit.rotate(90) }} disabled={!commands.cropGeometry} aria-label="Rotate 90 degrees clockwise">
-              <RotateCw className="size-4" aria-hidden="true" /> Rotate
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => { if (commands.cropGeometry) edit.flip() }} disabled={!commands.cropGeometry} aria-label="Flip horizontally">
-              <FlipHorizontal2 className="size-4" aria-hidden="true" /> Flip
-            </Button>
-          </div>
-          <CropPanel
-            cropRatio={edit.transformState.cropRatio}
-            fineAngle={edit.transformState.fineAngle}
-            cropScale={edit.transformState.cropScale}
-            onCropRatioChange={cropRatio => edit.changeCrop({ cropRatio })}
-            onFineAngleChange={fineAngle => edit.changeCrop({ fineAngle })}
-            onCropScaleChange={cropScale => edit.changeCrop({ cropScale })}
-            onInteractionChange={setIsCropControlActive}
-            onApply={edit.commit}
-            onCancel={edit.cancel}
-          />
-        </div>
-
-        <div className="mobile-editor-dock mobile-editor-surface relative z-20 min-w-0 md:hidden">
-        {/* Mobile: contextual controls */}
-        <div className="flex-shrink-0 md:hidden">
-          {!isMdUp && mobileMode === 'presets' && (
-            <FilmSelector
-              activeRecipe={currentImage.recipe}
-              onSelect={handleRecipeSelect}
-              disabled={!commands.selectColor}
-              horizontal
-              className="px-3 py-3"
+        <EditorControlDock
+          mode={mode}
+          navigation={(
+            <EditorModes mode={mode} onChange={changeMode} demoMode={demoMode} advancedOpen={isTuning}
+              disabled={{ films: !commands.selectColor, advanced: isTuning ? !commands.cancelDraft : !commands.advanced, crop: !commands.selectColor }} />
+          )}
+          actions={<EditorActions actions={actions} />}
+        >
+          {mode === 'films' && (
+            <FilmSelector activeRecipe={currentImage.recipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor}
+              horizontal className="px-3 py-3" />
+          )}
+          {mode === 'advanced' && isTuning && profile && (
+            <AdvancedPanel profile={profile} settings={settings} sourceImage={transformedThumbnail}
+              onProfileSelect={edit.selectDraftProfile} onSettingsChange={edit.changeSettings}
+              onRestoreBase={edit.restoreDraftBase} onApply={() => closeAdvanced(true)} onCancel={() => closeAdvanced(false)}
+              disabled={interactionDisabled || isExporting || isBatchExporting} applyDisabled={!isPreviewReady} />
+          )}
+          {mode === 'crop' && !isCropping && (
+            <CropTools onOpen={handleCropClick} onRotate={() => { if (commands.geometry) edit.rotate(90) }}
+              onFlip={() => { if (commands.geometry) edit.flip() }} disabled={!commands.geometry} />
+          )}
+          {mode === 'crop' && isCropping && (
+            <CropSessionControls
+              cropRatio={edit.transformState.cropRatio}
+              fineAngle={edit.transformState.fineAngle}
+              cropScale={edit.transformState.cropScale}
+              onCropRatioChange={cropRatio => edit.changeCrop({ cropRatio })}
+              onFineAngleChange={fineAngle => edit.changeCrop({ fineAngle })}
+              onCropScaleChange={cropScale => edit.changeCrop({ cropScale })}
+              onInteractionChange={setIsCropControlActive}
+              onRotate={() => { if (commands.cropGeometry) edit.rotate(90) }}
+              onFlip={() => { if (commands.cropGeometry) edit.flip() }}
+              disabled={interactionDisabled || isExporting || isBatchExporting}
+              geometryDisabled={!commands.cropGeometry}
+              onApply={edit.commit} onCancel={edit.cancel}
             />
           )}
-          {!isMdUp && isTuning && profile && (
-            <div className="h-[58dvh] min-h-0">
-              <AdvancedPanel profile={profile} settings={settings} sourceImage={transformedThumbnail}
-                onProfileSelect={edit.selectDraftProfile} onSettingsChange={edit.changeSettings}
-                onRestoreBase={edit.restoreDraftBase} onApply={() => closeAdvanced(true)} onCancel={() => closeAdvanced(false)}
-                disabled={interactionDisabled || isExporting || isBatchExporting} applyDisabled={!isPreviewReady} />
-            </div>
-          )}
-          {!isMdUp && mobileMode === 'crop' && !isCropping && (
-            <div className="flex h-28 items-center gap-2 border-t border-white/10 bg-transparent p-3" aria-label="Crop tools">
-              <Button variant="outline" onClick={handleCropClick} disabled={!commands.geometry} className="min-h-20 flex-1" aria-label="Open crop session">Crop</Button>
-              <Button variant="outline" onClick={() => { if (commands.geometry) edit.rotate(90) }} disabled={!commands.geometry} className="min-h-20 flex-1" aria-label="Rotate 90 degrees clockwise">Rotate</Button>
-              <Button variant="outline" onClick={() => { if (commands.geometry) edit.flip() }} disabled={!commands.geometry} className="min-h-20 flex-1" aria-label="Flip horizontally">Flip</Button>
-            </div>
-          )}
-          {!isMdUp && isCropping && (
-            <section className="border-t border-white/10" aria-label="Crop image">
-              <CropPanel
-                cropRatio={edit.transformState.cropRatio}
-                fineAngle={edit.transformState.fineAngle}
-                cropScale={edit.transformState.cropScale}
-                onCropRatioChange={cropRatio => edit.changeCrop({ cropRatio })}
-                onFineAngleChange={fineAngle => edit.changeCrop({ fineAngle })}
-                onCropScaleChange={cropScale => edit.changeCrop({ cropScale })}
-                onInteractionChange={setIsCropControlActive}
-                onApply={edit.commit}
-                onCancel={edit.cancel}
-                showActions={false}
-              />
-            </section>
-          )}
-        </div>
-
-        <nav className={`mobile-editor-modes grid min-h-12 flex-shrink-0 ${demoMode ? 'grid-cols-1' : 'grid-cols-3'} md:hidden`} aria-label="Editor modes">
-          {(demoMode ? ['presets'] as const : ['presets', 'adjust', 'crop'] as const).map(mode => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => changeMobileMode(mode)}
-              disabled={mode === 'adjust' ? !commands.advanced : !commands.selectColor}
-              className={`relative flex min-h-11 flex-wrap items-center justify-center gap-x-1.5 gap-y-1 rounded-full px-1 py-2 text-sm capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${mobileMode === mode ? 'text-white' : 'text-zinc-400'}`}
-              aria-current={mobileMode === mode ? 'page' : undefined}
-            >
-              {mode === 'presets' ? <Layers className="size-4 shrink-0" aria-hidden="true" /> : mode === 'adjust' ? <Settings2 className="size-4 shrink-0" aria-hidden="true" /> : <Crop className="size-4 shrink-0" aria-hidden="true" />}
-              <span className="min-w-0 break-words">{mode === 'presets' ? 'Films' : mode === 'adjust' ? 'Advanced' : 'Crop'}</span>
-            </button>
-          ))}
-        </nav>
-
-        {/* Mobile: Action buttons (Apply to all + Export) */}
-        <div
-          className={`mobile-editor-actions flex-shrink-0 p-3 md:hidden ${isTuning ? 'hidden' : ''}`}
-          onKeyDown={event => {
-            // Native button activation must take precedence over editor shortcuts.
-            if (event.key === 'Enter' || event.key === ' ') event.stopPropagation()
-          }}
-        >
-          <div className="flex h-11 gap-2 [&>button]:h-11">
-            {demoMode ? (
-              <>
-                <input
-                  ref={demoUploadRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
-                  multiple
-                  className="sr-only"
-                  aria-label="Choose photos or video to edit"
-                  onChange={(event) => {
-                    const files = Array.from(event.target.files ?? [])
-                    event.target.value = ''
-                    const type = files.length === 1 && files[0].type.startsWith('video/') ? 'video' : 'image'
-                    if (onMediaSelect) void onMediaSelect(files, type)
-                    else void onAddImages(files)
-                  }}
-                />
-                <Button onClick={() => demoUploadRef.current?.click()} className="w-full" aria-label="Upload photos">
-                  Upload photos
-                </Button>
-              </>
-            ) : isCropping ? (
-              <>
-                <Button variant="outline" onClick={edit.cancel} className="flex-1">Cancel</Button>
-                <Button onClick={edit.commit} className="flex-1">Done</Button>
-              </>
-            ) : (
-              <>
-                {totalImages > 1 ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={handleApplyToAll}
-                      disabled={!commands.applyToAll}
-                      aria-label={`Apply current color to all ${totalImages} images`}
-                      className="flex-1"
-                    >
-                      <Layers className="size-4" aria-hidden="true" />
-                      Apply to all
-                    </Button>
-                    <Button
-                      onClick={() => handleExportAll()}
-                      disabled={!canExportAll || !commands.export}
-                      aria-label="Export all photos"
-                      aria-busy={isBatchExporting}
-                      className="flex-1"
-                    >
-                      <Layers className="size-4" aria-hidden="true" />
-                      Export all
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    onClick={() => handleExport()}
-                    disabled={!commands.export}
-                    aria-label={isExporting ? 'Exporting...' : 'Export processed image'}
-                    aria-busy={isExporting}
-                    className="w-full"
-                  >
-                    {isExporting ? <Spinner className="size-4" randomColor /> : <Share className="size-4" aria-hidden="true" />}
-                    {isExporting ? 'Exporting...' : 'Export'}
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-
-        </div>
+        </EditorControlDock>
       </div>
-
-      {isMdUp && isTuning && profile && !demoMode && (
-        <aside className="h-full w-[320px] shrink-0 overflow-hidden border-l border-zinc-800 bg-black xl:w-[384px]" aria-label="Editing inspector">
-          <AdvancedPanel profile={profile} settings={settings} sourceImage={transformedThumbnail}
-            onProfileSelect={edit.selectDraftProfile} onSettingsChange={edit.changeSettings}
-            onRestoreBase={edit.restoreDraftBase} onApply={() => closeAdvanced(true)} onCancel={() => closeAdvanced(false)}
-            disabled={interactionDisabled || isExporting || isBatchExporting} applyDisabled={!isPreviewReady} />
-        </aside>
-      )}
 
       {/* Help dialog */}
       <HelpDialog
@@ -867,7 +737,7 @@ export function Editor({
           onNewEdit={() => {
             setCompletion(null)
             edit.cancel()
-            setMobileMode('presets')
+            setMode('films')
             onBack()
           }}
           onRestoreFocus={() => {
@@ -883,107 +753,4 @@ export function Editor({
 function snapshotPhoto(image: ImageItem): ImageItem {
   return { ...image, recipe: image.recipe ? structuredClone(image.recipe) : null,
     sourceSize: { ...image.sourceSize }, customSettings: structuredClone(image.customSettings), transform: structuredClone(image.transform) }
-}
-
-// ============================================================================
-// Sub-components
-// ============================================================================
-
-interface HeaderProps {
-  compact?: boolean
-  actionsDisabled: boolean
-  fileName: string
-  currentIndex: number
-  totalImages: number
-  onAddImages: (files: File[]) => Promise<void>
-  onHelp: () => void
-  hasUnreadHelp: boolean
-  demoMode: boolean
-  onDemoUpload: () => void
-}
-
-function Header({
-  compact = false,
-  actionsDisabled,
-  fileName,
-  currentIndex,
-  totalImages,
-  onAddImages,
-  onHelp,
-  hasUnreadHelp,
-  demoMode,
-  onDemoUpload,
-}: HeaderProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  return (
-    <header className="mobile-editor-header-content flex-shrink-0 px-3 py-2 md:p-4">
-      {compact && <p className="truncate text-sm text-zinc-300">{fileName}</p>}
-      <div className={`flex items-center justify-between md:hidden min-h-11 ${compact ? 'hidden' : ''}`}>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
-          multiple
-          className="sr-only"
-          aria-label="Add photos to current batch"
-          onChange={(event) => {
-            const files = Array.from(event.target.files ?? [])
-            event.target.value = ''
-            void onAddImages(files)
-          }}
-        />
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => inputRef.current?.click()} disabled={actionsDisabled}
-          className="mobile-glass-control h-11 min-w-11 gap-1 rounded-full px-2 text-zinc-300"
-          aria-label="Add photos"
-        >
-          <Plus className="size-4" aria-hidden="true" />
-          Add
-        </Button>
-        <div className="mobile-editor-file min-w-0 flex-1 px-2 text-center">
-          <p className="mobile-glass-control truncate rounded-xl px-2 py-2 text-sm font-medium text-white">{fileName}</p>
-          {totalImages > 1 && (
-            <p className="mobile-glass-control mx-auto -mt-1 w-fit rounded-b-lg px-2 pb-1 text-[11px] text-zinc-400">{currentIndex + 1} of {totalImages}</p>
-          )}
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onHelp} disabled={actionsDisabled}
-          className="mobile-glass-control relative h-11 min-w-11 gap-1 rounded-full px-2 text-zinc-300"
-          aria-label="Help"
-        >
-          <HelpCircle className="size-4" aria-hidden="true" />
-          Help
-          {hasUnreadHelp && (
-            <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-white" aria-hidden="true" />
-          )}
-        </Button>
-      </div>
-      <div className="hidden min-h-12 items-center gap-3 md:flex">
-        {!demoMode && (
-          <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()} disabled={actionsDisabled} className="gap-2" aria-label="Add photos">
-            <Plus className="size-4" aria-hidden="true" /> Add
-          </Button>
-        )}
-        <div className="min-w-0 flex-1 text-center">
-          <p className="truncate text-sm font-medium text-zinc-100">{fileName}</p>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400">
-            Photochrome {APP_VERSION}{totalImages > 1 ? ` · ${currentIndex + 1} of ${totalImages}` : ''}
-          </p>
-        </div>
-        {demoMode ? (
-          <Button onClick={onDemoUpload} disabled={actionsDisabled} aria-label="Upload photos">Upload photos</Button>
-        ) : (
-          <Button variant="ghost" size="sm" onClick={onHelp} disabled={actionsDisabled} className="relative text-zinc-400" aria-label="Help">
-            <HelpCircle className="size-4" aria-hidden="true" /> Help
-            {hasUnreadHelp && <span className="absolute right-1 top-1 size-1.5 rounded-full bg-white" aria-hidden="true" />}
-          </Button>
-        )}
-      </div>
-    </header>
-  )
 }

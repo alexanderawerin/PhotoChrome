@@ -78,13 +78,13 @@ export function CropPanel({
 
   return (
     <div
-      className="flex flex-col bg-transparent md:bg-black"
+      className="flex flex-col bg-transparent"
       onKeyDown={event => {
         // Let focused buttons activate without triggering the editor's Enter shortcut.
         if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof Element && event.target.closest('button')) event.stopPropagation()
       }}
     >
-      <div className="flex min-h-28 flex-col gap-2 px-3 py-2 md:px-4 md:py-4">
+      <div className="flex min-h-28 flex-col gap-2 px-3 py-2">
         <div className="flex min-h-11 items-center gap-3">
           <div
             ref={ratioControlRef}
@@ -107,7 +107,7 @@ export function CropPanel({
               variant="outline"
               size="sm"
               onClick={() => !isChangingAngle && setIsRatioOpen(open => !open)}
-              className="mobile-glass-control relative min-h-11 w-20 rounded-xl border-white/10 bg-white/5 px-2 text-xs text-white/80 tabular-nums md:rounded-md"
+              className="mobile-glass-control relative min-h-11 w-20 rounded-xl border-white/10 bg-white/5 px-2 text-xs text-white/80 tabular-nums"
               aria-label="Choose crop ratio"
               aria-expanded={isRatioOpen}
               aria-controls={isRatioOpen ? ratioListId : undefined}
@@ -137,11 +137,6 @@ export function CropPanel({
             )}
           </div>
           <div className="relative min-w-0 flex-1">
-            <div
-              className="pointer-events-none absolute inset-x-0 top-1/2 hidden h-3 -translate-y-1/2 opacity-30 md:block"
-              style={{ backgroundImage: 'repeating-linear-gradient(to right, transparent 0, transparent calc(100% / 90 - 1px), #a1a1aa calc(100% / 90 - 1px), #a1a1aa calc(100% / 90))' }}
-              aria-hidden="true"
-            />
             <Slider
               value={[fineAngle]}
               min={-45}
@@ -165,7 +160,7 @@ export function CropPanel({
               aria-valuetext={`${fineAngle.toFixed(1)} degrees`}
             />
           </div>
-          <Button variant="ghost" size="sm" onClick={() => onFineAngleChange(0)} className="mobile-glass-control min-h-11 min-w-12 shrink-0 rounded-xl px-2 text-white/80 md:rounded-md" aria-label="Reset crop angle">Reset</Button>
+          <Button variant="ghost" size="sm" onClick={() => onFineAngleChange(0)} className="mobile-glass-control min-h-11 min-w-12 shrink-0 rounded-xl px-2 text-white/80" aria-label="Reset crop angle">Reset</Button>
         </div>
         <div className="flex min-h-11 items-center gap-3">
           <span className="w-20 shrink-0 text-center text-xs text-white/70">Zoom</span>

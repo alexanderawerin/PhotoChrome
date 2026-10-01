@@ -1,4 +1,5 @@
 import { test, expect } from './helpers/fixtures'
+import { editorModes } from './helpers/editor-controls'
 import { uploadMultipleImages, waitForEditor } from './helpers/upload'
 import { advancedPanel, advancedTrigger, appliedColor, changeHighlight, editorCanvas, openAdvanced, previewPixels, selectPortraitDraft, startAdvancedMedia, type AdvancedMedia } from './helpers/advanced'
 
@@ -155,6 +156,7 @@ for (const width of [393, 1600]) {
     await advancedPanel(page).getByRole('button', { name: 'Apply', exact: true }).click()
     await expect(appliedColor(page)).not.toContainText('Modified')
     await expect.poll(() => canvas.evaluate((element: HTMLCanvasElement) => [element.width, element.height])).toEqual([150, 200])
+    await editorModes(page).getByRole('button', { name: 'Films', exact: true }).click()
     await page.getByRole('button', { name: 'Select film Velvia', exact: true }).click()
     await expect(appliedColor(page)).toContainText('Velvia')
     await expect(appliedColor(page)).not.toContainText('Portrait')
@@ -190,6 +192,7 @@ for (const media of ['photo', 'video'] as const) {
     await openAdvanced(page)
     await selectPortraitDraft(page)
     await changeHighlight(page)
+    await editorModes(page).getByRole('button', { name: 'Films', exact: true }).click()
     await page.getByRole('button', { name: 'Select film Velvia', exact: true }).click()
     await expect(advancedPanel(page)).toHaveCount(0)
     await expect(appliedColor(page)).toContainText('Velvia')

@@ -43,9 +43,12 @@ test('unfinished tuning cannot be exported through buttons or shortcuts', async 
   const highlight = panel.getByRole('slider', { name: 'Highlight', exact: true })
   await highlight.focus()
   await page.keyboard.press('ArrowRight')
-  await expect(page.getByRole('button', { name: 'Export processed image (Ctrl+S)', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Export processed image (Ctrl+S)', exact: true })).toHaveCount(0)
+  const draftHighlight = await highlight.getAttribute('aria-valuenow')
   const downloads: string[] = []
   page.on('download', download => downloads.push(download.suggestedFilename()))
   await page.keyboard.press('Control+s')
+  await expect(panel).toBeVisible()
+  await expect(highlight).toHaveAttribute('aria-valuenow', draftHighlight!)
   expect(downloads).toEqual([])
 })

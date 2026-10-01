@@ -84,7 +84,7 @@ async function expectFullViewportCover(page: Page): Promise<void> {
 
 async function visibleLowerControl(page: Page): Promise<Rect> {
   const cropTools = page.getByLabel('Crop tools', { exact: true })
-  const cropRegion = page.getByRole('region', { name: 'Crop image', exact: true })
+  const cropRegion = page.getByRole('region', { name: 'Crop settings', exact: true })
 
   for (const control of [cropTools, cropRegion, advancedPanel(page)]) {
     if (await control.isVisible().catch(() => false)) return readRect(control)
@@ -113,7 +113,7 @@ async function selectMobileFilm(page: Page): Promise<void> {
   const choice = page.getByRole('group', { name: 'Film selection', exact: true }).getByRole('button', { name: 'Select film Provia', exact: true })
   await choice.click()
   await expect(choice).toHaveAttribute('aria-pressed', 'true')
-  await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true }).getByRole('button', { name: 'Advanced', exact: true })).toBeEnabled()
+  await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true }).getByRole('button', { name: 'Open Advanced settings', exact: true })).toBeEnabled()
 }
 
 async function expectTouchTarget(locator: Locator): Promise<void> {
@@ -230,7 +230,7 @@ test.describe('Editor — mobile preview layout', () => {
 
     const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
     await expect(modes.getByRole('button', { name: /^films$/i })).toHaveAttribute('aria-current', 'page')
-    await expect(modes.getByRole('button', { name: /^advanced$/i })).toHaveCount(0)
+    await expect(modes.getByRole('button', { name: /^(Open|Close) Advanced settings$/ })).toHaveCount(0)
     await expect(modes.getByRole('button', { name: /^crop$/i })).toHaveCount(0)
     await expect(page.getByRole('button', { name: /Export/ })).toHaveCount(0)
   })
@@ -245,8 +245,8 @@ test.describe('Editor — mobile preview layout', () => {
       await expectFullViewportCover(page)
 
       const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
-      await modes.getByRole('button', { name: /^advanced$/i }).click()
-      await expect(modes.getByRole('button', { name: /^advanced$/i })).toHaveAttribute('aria-current', 'page')
+      await modes.getByRole('button', { name: /^(Open|Close) Advanced settings$/ }).click()
+      await expect(modes.getByRole('button', { name: /^(Open|Close) Advanced settings$/ })).toHaveAttribute('aria-current', 'page')
       await expect(advancedPanel(page)).toBeVisible()
       await expectContainedInWorkspace(page)
       await advancedPanel(page).getByRole('button', { name: 'Cancel', exact: true }).click()
@@ -292,7 +292,7 @@ test.describe('Editor — mobile preview layout', () => {
       test('keeps touch targets, rows, and text within the viewport', async ({ page, editorPage }) => {
         const header = page.locator('header:visible')
         const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
-        const actions = page.locator('.mobile-editor-actions:visible')
+        const actions = page.getByRole('toolbar', { name: 'Editor actions', exact: true })
 
         await expectVisibleTouchTargets(header.locator('button:visible'))
         await expectVisibleTouchTargets(modes.locator('button:visible'))
@@ -319,7 +319,7 @@ test.describe('Editor — mobile preview layout', () => {
         await waitForEditor(page)
         await selectMobileFilm(page)
 
-        const batchActions = page.locator('.mobile-editor-actions:visible')
+        const batchActions = page.getByRole('toolbar', { name: 'Editor actions', exact: true })
         await expect(batchActions.getByRole('button', { name: /Apply current color to all 2 images/ })).toBeVisible()
         await expect(batchActions.getByRole('button', { name: 'Export all photos', exact: true })).toBeVisible()
         await stressTextSize(page)
@@ -354,7 +354,7 @@ test.describe('Editor — mobile preview layout', () => {
         await expectContainedInWorkspace(page)
         await page.keyboard.press('Escape')
         await expect(panel).toHaveCount(0)
-        await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true }).getByRole('button', { name: 'Advanced', exact: true })).toBeFocused()
+        await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true }).getByRole('button', { name: 'Open Advanced settings', exact: true })).toBeFocused()
       })
     })
   }
@@ -410,10 +410,10 @@ test.describe('Editor — mobile preview layout', () => {
 
     const openCrop = page.getByRole('button', { name: 'Open crop session', exact: true })
     await openCrop.click()
-    const cropRegion = page.getByRole('region', { name: 'Crop image', exact: true })
+    const cropRegion = page.getByRole('region', { name: 'Crop settings', exact: true })
     await expect(cropRegion).toBeVisible()
     await expect(cropRegion).not.toHaveAttribute('aria-modal', 'true')
-    await expect(page.getByRole('dialog', { name: 'Crop image', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('dialog', { name: /Crop/ })).toHaveCount(0)
     await expect(modes).toBeVisible()
     await expect(modes.getByRole('button', { name: /^crop$/i })).toHaveAttribute('aria-current', 'page')
     await expectContainedInWorkspace(page)
