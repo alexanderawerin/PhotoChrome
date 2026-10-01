@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { strFromU8, unzipSync } from 'fflate'
 import {
   createBatchArchiveName,
@@ -11,6 +11,9 @@ import { ImageProcessor } from './processor'
 import { getRecipe } from '../presets/recipes'
 import { createDefaultTransformState } from './transform'
 import type { ImageItem } from './types'
+import { materializePhotoPixels } from './photo-source'
+
+vi.mock('./photo-source', () => ({ materializePhotoPixels: vi.fn() }))
 
 const recipe = getRecipe('classic-neg-cinema')!
 const imageData = { width: 1, height: 1, data: new Uint8ClampedArray([1, 2, 3, 255]) } as ImageData
@@ -18,16 +21,19 @@ const item = (fileName: string, withRecipe = true): ImageItem => ({
   id: fileName,
   file: new File(['image'], fileName, { type: 'image/jpeg' }),
   fileName,
-  original: imageData,
+  sourceSize: { width: 1, height: 1 },
   thumbnail: imageData,
   recipe: withRecipe ? recipe : null,
   customSettings: {},
-  transformedOriginal: imageData,
   transformedThumbnail: imageData,
   transform: createDefaultTransformState(),
 })
 
-afterEach(() => vi.restoreAllMocks())
+beforeEach(() => vi.mocked(materializePhotoPixels).mockReset().mockResolvedValue(imageData))
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.mocked(materializePhotoPixels).mockReset()
+})
 
 describe('batch export naming', () => {
   it('creates the required timestamped archive name', () => {
@@ -64,7 +70,9 @@ describe('exportPhotoBatch', () => {
   it('includes Original and geometry-only photos with explicit Original metadata', async () => {
     const original = item('original.jpg', false)
     const geometry = item('geometry.jpg', false)
-    geometry.transformedOriginal = { width: 2, height: 1, data: new Uint8ClampedArray(8) } as ImageData
+    geometry.transform.quarterTurns = 90
+    const rendered = { width: 2, height: 1, data: new Uint8ClampedArray(8) } as ImageData
+    vi.mocked(materializePhotoPixels).mockResolvedValueOnce(imageData).mockResolvedValueOnce(rendered)
     const process = vi.spyOn(ImageProcessor, 'processAsync').mockImplementation(async data => data)
     vi.spyOn(ImageProcessor, 'addWatermark').mockImplementation(data => data)
     const encode = vi.spyOn(ImageProcessor, 'imageDataToBlob').mockResolvedValue(new Blob(['jpeg']))
@@ -75,7 +83,7 @@ describe('exportPhotoBatch', () => {
     expect(Object.keys(unzipSync(new Uint8Array(await result.blob.arrayBuffer())))).toEqual([
       'photochrome_original_original.jpg', 'photochrome_original_geometry.jpg',
     ])
-    expect(process.mock.calls[1][0]).toBe(geometry.transformedOriginal)
+    expect(process.mock.calls[1][0]).toBe(rendered)
     expect(process.mock.calls[1][1]).toMatchObject({ colorMode: 'original', targetSize: { width: 2, height: 1 } })
     expect(encode.mock.calls[1][2]).toEqual({ recipeName: 'Original', recipeId: 'original', settings: {} })
   })
@@ -85,7 +93,8 @@ describe('exportPhotoBatch', () => {
     const second = item('two.jpg')
     second.recipe = structuredClone(recipe)
     second.customSettings = { color: 3 }
-    const geometry = second.transformedOriginal
+    second.transform.cropRect.x = 0.25
+    const file = second.file
     let release!: () => void
     let started!: () => void
     const gate = new Promise<void>(resolve => { release = resolve })
@@ -100,16 +109,53 @@ describe('exportPhotoBatch', () => {
     vi.spyOn(ImageProcessor, 'createThumbnail').mockResolvedValue(imageData)
     const pending = exportPhotoBatch([first, second])
     await processing
+    expect(materializePhotoPixels).toHaveBeenCalledOnce()
     second.recipe!.id = 'changed'
     second.recipe = null
     second.customSettings.color = 9
-    second.transformedOriginal = { width: 2, height: 2, data: new Uint8ClampedArray(16) } as ImageData
+    second.transform.cropRect.x = 0.75
+    second.transform.quarterTurns = 90
     release()
     const result = await pending
     expect(result.status).toBe('success')
     expect(process.mock.calls[1][1].recipe.id).toBe('classic-neg-cinema')
     expect(process.mock.calls[1][1].settings.color).toBe(3)
-    expect(process.mock.calls[1][0]).toBe(geometry)
+    expect(vi.mocked(materializePhotoPixels).mock.calls[1][0]).toMatchObject({ file, sourceSize: { width: 1, height: 1 }, transform: { quarterTurns: 0, cropRect: { x: 0.25 } } })
+  })
+
+  it('materializes full-resolution photos sequentially through encoding completion', async () => {
+    let release!: () => void
+    let started!: () => void
+    const gate = new Promise<void>(resolve => { release = resolve })
+    const encoding = new Promise<void>(resolve => { started = resolve })
+    vi.spyOn(ImageProcessor, 'processAsync').mockResolvedValue(imageData)
+    vi.spyOn(ImageProcessor, 'addWatermark').mockReturnValue(imageData)
+    vi.spyOn(ImageProcessor, 'imageDataToBlob').mockImplementationOnce(async () => {
+      started()
+      await gate
+      return new Blob(['first'])
+    }).mockResolvedValue(new Blob(['second']))
+    vi.spyOn(ImageProcessor, 'createThumbnail').mockResolvedValue(imageData)
+    const pending = exportPhotoBatch([item('one.jpg'), item('two.jpg')])
+    await encoding
+    expect(materializePhotoPixels).toHaveBeenCalledOnce()
+    release()
+    expect((await pending).status).toBe('success')
+    expect(vi.mocked(materializePhotoPixels).mock.calls.map(([image]) => image.file.name)).toEqual(['one.jpg', 'two.jpg'])
+  })
+
+  it('does not process or return a ZIP after a late canceled source decode', async () => {
+    const controller = new AbortController()
+    vi.mocked(materializePhotoPixels).mockImplementationOnce(async () => {
+      controller.abort()
+      return imageData
+    })
+    const process = vi.spyOn(ImageProcessor, 'processAsync')
+    const result = await exportPhotoBatch([item('one.jpg'), item('two.jpg')], { signal: controller.signal })
+    expect(result).toEqual({ status: 'cancelled', exported: 0, skipped: 0, errors: 0 })
+    expect(materializePhotoPixels).toHaveBeenCalledOnce()
+    expect(process).not.toHaveBeenCalled()
+    expect('blob' in result).toBe(false)
   })
 
   it('returns an actionable error with no ZIP or previews when every photo fails', async () => {

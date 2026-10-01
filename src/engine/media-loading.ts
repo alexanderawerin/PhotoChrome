@@ -43,23 +43,22 @@ export async function decodeImages(
 
       try {
         signal?.throwIfAborted()
-        const { original, thumbnail } = await ImageProcessor.decodeImagePair(file, THUMBNAIL_MAX_SIZE, (width, height) => {
+        const { width, height, thumbnail } = await ImageProcessor.decodeImagePreview(file, THUMBNAIL_MAX_SIZE, (width, height) => {
           signal?.throwIfAborted()
           decodedItems[existingCount + index] = { file, width, height }
           const validation = validateMediaSelection(decodedItems)
           if (!validation.valid) throw new Error(validation.error.message)
-        })
+        }, signal)
 
         signal?.throwIfAborted()
         loadedImages[index] = {
           id: generateImageId(),
           file,
           fileName: file.name,
-          original,
+          sourceSize: { width, height },
           thumbnail,
           recipe: null,
           customSettings: {},
-          transformedOriginal: original,
           transformedThumbnail: thumbnail,
           transform: createDefaultTransformState(),
         }

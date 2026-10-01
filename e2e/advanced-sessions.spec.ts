@@ -3,6 +3,50 @@ import { uploadMultipleImages, waitForEditor } from './helpers/upload'
 import { advancedPanel, advancedTrigger, appliedColor, changeHighlight, editorCanvas, openAdvanced, previewPixels, selectPortraitDraft, startAdvancedMedia, type AdvancedMedia } from './helpers/advanced'
 
 for (const width of [393, 1600]) {
+  for (const failure of [false, true]) {
+    test(`photo Escape cancels a ${failure ? 'failed' : 'pending'} preview and restores focus at ${width}px`, async ({ page }) => {
+      await startAdvancedMedia(page, 'photo', width)
+      const base = await previewPixels(page, 'photo')
+      await openAdvanced(page)
+      const panel = advancedPanel(page)
+      await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
+      await expect(panel.getByRole('button', { name: 'Apply', exact: true })).toBeEnabled()
+      await page.evaluate(fail => {
+        const original = Worker.prototype.postMessage
+        const state = { seen: false, restore: () => { Worker.prototype.postMessage = original } }
+        ;(window as unknown as { draftWorker: typeof state }).draftWorker = state
+        Worker.prototype.postMessage = function (message: unknown, transfer: Transferable[] | StructuredSerializeOptions = []) {
+          const request = message as { type?: string; requestId?: string }
+          if (request.type === 'process') {
+            state.seen = true
+            if (fail) queueMicrotask(() => this.dispatchEvent(new MessageEvent('message', { data: {
+              type: 'error', requestId: request.requestId, message: 'Preview worker failure',
+            } })))
+            return
+          }
+          return original.call(this, message, Array.isArray(transfer) ? { transfer } : transfer)
+        }
+      }, failure)
+      try {
+        const slider = panel.getByRole('slider', { name: 'Highlight', exact: true })
+        await slider.focus()
+        await slider.press('ArrowRight')
+        await expect.poll(() => page.evaluate(() => (window as unknown as { draftWorker: { seen: boolean } }).draftWorker.seen)).toBe(true)
+        if (failure) await expect(page.getByRole('alert')).toContainText('Preview worker failure')
+        await expect(panel.getByRole('button', { name: 'Apply', exact: true })).toBeDisabled()
+        // Restoring transport leaves the old request held/failed; Escape must
+        // cancel its owner before the restored applied preview can complete.
+        await page.evaluate(() => (window as unknown as { draftWorker: { restore: () => void } }).draftWorker.restore())
+        await slider.press('Escape')
+        await expect(panel).toHaveCount(0)
+        await expect(appliedColor(page)).not.toContainText('Modified')
+        await expect.poll(() => previewPixels(page, 'photo')).toBe(base)
+        await expect(advancedTrigger(page)).toBeFocused()
+      } finally {
+        await page.evaluate(() => (window as unknown as { draftWorker: { restore: () => void } }).draftWorker.restore())
+      }
+    })
+  }
   for (const media of ['photo', 'video'] as const satisfies readonly AdvancedMedia[]) {
     test.describe(`${media} Advanced at ${width}px`, () => {
       test('Recipes and Manual preview one draft and Apply commits both together', async ({ page }) => {

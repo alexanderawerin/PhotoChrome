@@ -819,3 +819,9 @@ export function getPhotoWebGLProcessor(): WebGLProcessor {
   }
   return photoProcessorInstance
 }
+
+/** Release an existing photo context without creating one during cleanup. */
+export function disposePhotoWebGLProcessor(): void {
+  photoProcessorInstance?.dispose()
+  photoProcessorInstance = null
+}

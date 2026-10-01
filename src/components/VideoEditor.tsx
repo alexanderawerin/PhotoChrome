@@ -14,6 +14,8 @@ import { getVideoOutputSize } from '../engine/video/geometry'
 import { HelpDialog } from './HelpDialog'
 import { Recipe, RecipeSettings, ProcessingPlan } from '../engine/types'
 import { prepareProcessingPlan } from '../engine/processing-plan'
+import { clearPreviewCaches } from '../engine/preview-image'
+import { disposePhotoWebGLProcessor } from '../engine/webgl/processor'
 import { editorCommands } from '../engine/editor-commands'
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from './ui/sheet'
 import type { VideoData } from '../engine/media-loading'
@@ -95,6 +97,10 @@ export function VideoEditor({
   interactionDisabled = false,
 }: VideoEditorProps) {
   const { video, thumbnail, metadata } = videoData
+  useEffect(() => () => {
+    clearPreviewCaches()
+    disposePhotoWebGLProcessor()
+  }, [videoData])
   const isDesktop = useIsMdUp()
   const [color, setColor] = useState<{ recipe: Recipe | null; settings: RecipeSettings }>({ recipe: null, settings: {} })
   const activeRecipe = color.recipe
@@ -345,7 +351,7 @@ export function VideoEditor({
           if (!e.metaKey && !e.ctrlKey) changeGeometry({ flipHorizontal: !visibleTransform.flipHorizontal })
           break
         case 'escape':
-          if (session) {
+          if (commands.cancelDraft) {
             handleTuningCancel()
           }
           break

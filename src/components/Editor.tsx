@@ -14,6 +14,9 @@ import { ThumbnailStrip } from './ThumbnailStrip'
 import { ImageCounter } from './ImageCounter'
 import { Recipe, ImageItem } from '../engine/types'
 import { ImageProcessor } from '../engine/processor'
+import { materializePhotoPixels } from '../engine/photo-source'
+import { clearPreviewCaches } from '../engine/preview-image'
+import { disposePhotoWebGLProcessor } from '../engine/webgl/processor'
 import { prepareProcessingPlan } from '../engine/processing-plan'
 import { editorCommands } from '../engine/editor-commands'
 import { useEditorSession } from '../hooks/useEditorSession'
@@ -44,7 +47,7 @@ interface EditorProps {
 /**
  * Главный компонент редактора.
  * Использует композицию хуков для разделения ответственности:
- * - useEditorSession: черновики Adjust/Crop и сохранённые настройки
+ * - useEditorSession: черновики Advanced/Crop и сохранённые настройки
  * - useKeyboardShortcuts: горячие клавиши
  * - useViewportHeight: корректная высота на мобильных
  */
@@ -145,15 +148,17 @@ export function Editor({
   // Both committed edits and the active draft feed the same preview path.
   useEffect(() => {
     const controller = new AbortController()
+    setIsProcessing(true)
+    setPreviewError(null)
     const loadAndPreview = async () => {
-      setIsProcessing(true)
-      setPreviewError(null)
       try {
         const plan = profile
           ? await prepareProcessingPlan(profile, transformedThumbnail, settings, { signal: controller.signal })
           : null
+        const data = plan
+          ? await ImageProcessor.processAsync(transformedThumbnail, plan, { signal: controller.signal })
+          : transformedThumbnail
         if (!controller.signal.aborted) {
-          const data = plan ? ImageProcessor.process(transformedThumbnail, plan) : transformedThumbnail
           setPreview({ imageId: currentImage.id, data, owner: previewOwner })
         }
       } catch (error) {
@@ -162,8 +167,14 @@ export function Editor({
         if (!controller.signal.aborted) setIsProcessing(false)
       }
     }
-    void loadAndPreview()
-    return () => controller.abort()
+    // Combine rapid input changes before copying pixels into the existing
+    // worker. Obsolete requests retain the same abort owner.
+    const timer = profile ? setTimeout(() => { void loadAndPreview() }, 24) : null
+    if (!profile) void loadAndPreview()
+    return () => {
+      if (timer !== null) clearTimeout(timer)
+      controller.abort()
+    }
   }, [currentImage.id, profile, transformedThumbnail, settings, previewRetry, previewOwner])
 
   // ============================================================================
@@ -215,15 +226,27 @@ export function Editor({
    * Переключение видимости панели
    */
   const advancedFocusRef = useRef<HTMLElement | null>(null)
+  const restoreAdvancedFocus = useRef(false)
   const closeAdvanced = useCallback((apply: boolean) => {
     if (apply && !isPreviewReady) return
     if (apply) edit.commit()
     else edit.cancel()
     setIsPanelOpen(false)
     setMobileMode('presets')
-    const trigger = advancedFocusRef.current
-    requestAnimationFrame(() => { if (trigger?.isConnected) trigger.focus({ preventScroll: true }) })
+    restoreAdvancedFocus.current = true
   }, [edit, isPreviewReady])
+
+  useEffect(() => {
+    if (isTuning || !isPreviewReady || !restoreAdvancedFocus.current) return
+    const frame = requestAnimationFrame(() => {
+      const trigger = advancedFocusRef.current
+      if (trigger?.isConnected && !(trigger instanceof HTMLButtonElement && trigger.disabled)) {
+        trigger.focus({ preventScroll: true })
+        restoreAdvancedFocus.current = false
+      }
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [isTuning, isPreviewReady])
 
   const handleTuningOpen = useCallback(() => {
     if (isTuning) {
@@ -264,6 +287,7 @@ export function Editor({
   useEffect(() => {
     setIsPanelOpen(false)
     setMobileMode('presets')
+    restoreAdvancedFocus.current = false
   }, [currentImage.id])
 
   // ============================================================================
@@ -285,16 +309,17 @@ export function Editor({
     setIsExporting(true)
     try {
       const mergedSettings = { ...exportImage.recipe?.settings, ...exportImage.customSettings }
+      const imageData = await materializePhotoPixels(exportImage, controller.signal)
       const plan = await prepareProcessingPlan(
         exportImage.recipe,
-        exportImage.transformedOriginal,
+        imageData,
         mergedSettings,
         { signal: controller.signal }
       )
 
       const baseName = exportImage.fileName.replace(/\.[^.]+$/, '')
       const result = await exportPhoto({
-        imageData: exportImage.transformedOriginal,
+        imageData,
         plan,
         fileName: `photochrome_${exportImage.recipe?.id ?? 'original'}_${baseName}.jpg`,
         watermarkText: APP_URL,
@@ -307,13 +332,18 @@ export function Editor({
       })
       if (controller.signal.aborted) return
       if (result.status === 'error') setExportError(result.error)
-      if (result.status === 'success') setCompletion({ kind: 'single', exported: 1, skipped: 0, errors: 0, previews: result.preview ? [result.preview] : [] })
+      if (result.status === 'success') {
+        exportSnapshotRef.current = null
+        setCompletion({ kind: 'single', exported: 1, skipped: 0, errors: 0, previews: result.preview ? [result.preview] : [] })
+      }
+      if (result.status === 'cancelled') exportSnapshotRef.current = null
     } catch (error) {
       if (!controller.signal.aborted) setExportError({ code: 'processing-failed', message: error instanceof Error ? error.message : 'Film processing failed' })
     } finally {
       if (exportAbortControllerRef.current === controller) {
         exportAbortControllerRef.current = null
       }
+      if (controller.signal.aborted) exportSnapshotRef.current = null
       setIsExporting(false)
     }
   }, [currentImage, commands.export])
@@ -358,7 +388,10 @@ export function Editor({
       setBatchProgress(null)
     }
 
-    if (controller.signal.aborted) return
+    if (controller.signal.aborted || result.status === 'cancelled') {
+      exportSnapshotRef.current = null
+      return
+    }
     if (result.status === 'error') {
       setExportError({ code: 'processing-failed', message: result.message })
     }
@@ -370,7 +403,10 @@ export function Editor({
         anchor.href = url
         anchor.download = result.archiveName
         document.body.appendChild(anchor)
-        try { anchor.click() } finally { anchor.remove() }
+        try {
+          controller.signal.throwIfAborted()
+          anchor.click()
+        } finally { anchor.remove() }
         setCompletion({
           kind: 'batch',
           exported: result.exported,
@@ -378,8 +414,10 @@ export function Editor({
           errors: result.errors,
           previews: result.previews,
         })
+        exportSnapshotRef.current = null
       } catch (error) {
-        setExportError({ code: 'download-failed', message: error instanceof Error ? error.message : 'Failed to download archive' })
+        if (controller.signal.aborted) exportSnapshotRef.current = null
+        else setExportError({ code: 'download-failed', message: error instanceof Error ? error.message : 'Failed to download archive' })
       } finally {
         if (url) URL.revokeObjectURL(url)
       }
@@ -392,6 +430,10 @@ export function Editor({
   useEffect(() => () => {
     exportAbortControllerRef.current?.abort()
     batchAbortControllerRef.current?.abort()
+    exportSnapshotRef.current = null
+    ImageProcessor.disposeProcessingWorker()
+    clearPreviewCaches()
+    disposePhotoWebGLProcessor()
   }, [])
 
   // ============================================================================
@@ -655,6 +697,7 @@ export function Editor({
               key={mode}
               type="button"
               onClick={() => changeMobileMode(mode)}
+              disabled={mode === 'adjust' ? !commands.advanced : !commands.selectColor}
               className={`relative flex min-h-11 flex-wrap items-center justify-center gap-x-1.5 gap-y-1 rounded-full px-1 py-2 text-sm capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${mobileMode === mode ? 'text-white' : 'text-zinc-400'}`}
               aria-current={mobileMode === mode ? 'page' : undefined}
             >
@@ -839,7 +882,7 @@ export function Editor({
 
 function snapshotPhoto(image: ImageItem): ImageItem {
   return { ...image, recipe: image.recipe ? structuredClone(image.recipe) : null,
-    customSettings: structuredClone(image.customSettings), transform: structuredClone(image.transform) }
+    sourceSize: { ...image.sourceSize }, customSettings: structuredClone(image.customSettings), transform: structuredClone(image.transform) }
 }
 
 // ============================================================================

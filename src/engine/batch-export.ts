@@ -3,6 +3,7 @@ import { prepareProcessingPlan } from './processing-plan'
 import { ImageProcessor } from './processor'
 import { createExportPreview, type ExportPreview } from './photo-export'
 import type { ImageItem } from './types'
+import { materializePhotoPixels } from './photo-source'
 
 export interface BatchExportProgress {
   current: number
@@ -113,7 +114,7 @@ export async function exportPhotoBatch(
   images: readonly ImageItem[],
   options: BatchExportOptions = {}
 ): Promise<BatchExportResult> {
-  images = images.map(image => ({ ...image, recipe: image.recipe ? structuredClone(image.recipe) : null, customSettings: { ...image.customSettings } }))
+  images = images.map(image => ({ ...image, sourceSize: { ...image.sourceSize }, transform: structuredClone(image.transform), recipe: image.recipe ? structuredClone(image.recipe) : null, customSettings: { ...image.customSettings } }))
   const { Zip, ZipPassThrough, strToU8 } = await import('fflate')
   const chunks: Uint8Array[] = []
   let completeZip: ((blob: Blob) => void) | null = null
@@ -153,14 +154,17 @@ export async function exportPhotoBatch(
       const image = images[index]
       progress(index, image.fileName)
       try {
+        const pixels = await materializePhotoPixels(image, options.signal)
+        options.signal?.throwIfAborted()
         const plan = await prepareProcessingPlan(
           image.recipe,
-          image.transformedOriginal,
+          pixels,
           image.customSettings,
           { signal: options.signal }
         )
+        options.signal?.throwIfAborted()
         const processed = await ImageProcessor.processAsync(
-          image.transformedOriginal,
+          pixels,
           plan,
           { signal: options.signal }
         )
@@ -184,6 +188,7 @@ export async function exportPhotoBatch(
         exported++
         if (previews.length < 4) {
           const preview = await createExportPreview(blob, name)
+          options.signal?.throwIfAborted()
           if (preview) previews.push(preview)
         }
       } catch (error) {

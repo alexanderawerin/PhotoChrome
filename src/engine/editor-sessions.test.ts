@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   activeEditorSession,
-  beginAdjustSession,
   beginCropSession,
   beginTuningSession,
   editorSessionChanges,
-  resetAdjustSession,
   setCropRatio,
-  updateAdjustSession,
   updateCropSession,
   updateTuningSession,
   selectTuningProfile,
@@ -25,37 +22,6 @@ const recipe: Recipe = {
   filmSimulation: 'provia',
   settings: { highlight: 2, whiteBalance: 'daylight' },
 }
-
-describe('adjust sessions', () => {
-  it('keeps committed settings unchanged while editing a separate draft', () => {
-    const saved = { highlight: -1, color: 2 }
-    const session = beginAdjustSession(owner, 'highlight', saved)
-    const changed = updateAdjustSession(session, 4)
-
-    expect(saved).toEqual({ highlight: -1, color: 2 })
-    expect(session.draft).not.toBe(saved)
-    expect(changed.draft).toEqual({ highlight: 4, color: 2 })
-  })
-
-  it('resets to the active recipe value instead of zero', () => {
-    const session = updateAdjustSession(beginAdjustSession(owner, 'highlight', {}), -2)
-    expect(resetAdjustSession(session, recipe).draft.highlight).toBe(2)
-  })
-
-  it('keeps White Balance and Temperature mutually exclusive', () => {
-    const temperature = updateAdjustSession(
-      beginAdjustSession(owner, 'whiteBalanceKelvin', { whiteBalance: 'cloudy' }),
-      7200,
-    )
-    expect(temperature.draft).toEqual({ whiteBalanceKelvin: 7200 })
-
-    const whiteBalance = updateAdjustSession(
-      beginAdjustSession(owner, 'whiteBalance', { whiteBalanceKelvin: 7200 }),
-      'shade',
-    )
-    expect(whiteBalance.draft).toEqual({ whiteBalance: 'shade' })
-  })
-})
 
 describe('crop sessions', () => {
   it('preserves committed geometry while normalizing a separate draft', () => {
@@ -142,12 +108,10 @@ describe('committing the active photo session', () => {
     expect(editorSessionChanges(restored, { ...owner, recipeId: 'new-film' })).toBeNull()
   })
 
-  it.each(['adjust', 'tuning', 'crop'] as const)('rejects a %s draft after changing photos or presets', kind => {
+  it.each(['tuning', 'crop'] as const)('rejects a %s draft after changing photos or presets', kind => {
     const session = kind === 'crop'
       ? beginCropSession(owner, createDefaultTransformState())
-      : kind === 'adjust'
-        ? beginAdjustSession(owner, 'highlight', { highlight: 4 })
-        : beginTuningSession(owner, { highlight: 4 })
+      : beginTuningSession(owner, { highlight: 4 }, recipe)
 
     for (const otherOwner of [
       { ...owner, imageId: 'photo-b' },
@@ -158,7 +122,7 @@ describe('committing the active photo session', () => {
     }
   })
 
-  it('commits Crop geometry without copying Adjust settings, and leaves Cancel reversible', () => {
+  it('commits Crop geometry without copying color settings, and leaves Cancel reversible', () => {
     const saved = createDefaultTransformState()
     const session = updateCropSession(beginCropSession(owner, saved), {
       quarterTurns: 90, flipHorizontal: true, fineAngle: 12.3, cropRatio: '1:1',

@@ -24,4 +24,10 @@ describe('editor command availability', () => {
     expect(commands.selectColor).toBe(true)
     expect(commands.export || commands.compare).toBe(false)
   })
+
+  it.each(['crop', 'tuning'] as const)('a pending %s preview allows Cancel while Apply and export wait', session => {
+    const commands = editorCommands({ session, processing: true, hasColor: true })
+    expect(commands.cancelDraft).toBe(true)
+    expect(commands.editDraft || commands.export || commands.applyToAll).toBe(false)
+  })
 })

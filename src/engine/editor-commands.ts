@@ -5,7 +5,7 @@ export interface EditorCommandContext {
   modal?: boolean
   exporting?: boolean
   applying?: boolean
-  session?: 'crop' | 'tuning' | 'adjust' | null
+  session?: 'crop' | 'tuning' | null
   hasColor?: boolean
   multiplePhotos?: boolean
 }
@@ -25,6 +25,7 @@ export function editorCommands(context: EditorCommandContext) {
     export: resolved,
     applyToAll: resolved && !!context.multiplePhotos,
     editDraft: editing && !!context.session,
+    cancelDraft: available && !context.demo && !!context.session,
     panel: available && !context.session,
     add: available && !context.session,
     help: available && !context.session,

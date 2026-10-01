@@ -154,7 +154,7 @@ export function useKeyboardShortcuts(
         break
 
       case 'escape':
-        if (!commands.editDraft) break
+        if (!commands.cancelDraft) break
         if (isCropping) {
           onCropCancel()
         } else if (isTuning) {

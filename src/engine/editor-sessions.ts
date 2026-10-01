@@ -8,33 +8,9 @@ import {
   type NormalizedCropRect,
 } from './transform'
 
-export type AdjustTool = keyof Pick<RecipeSettings,
-  | 'highlight'
-  | 'shadow'
-  | 'color'
-  | 'sharpness'
-  | 'clarity'
-  | 'wbShiftRed'
-  | 'wbShiftBlue'
-  | 'grainEffect'
-  | 'grainSize'
-  | 'colorChromeEffect'
-  | 'colorChromeFXBlue'
-  | 'dynamicRange'
-  | 'whiteBalance'
-  | 'whiteBalanceKelvin'
->
-
 export interface EditOwner {
   imageId: string
   recipeId: string | null
-}
-
-export interface AdjustSession {
-  kind: 'adjust'
-  owner: EditOwner
-  tool: AdjustTool
-  draft: RecipeSettings
 }
 
 export interface CropSession {
@@ -50,7 +26,7 @@ export interface TuningSession {
   profile: Recipe | null
 }
 
-export type EditorSession = AdjustSession | TuningSession | CropSession
+export type EditorSession = TuningSession | CropSession
 
 export function editOwner(image: Pick<ImageItem, 'id' | 'recipe'>): EditOwner {
   return { imageId: image.id, recipeId: image.recipe?.id ?? null }
@@ -72,9 +48,7 @@ export function editorSessionChanges(
   if (!active) return null
   return active.kind === 'crop'
     ? { transform: cloneTransform(active.draft) }
-    : active.kind === 'tuning'
-      ? { recipe: cloneProfile(active.profile), customSettings: cloneSettings(active.draft) }
-      : { customSettings: cloneSettings(active.draft) }
+    : { recipe: cloneProfile(active.profile), customSettings: cloneSettings(active.draft) }
 }
 
 export function beginTuningSession(owner: EditOwner, settings: RecipeSettings, profile: Recipe | null = null): TuningSession {
@@ -99,30 +73,6 @@ export function updateTuningSession(session: TuningSession, settings: RecipeSett
 }
 
 const cloneSettings = (settings: RecipeSettings): RecipeSettings => ({ ...settings })
-
-export function beginAdjustSession(owner: EditOwner, tool: AdjustTool, settings: RecipeSettings): AdjustSession {
-  return { kind: 'adjust', owner, tool, draft: cloneSettings(settings) }
-}
-
-export function updateAdjustSession(
-  session: AdjustSession,
-  value: RecipeSettings[AdjustTool],
-): AdjustSession {
-  const draft = { ...session.draft, [session.tool]: value }
-  if (session.tool === 'whiteBalance') delete draft.whiteBalanceKelvin
-  if (session.tool === 'whiteBalanceKelvin') delete draft.whiteBalance
-  return { ...session, draft }
-}
-
-export function resetAdjustSession(session: AdjustSession, recipe: Recipe): AdjustSession {
-  const draft = { ...session.draft }
-  const recipeValue = recipe.settings[session.tool]
-  if (recipeValue === undefined) delete draft[session.tool]
-  else Object.assign(draft, { [session.tool]: recipeValue })
-  if (session.tool === 'whiteBalance') delete draft.whiteBalanceKelvin
-  if (session.tool === 'whiteBalanceKelvin') delete draft.whiteBalance
-  return { ...session, draft }
-}
 
 export function beginCropSession(owner: EditOwner, transform: ImageTransformState): CropSession {
   return { kind: 'crop', owner, draft: cloneTransform(transform) }

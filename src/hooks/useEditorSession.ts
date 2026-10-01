@@ -2,19 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ImageItem, Recipe, RecipeSettings } from '../engine/types'
 import {
   activeEditorSession,
-  beginAdjustSession,
   beginCropSession,
   beginTuningSession,
   editOwner,
   editorSessionChanges,
-  resetAdjustSession,
   setCropRatio,
-  updateAdjustSession,
   updateCropSession,
   updateTuningSession,
   selectTuningProfile,
   restoreTuningBase,
-  type AdjustTool,
   type EditorSession,
 } from '../engine/editor-sessions'
 import { nextQuarterTurn, renderImageTransform, toggleHorizontalFlip, type ImageTransformState } from '../engine/transform'
@@ -31,7 +27,7 @@ export function useEditorSession(
   const [draft, setDraft] = useState<EditorSession | null>(null)
   const owner = editOwner(image)
   const session = activeEditorSession(draft, owner)
-  const settings = session && session.kind !== 'crop' ? session.draft : image.customSettings
+  const settings = session?.kind === 'tuning' ? session.draft : image.customSettings
   const profile = session?.kind === 'tuning' ? session.profile : image.recipe
   const transformState = session?.kind === 'crop' ? session.draft : image.transform
   const transformedThumbnail = useMemo(() => (
@@ -50,7 +46,6 @@ export function useEditorSession(
       if ('transform' in changes) {
         onImageUpdate(image.id, {
           ...changes,
-          transformedOriginal: renderImageTransform(image.original, changes.transform),
           transformedThumbnail,
         })
       } else {
@@ -77,7 +72,6 @@ export function useEditorSession(
     const next = { ...image.transform, ...update }
     onImageUpdate(image.id, {
       transform: next,
-      transformedOriginal: renderImageTransform(image.original, next),
       transformedThumbnail: renderImageTransform(image.thumbnail, next),
     })
   }
@@ -90,15 +84,6 @@ export function useEditorSession(
     transformedThumbnail,
     cancel,
     commit,
-    openAdjust: (tool: AdjustTool) => setDraft(beginAdjustSession(owner, tool, image.customSettings)),
-    changeAdjust: (value: RecipeSettings[AdjustTool]) => setDraft(previous => {
-      const current = activeEditorSession(previous, owner)
-      return current?.kind === 'adjust' ? updateAdjustSession(current, value) : current
-    }),
-    resetAdjust: () => setDraft(previous => {
-      const current = activeEditorSession(previous, owner)
-      return current?.kind === 'adjust' && image.recipe ? resetAdjustSession(current, image.recipe) : current
-    }),
     openTuning: () => { if (image.recipe) setDraft(beginTuningSession(owner, image.customSettings, image.recipe)) },
     selectDraftProfile: (next: Recipe) => setDraft(previous => {
       const current = activeEditorSession(previous, owner)
@@ -121,16 +106,6 @@ export function useEditorSession(
         : ((transformState.quarterTurns + angle) % 360) as ImageTransformState['quarterTurns'],
     }),
     flip: () => changeGeometry({ flipHorizontal: toggleHorizontalFlip(transformState).flipHorizontal }),
-    /** Export the visible draft without silently committing it to the photo. */
-    exportImage: (): ImageItem => ({
-      ...image,
-      recipe: profile,
-      customSettings: settings,
-      transform: transformState,
-      transformedThumbnail,
-      transformedOriginal: transformState === image.transform
-        ? image.transformedOriginal
-        : renderImageTransform(image.original, transformState),
-    }),
+
   }
 }

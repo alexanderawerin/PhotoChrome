@@ -4,13 +4,14 @@ import { Spinner } from './ui/spinner'
 import { Card } from './ui/card'
 import { Recipe } from '../engine/types'
 import { ImageProcessor } from '../engine/processor'
+import { usePreviewVisibility } from '../hooks/usePreviewVisibility'
+import { resizePreviewImage, processedPreviewCache } from '../engine/preview-image'
 import { getImageKey } from '../engine/image-identity'
 import { prepareProcessingPlan } from '../engine/processing-plan'
 import { 
   RECIPE_CARD_PREVIEW_SIZE, 
   PREVIEW_GENERATION_DELAY,
-  PREVIEW_CACHE_MAX_SIZE,
-  SMALL_IMAGE_CACHE_MAX_SIZE
+  PREVIEW_CACHE_MAX_SIZE
 } from '../constants'
 
 interface RecipeCardProps {
@@ -25,88 +26,6 @@ interface RecipeCardProps {
   largeTouchTargets?: boolean
 }
 
-/**
- * Кэш для уменьшенных изображений.
- * Ключ: идентификатор неизменяемого ImageData
- * Значение: уменьшенное ImageData
- */
-const smallImageCache = new Map<string, ImageData>()
-
-/**
- * Кэш для обработанных превью.
- * Ключ: строка вида "recipeId_imageKey"
- * Значение: обработанное ImageData
- */
-const processedPreviewCache = new Map<string, ImageData>()
-
-/**
- * Переиспользуемые canvas элементы для уменьшения аллокаций памяти.
- * Создаются лениво при первом использовании.
- */
-let reusableSourceCanvas: HTMLCanvasElement | null = null
-let reusableSourceCtx: CanvasRenderingContext2D | null = null
-let reusableTargetCanvas: HTMLCanvasElement | null = null
-let reusableTargetCtx: CanvasRenderingContext2D | null = null
-
-/**
- * Инициализирует переиспользуемые canvas элементы.
- * Вызывается лениво при первой необходимости.
- */
-function ensureCanvasElements(): boolean {
-  if (!reusableSourceCanvas) {
-    reusableSourceCanvas = document.createElement('canvas')
-    reusableSourceCtx = reusableSourceCanvas.getContext('2d', { willReadFrequently: true })
-  }
-  if (!reusableTargetCanvas) {
-    reusableTargetCanvas = document.createElement('canvas')
-    reusableTargetCtx = reusableTargetCanvas.getContext('2d', { willReadFrequently: true })
-  }
-  return !!(reusableSourceCtx && reusableTargetCtx)
-}
-
-/**
- * Создаёт уменьшенное изображение для превью с кэшированием.
- * Переиспользует canvas элементы для уменьшения аллокаций памяти.
- */
-function createSmallImage(sourceImage: ImageData): ImageData | null {
-  const cacheKey = getImageKey(sourceImage)
-  
-  // Проверяем кэш
-  const cached = smallImageCache.get(cacheKey)
-  if (cached) return cached
-
-  // Инициализируем canvas элементы при необходимости
-  if (!ensureCanvasElements()) return null
-
-  const scale = Math.min(
-    RECIPE_CARD_PREVIEW_SIZE / sourceImage.width,
-    RECIPE_CARD_PREVIEW_SIZE / sourceImage.height
-  )
-  const width = Math.round(sourceImage.width * scale)
-  const height = Math.round(sourceImage.height * scale)
-
-  // Устанавливаем размеры source canvas и рисуем исходное изображение
-  reusableSourceCanvas!.width = sourceImage.width
-  reusableSourceCanvas!.height = sourceImage.height
-  reusableSourceCtx!.putImageData(sourceImage, 0, 0)
-
-  // Устанавливаем размеры target canvas и масштабируем
-  reusableTargetCanvas!.width = width
-  reusableTargetCanvas!.height = height
-  reusableTargetCtx!.drawImage(reusableSourceCanvas!, 0, 0, width, height)
-  
-  const result = reusableTargetCtx!.getImageData(0, 0, width, height)
-
-  // Сохраняем в кэш с FIFO-вытеснением
-  if (smallImageCache.size >= SMALL_IMAGE_CACHE_MAX_SIZE) {
-    const firstKey = smallImageCache.keys().next().value
-    if (firstKey) smallImageCache.delete(firstKey)
-  }
-  smallImageCache.set(cacheKey, result)
-
-  return result
-}
-
 function RecipeCardComponent({ 
   recipe, 
   sourceImage, 
@@ -117,6 +36,8 @@ function RecipeCardComponent({
   hideFavoriteButton = false,
   largeTouchTargets = false
 }: RecipeCardProps) {
+  const cardRef = useRef<HTMLDivElement>(null)
+  const visible = usePreviewVisibility(cardRef)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [previewData, setPreviewData] = useState<ImageData | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -127,6 +48,9 @@ function RecipeCardComponent({
   }
 
   useEffect(() => {
+    setPreviewData(null)
+    setIsGenerating(false)
+    if (!visible) return
     let cancelled = false
     const controller = new AbortController()
 
@@ -147,7 +71,7 @@ function RecipeCardComponent({
 
         setIsGenerating(true)
 
-        const smallImage = createSmallImage(sourceImage)
+        const smallImage = resizePreviewImage(sourceImage, RECIPE_CARD_PREVIEW_SIZE)
         if (!smallImage || cancelled) {
           setIsGenerating(false)
           return
@@ -188,7 +112,7 @@ function RecipeCardComponent({
       controller.abort()
       clearTimeout(timeoutId)
     }
-  }, [recipe, sourceImage])
+  }, [recipe, sourceImage, visible])
 
   useEffect(() => {
     if (!previewData || !canvasRef.current) return
@@ -201,10 +125,12 @@ function RecipeCardComponent({
     if (!ctx) return
 
     ctx.putImageData(previewData, 0, 0)
+    return () => { canvas.width = canvas.height = 0 }
   }, [previewData])
 
   return (
     <Card
+      ref={cardRef}
       data-recipe-card
       className={`relative cursor-pointer overflow-hidden transition-all hover:ring-2 hover:ring-primary focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 ${
         isActive ? 'ring-2 ring-primary' : ''
@@ -230,7 +156,7 @@ function RecipeCardComponent({
             role="status"
             aria-label="Loading preview"
           >
-            <Spinner className="size-4" randomColor />
+            {visible && <Spinner className="size-4" randomColor />}
           </div>
         )}
         {isGenerating && previewData && (
@@ -279,14 +205,4 @@ function RecipeCardComponent({
 }
 
 // Мемоизируем компонент для предотвращения лишних ререндеров
-export const RecipeCard = memo(RecipeCardComponent, (prevProps, nextProps) => {
-  // Перерисовываем только если изменились важные пропсы
-  return (
-    prevProps.recipe.id === nextProps.recipe.id &&
-    prevProps.isActive === nextProps.isActive &&
-    prevProps.isFavorite === nextProps.isFavorite &&
-    prevProps.sourceImage === nextProps.sourceImage &&
-    prevProps.hideFavoriteButton === nextProps.hideFavoriteButton &&
-    prevProps.largeTouchTargets === nextProps.largeTouchTargets
-  )
-})
+export const RecipeCard = memo(RecipeCardComponent)

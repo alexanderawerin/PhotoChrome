@@ -12,20 +12,33 @@ afterEach(() => {
 })
 
 describe('atomic photo decoding', () => {
+  it('retains source dimensions and preview pixels without decoding an export original', async () => {
+    const signal = new AbortController().signal
+    const original = vi.spyOn(ImageProcessor, 'decodeImageOriginal')
+    const preview = vi.spyOn(ImageProcessor, 'decodeImagePreview').mockImplementation(async (_file, _size, validate) => {
+      validate?.(8_000, 6_000)
+      return { thumbnail: pixels, width: 8_000, height: 6_000 }
+    })
+    const [image] = await decodeImages([imageFile], [], signal)
+    expect(image.sourceSize).toEqual({ width: 8_000, height: 6_000 })
+    expect(image.thumbnail).toBe(pixels)
+    expect(preview).toHaveBeenCalledWith(imageFile, 1_600, expect.any(Function), signal)
+    expect(original).not.toHaveBeenCalled()
+  })
   it('rejects a canceled decode even if the native bitmap operation completes', async () => {
     const controller = new AbortController()
-    vi.spyOn(ImageProcessor, 'decodeImagePair').mockImplementation(async () => {
+    vi.spyOn(ImageProcessor, 'decodeImagePreview').mockImplementation(async () => {
       controller.abort()
-      return { original: pixels, thumbnail: pixels, width: pixels.width, height: pixels.height }
+      return { thumbnail: pixels, width: pixels.width, height: pixels.height }
     })
 
     await expect(decodeImages([imageFile], [], controller.signal)).rejects.toMatchObject({ name: 'AbortError' })
   })
 
   it('validates added dimensions against the retained batch before accepting any new photo', async () => {
-    vi.spyOn(ImageProcessor, 'decodeImagePair').mockImplementation(async (_file, _size, validate) => {
+    vi.spyOn(ImageProcessor, 'decodeImagePreview').mockImplementation(async (_file, _size, validate) => {
       validate?.(8_000, 8_000)
-      return { original: pixels, thumbnail: pixels, width: pixels.width, height: pixels.height }
+      return { thumbnail: pixels, width: pixels.width, height: pixels.height }
     })
     const existing = Array.from({ length: 3 }, () => ({ file: imageFile, width: 8_000, height: 8_000 }))
 
@@ -33,8 +46,8 @@ describe('atomic photo decoding', () => {
   })
 
   it('does not accept a partial result when one file in a selection fails', async () => {
-    const decode = vi.spyOn(ImageProcessor, 'decodeImagePair')
-      .mockResolvedValueOnce({ original: pixels, thumbnail: pixels, width: pixels.width, height: pixels.height })
+    const decode = vi.spyOn(ImageProcessor, 'decodeImagePreview')
+      .mockResolvedValueOnce({ thumbnail: pixels, width: pixels.width, height: pixels.height })
       .mockRejectedValueOnce(new Error('Corrupt second file'))
 
     await expect(decodeImages([imageFile, imageFile])).rejects.toThrow('Corrupt second file')

@@ -157,6 +157,10 @@ test('zero successful files produce no ZIP and batch Retry saves the original re
   await expect(alert).toContainText('No photos were exported')
   expect(downloads).toBe(0)
   await expect(page.getByRole('dialog', { name: 'Export complete', exact: true })).toHaveCount(0)
+  await page.evaluate(() => {
+    // @ts-expect-error Engine-boundary test restoration closure.
+    window.__restoreBatchFilmProcessor()
+  })
   await page.getByRole('button', { name: 'Select film Classic Neg', exact: true }).click()
   await expect(exportAll(page)).toBeEnabled()
   await page.evaluate(() => {
@@ -164,10 +168,6 @@ test('zero successful files produce no ZIP and batch Retry saves the original re
   })
   await page.keyboard.press('r')
   await expect.poll(() => preview(page).evaluate((canvas: HTMLCanvasElement) => [canvas.width, canvas.height])).toEqual([200, 150])
-  await page.evaluate(() => {
-    // @ts-expect-error Engine-boundary test restoration closure.
-    window.__restoreBatchFilmProcessor()
-  })
   const pending = page.waitForEvent('download')
   await alert.getByRole('button', { name: 'Retry', exact: true }).click()
   const path = await (await pending).path()

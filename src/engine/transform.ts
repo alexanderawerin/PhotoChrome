@@ -77,24 +77,44 @@ export function minimumCoverScale(width: number, height: number, angle: number):
   )
 }
 
+/** Temporary canvas backing stores must not outlive the copied ImageData. */
+function withTemporaryCanvases(render: (createCanvas: () => HTMLCanvasElement) => ImageData): ImageData {
+  const canvases: HTMLCanvasElement[] = []
+  const createCanvas = () => {
+    const canvas = document.createElement('canvas')
+    canvases.push(canvas)
+    return canvas
+  }
+  try {
+    return render(createCanvas)
+  } finally {
+    for (const canvas of canvases) {
+      canvas.width = 0
+      canvas.height = 0
+    }
+  }
+}
+
 function flipImageHorizontal(imageData: ImageData): ImageData {
-  const canvas = document.createElement('canvas')
-  canvas.width = imageData.width
-  canvas.height = imageData.height
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Failed to get canvas context')
+  return withTemporaryCanvases(createCanvas => {
+    const canvas = createCanvas()
+    canvas.width = imageData.width
+    canvas.height = imageData.height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Failed to get canvas context')
 
-  const source = document.createElement('canvas')
-  source.width = imageData.width
-  source.height = imageData.height
-  const sourceCtx = source.getContext('2d')
-  if (!sourceCtx) throw new Error('Failed to get source canvas context')
-  sourceCtx.putImageData(imageData, 0, 0)
+    const source = createCanvas()
+    source.width = imageData.width
+    source.height = imageData.height
+    const sourceCtx = source.getContext('2d')
+    if (!sourceCtx) throw new Error('Failed to get source canvas context')
+    sourceCtx.putImageData(imageData, 0, 0)
 
-  ctx.translate(canvas.width, 0)
-  ctx.scale(-1, 1)
-  ctx.drawImage(source, 0, 0)
-  return ctx.getImageData(0, 0, canvas.width, canvas.height)
+    ctx.translate(canvas.width, 0)
+    ctx.scale(-1, 1)
+    ctx.drawImage(source, 0, 0)
+    return ctx.getImageData(0, 0, canvas.width, canvas.height)
+  })
 }
 
 /** Renders the complete transform from the immutable source image. */
@@ -142,30 +162,32 @@ export function getImageTransformSize(width: number, height: number, state: Imag
 }
 
 function renderFineTransform(imageData: ImageData, state: ImageTransformState): ImageData {
-  const canvas = document.createElement('canvas')
-  canvas.width = imageData.width
-  canvas.height = imageData.height
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Failed to get canvas context')
+  return withTemporaryCanvases(createCanvas => {
+    const canvas = createCanvas()
+    canvas.width = imageData.width
+    canvas.height = imageData.height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Failed to get canvas context')
 
-  const source = document.createElement('canvas')
-  source.width = imageData.width
-  source.height = imageData.height
-  const sourceCtx = source.getContext('2d')
-  if (!sourceCtx) throw new Error('Failed to get source canvas context')
-  sourceCtx.putImageData(imageData, 0, 0)
+    const source = createCanvas()
+    source.width = imageData.width
+    source.height = imageData.height
+    const sourceCtx = source.getContext('2d')
+    if (!sourceCtx) throw new Error('Failed to get source canvas context')
+    sourceCtx.putImageData(imageData, 0, 0)
 
-  const scale = minimumCoverScale(imageData.width, imageData.height, state.fineAngle) * Math.max(1, state.cropScale)
-  const overflowX = imageData.width * (scale - 1)
-  const overflowY = imageData.height * (scale - 1)
-  const translateX = (0.5 - state.cropOffset.x) * overflowX
-  const translateY = (0.5 - state.cropOffset.y) * overflowY
+    const scale = minimumCoverScale(imageData.width, imageData.height, state.fineAngle) * Math.max(1, state.cropScale)
+    const overflowX = imageData.width * (scale - 1)
+    const overflowY = imageData.height * (scale - 1)
+    const translateX = (0.5 - state.cropOffset.x) * overflowX
+    const translateY = (0.5 - state.cropOffset.y) * overflowY
 
-  ctx.translate(canvas.width / 2 + translateX, canvas.height / 2 + translateY)
-  ctx.rotate(clampFineAngle(state.fineAngle) * Math.PI / 180)
-  ctx.scale(scale, scale)
-  ctx.drawImage(source, -imageData.width / 2, -imageData.height / 2)
-  return ctx.getImageData(0, 0, canvas.width, canvas.height)
+    ctx.translate(canvas.width / 2 + translateX, canvas.height / 2 + translateY)
+    ctx.rotate(clampFineAngle(state.fineAngle) * Math.PI / 180)
+    ctx.scale(scale, scale)
+    ctx.drawImage(source, -imageData.width / 2, -imageData.height / 2)
+    return ctx.getImageData(0, 0, canvas.width, canvas.height)
+  })
 }
 
 /**
@@ -177,37 +199,39 @@ function rotateImage(
 ): ImageData {
   if (angle === 0) return imageData
 
-  const canvas = document.createElement('canvas')
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Failed to get canvas context')
+  return withTemporaryCanvases(createCanvas => {
+    const canvas = createCanvas()
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Failed to get canvas context')
 
-  // Для 90° и 270° меняем местами ширину и высоту
-  if (angle === 90 || angle === 270) {
-    canvas.width = imageData.height
-    canvas.height = imageData.width
-  } else {
-    canvas.width = imageData.width
-    canvas.height = imageData.height
-  }
+    // Для 90° и 270° меняем местами ширину и высоту
+    if (angle === 90 || angle === 270) {
+      canvas.width = imageData.height
+      canvas.height = imageData.width
+    } else {
+      canvas.width = imageData.width
+      canvas.height = imageData.height
+    }
 
-  // Создаём временный canvas для исходного изображения
-  const tempCanvas = document.createElement('canvas')
-  tempCanvas.width = imageData.width
-  tempCanvas.height = imageData.height
-  const tempCtx = tempCanvas.getContext('2d')
-  if (!tempCtx) throw new Error('Failed to get temp canvas context')
-  tempCtx.putImageData(imageData, 0, 0)
+    // Создаём временный canvas для исходного изображения
+    const tempCanvas = createCanvas()
+    tempCanvas.width = imageData.width
+    tempCanvas.height = imageData.height
+    const tempCtx = tempCanvas.getContext('2d')
+    if (!tempCtx) throw new Error('Failed to get temp canvas context')
+    tempCtx.putImageData(imageData, 0, 0)
 
-  // Применяем трансформацию
-  ctx.translate(canvas.width / 2, canvas.height / 2)
-  ctx.rotate((angle * Math.PI) / 180)
-  ctx.drawImage(
-    tempCanvas,
-    -imageData.width / 2,
-    -imageData.height / 2
-  )
+    // Применяем трансформацию
+    ctx.translate(canvas.width / 2, canvas.height / 2)
+    ctx.rotate((angle * Math.PI) / 180)
+    ctx.drawImage(
+      tempCanvas,
+      -imageData.width / 2,
+      -imageData.height / 2
+    )
 
-  return ctx.getImageData(0, 0, canvas.width, canvas.height)
+    return ctx.getImageData(0, 0, canvas.width, canvas.height)
+  })
 }
 
 /**
@@ -239,38 +263,40 @@ function cropImage(
   imageData: ImageData,
   cropArea: CropArea
 ): ImageData {
-  // Валидируем область
-  const validArea = validateCropArea(cropArea, imageData.width, imageData.height)
+  return withTemporaryCanvases(createCanvas => {
+    // Валидируем область
+    const validArea = validateCropArea(cropArea, imageData.width, imageData.height)
 
-  const canvas = document.createElement('canvas')
-  canvas.width = validArea.width
-  canvas.height = validArea.height
+    const canvas = createCanvas()
+    canvas.width = validArea.width
+    canvas.height = validArea.height
 
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Failed to get canvas context')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Failed to get canvas context')
 
-  // Создаём временный canvas
-  const tempCanvas = document.createElement('canvas')
-  tempCanvas.width = imageData.width
-  tempCanvas.height = imageData.height
-  const tempCtx = tempCanvas.getContext('2d')
-  if (!tempCtx) throw new Error('Failed to get temp canvas context')
-  tempCtx.putImageData(imageData, 0, 0)
+    // Создаём временный canvas
+    const tempCanvas = createCanvas()
+    tempCanvas.width = imageData.width
+    tempCanvas.height = imageData.height
+    const tempCtx = tempCanvas.getContext('2d')
+    if (!tempCtx) throw new Error('Failed to get temp canvas context')
+    tempCtx.putImageData(imageData, 0, 0)
 
-  // Рисуем обрезанную область
-  ctx.drawImage(
-    tempCanvas,
-    validArea.x,
-    validArea.y,
-    validArea.width,
-    validArea.height,
-    0,
-    0,
-    validArea.width,
-    validArea.height
-  )
+    // Рисуем обрезанную область
+    ctx.drawImage(
+      tempCanvas,
+      validArea.x,
+      validArea.y,
+      validArea.width,
+      validArea.height,
+      0,
+      0,
+      validArea.width,
+      validArea.height
+    )
 
-  return ctx.getImageData(0, 0, validArea.width, validArea.height)
+    return ctx.getImageData(0, 0, validArea.width, validArea.height)
+  })
 }
 
 /**

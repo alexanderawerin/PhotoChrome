@@ -99,11 +99,11 @@ export interface ImageItem {
   /** Уникальный идентификатор */
   id: string
   /** Оригинальный файл */
-  file: File
+  readonly file: File
   /** Имя файла для отображения */
   fileName: string
-  /** Полноразмерное изображение */
-  original: ImageData
+  /** Full source dimensions; full-resolution pixels are decoded only for export. */
+  readonly sourceSize: { readonly width: number; readonly height: number }
   /** Превью для быстрой обработки */
   thumbnail: ImageData
 
@@ -112,8 +112,6 @@ export interface ImageItem {
   /** Пользовательские настройки тюнинга */
   customSettings: RecipeSettings
 
-  /** Трансформированное полноразмерное изображение */
-  transformedOriginal: ImageData
   /** Трансформированное превью */
   transformedThumbnail: ImageData
   /** Недеструктивное состояние геометрии изображения. */

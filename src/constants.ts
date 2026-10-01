@@ -54,10 +54,10 @@ export const RESIZE_DEBOUNCE_DELAY = 100
 // ============================================================================
 
 /** Maximum number of processed preview images to cache */
-export const PREVIEW_CACHE_MAX_SIZE = 100
+export const PREVIEW_CACHE_MAX_SIZE = 40
 
 /** Maximum number of small images to cache */
-export const SMALL_IMAGE_CACHE_MAX_SIZE = 100
+export const SMALL_IMAGE_CACHE_MAX_SIZE = 8
 
 /** Circle animation parameters */
 export const PHOTO_ARC = {

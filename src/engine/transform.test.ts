@@ -1,5 +1,49 @@
-import { describe, expect, it } from 'vitest'
-import { clampFineAngle, createDefaultTransformState, minimumCoverScale, nextQuarterTurn, toggleHorizontalFlip } from './transform'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { clampFineAngle, createDefaultTransformState, getImageTransformSize, minimumCoverScale, nextQuarterTurn, renderImageTransform, toggleHorizontalFlip } from './transform'
+
+afterEach(() => vi.unstubAllGlobals())
+
+describe('transform canvas ownership', () => {
+  function canvasFixture(failReadback = false) {
+    const canvases: { width: number; height: number; getContext: () => typeof context }[] = []
+    const context = {
+      putImageData: vi.fn(), translate: vi.fn(), scale: vi.fn(), rotate: vi.fn(), drawImage: vi.fn(),
+      getImageData: vi.fn((_x: number, _y: number, width: number, height: number) => {
+        if (failReadback) throw new Error('Readback failed')
+        return { width, height, data: new Uint8ClampedArray(4) } as ImageData
+      }),
+    }
+    vi.stubGlobal('document', { createElement: () => {
+      const canvas = { width: 0, height: 0, getContext: () => context }
+      canvases.push(canvas)
+      return canvas
+    } })
+    return canvases
+  }
+
+  const source = { width: 400, height: 300, data: new Uint8ClampedArray(4) } as ImageData
+
+  it('releases every backing canvas after combined geometry while retaining output dimensions', () => {
+    const canvases = canvasFixture()
+    const state = {
+      ...createDefaultTransformState(), quarterTurns: 90 as const, flipHorizontal: true,
+      fineAngle: 12, cropRatio: 'free' as const, cropRect: { x: 0.1, y: 0.2, width: 0.6, height: 0.7 },
+    }
+    const output = renderImageTransform(source, state)
+    expect({ width: output.width, height: output.height }).toEqual(getImageTransformSize(source.width, source.height, state))
+    expect(canvases.length).toBeGreaterThan(0)
+    for (const canvas of canvases) expect(canvas).toMatchObject({ width: 0, height: 0 })
+  })
+
+  it.each([
+    { quarterTurns: 90 as const }, { flipHorizontal: true }, { fineAngle: 10 }, { cropRatio: '1:1' as const },
+  ])('releases temporary geometry canvases when readback fails for %j', update => {
+    const canvases = canvasFixture(true)
+    expect(() => renderImageTransform(source, { ...createDefaultTransformState(), ...update })).toThrow('Readback failed')
+    expect(canvases.length).toBeGreaterThan(0)
+    for (const canvas of canvases) expect(canvas).toMatchObject({ width: 0, height: 0 })
+  })
+})
 
 describe('transform state', () => {
   it('returns to the original orientation after four clockwise turns', () => {
