@@ -25,11 +25,13 @@ const recipe: Recipe = {
 }
 
 describe('adjust sessions', () => {
-  it('keeps a stable snapshot for Cancel and a separate live draft', () => {
-    const session = beginAdjustSession(owner, 'highlight', { highlight: -1, color: 2 })
+  it('keeps committed settings unchanged while editing a separate draft', () => {
+    const saved = { highlight: -1, color: 2 }
+    const session = beginAdjustSession(owner, 'highlight', saved)
     const changed = updateAdjustSession(session, 4)
 
-    expect(changed.before).toEqual({ highlight: -1, color: 2 })
+    expect(saved).toEqual({ highlight: -1, color: 2 })
+    expect(session.draft).not.toBe(saved)
     expect(changed.draft).toEqual({ highlight: 4, color: 2 })
   })
 
@@ -69,7 +71,7 @@ describe('random settings', () => {
 })
 
 describe('crop sessions', () => {
-  it('preserves the entire entry snapshot while normalizing a draft', () => {
+  it('preserves committed geometry while normalizing a separate draft', () => {
     const before = createDefaultTransformState()
     const changed = updateCropSession(beginCropSession(owner, before), {
       fineAngle: 60,
@@ -77,7 +79,9 @@ describe('crop sessions', () => {
       cropOffset: { x: -1, y: 2 },
     })
 
-    expect(changed.before).toEqual(before)
+    expect(before).toEqual(createDefaultTransformState())
+    expect(changed.draft.cropOffset).not.toBe(before.cropOffset)
+    expect(changed.draft.cropRect).not.toBe(before.cropRect)
     expect(changed.draft).toMatchObject({
       fineAngle: 45,
       cropScale: 1,
@@ -111,7 +115,6 @@ describe('committing the active photo session', () => {
     const session = updateTuningSession(beginTuningSession(owner, saved), { highlight: 4, color: -1 })
 
     expect(saved).toEqual({ highlight: 1, color: 2 })
-    expect(session.before).toEqual(saved)
     expect(editorSessionChanges(session, owner)).toEqual({ customSettings: { highlight: 4, color: -1 } })
     expect(editorSessionChanges(null, owner)).toBeNull() // Cancel writes nothing.
   })
@@ -139,7 +142,6 @@ describe('committing the active photo session', () => {
     })
 
     expect(saved).toEqual(createDefaultTransformState())
-    expect(session.before).toEqual(saved)
     expect(editorSessionChanges(session, owner)).toEqual({ transform: session.draft })
     expect(editorSessionChanges(null, owner)).toBeNull()
   })

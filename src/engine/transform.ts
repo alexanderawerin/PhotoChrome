@@ -6,7 +6,7 @@ import { clampRange } from './utils'
 
 export type RotationAngle = 0 | 90 | 180 | 270
 
-export interface CropArea {
+interface CropArea {
   x: number
   y: number
   width: number
@@ -32,7 +32,7 @@ export interface ImageTransformState {
   cropRect: NormalizedCropRect
 }
 
-export const DEFAULT_TRANSFORM_STATE: ImageTransformState = {
+const DEFAULT_TRANSFORM_STATE: ImageTransformState = {
   quarterTurns: 0,
   fineAngle: 0,
   flipHorizontal: false,
@@ -77,7 +77,7 @@ export function minimumCoverScale(width: number, height: number, angle: number):
   )
 }
 
-export function flipImageHorizontal(imageData: ImageData): ImageData {
+function flipImageHorizontal(imageData: ImageData): ImageData {
   const canvas = document.createElement('canvas')
   canvas.width = imageData.width
   canvas.height = imageData.height
@@ -157,7 +157,7 @@ function renderFineTransform(imageData: ImageData, state: ImageTransformState): 
 /**
  * Поворачивает изображение на заданный угол
  */
-export function rotateImage(
+function rotateImage(
   imageData: ImageData,
   angle: RotationAngle
 ): ImageData {
@@ -199,7 +199,7 @@ export function rotateImage(
 /**
  * Валидирует и корректирует область crop
  */
-export function validateCropArea(
+function validateCropArea(
   cropArea: CropArea,
   imageWidth: number,
   imageHeight: number
@@ -221,7 +221,7 @@ export function validateCropArea(
 /**
  * Обрезает изображение по заданной области
  */
-export function cropImage(
+function cropImage(
   imageData: ImageData,
   cropArea: CropArea
 ): ImageData {
@@ -264,7 +264,7 @@ export function cropImage(
  * @param offsetX горизонтальное смещение 0..1 (0.5 = по центру)
  * @param offsetY вертикальное смещение 0..1 (0.5 = по центру)
  */
-export function calculateCropAreaWithOffset(
+function calculateCropAreaWithOffset(
   imageWidth: number,
   imageHeight: number,
   aspectRatio: AspectRatio,
@@ -287,7 +287,7 @@ export function calculateCropAreaWithOffset(
 /**
  * Вычисляет область crop для заданного соотношения сторон
  */
-export function calculateCropArea(
+function calculateCropArea(
   imageWidth: number,
   imageHeight: number,
   aspectRatio: AspectRatio

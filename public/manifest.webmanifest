@@ -1,7 +1,7 @@
 {
   "name": "Photochrome — Fujifilm Film Simulations",
   "short_name": "Photochrome",
-  "description": "Apply legendary Fujifilm film simulations to your photos right in your browser. Free, private, no uploads required.",
+  "description": "Apply Fujifilm-inspired film simulations to photos and short videos in your browser. Free, private, no uploads required.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
