@@ -41,6 +41,9 @@ jobs:
       - name: E2E types
         run: npm run test:e2e:types
 
+      - name: Unit test types
+        run: npm run test:types
+
       - name: Unit tests
         run: npm test
 

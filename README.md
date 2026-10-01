@@ -52,6 +52,7 @@ Checks that do not launch a browser:
 ```bash
 npm run lint
 npm run check:unused                   # Unused files, exports, types, and dependencies
+npm run test:types                     # Type-check application source and unit tests
 npm run test:e2e:types                  # Type-check E2E helpers, specs, and config
 npm test                               # Engine and preset unit tests
 npm run build
@@ -66,7 +67,7 @@ npm run test:e2e:chromium                # Desktop Chromium, matching main CI
 npm run test:e2e:ui                      # Interactive UI mode
 ```
 
-Main CI runs lint, unused-code analysis, E2E type checks, unit tests, build, and desktop Chromium E2E. Firefox and the selected mobile specs run in a separate weekly/manual workflow. `mobile-chrome` emulates a Pixel 7; it does not verify real mobile hardware. WebKit/Safari is not configured. `test:e2e:types` checks types without launching browsers.
+Main CI runs lint, unused-code analysis, unit/E2E type checks, unit tests, build, and desktop Chromium E2E. Firefox and the selected mobile specs run in a separate weekly/manual workflow. `mobile-chrome` emulates a Pixel 7; it does not verify real mobile hardware. WebKit/Safari is not configured. Type checks run without launching browsers; unit tests use the ES2023 library available in Node.js 22, while the application build keeps its ES2020 library.
 
 Playwright uses its managed Chromium by default. To use an existing installation for the Chromium projects, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to its absolute path, for example:
 
