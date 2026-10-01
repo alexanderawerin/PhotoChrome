@@ -32,6 +32,10 @@ test.describe('Keyboard Shortcuts', () => {
 
   test('T opens Advanced when a film is selected', async ({ page, editorPage }) => {
     await selectBaseFilm(page)
+    // Film resources can be ready before the worker finishes its first preview.
+    // The enabled action is the observable boundary shared with shortcut guards.
+    await expect(page.getByRole('toolbar', { name: 'Desktop editor actions', exact: true })
+      .getByRole('button', { name: 'Open Advanced settings', exact: true })).toBeEnabled()
 
     await page.keyboard.press('t')
     const panel = page.getByRole('region', { name: 'Advanced settings', exact: true })

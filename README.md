@@ -60,7 +60,7 @@ npm test                               # Engine and preset unit tests
 npm run build
 ```
 
-Browser checks (require installed browsers):
+Browser checks require installed browsers. Video geometry checks also require `ffmpeg` on `PATH` (or `FFMPEG_PATH`) to inspect downloaded MP4 frames. Both GitHub browser workflows install it before running the tests.
 
 ```bash
 npx playwright install chromium firefox  # Install browsers (once)
