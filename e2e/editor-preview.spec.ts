@@ -1,3 +1,4 @@
+import { openImageChooser } from './helpers/editor-controls'
 import { test, expect } from './helpers/fixtures'
 import { selectBaseFilm } from './helpers/upload'
 
@@ -211,9 +212,10 @@ test.describe('Editor — Preview Rendering', () => {
       }
     })
     await selectBaseFilm(page)
-    const strip = page.getByRole('tablist', { name: 'Image thumbnails', exact: true })
-    const first = strip.getByRole('tab', { name: 'Image 1 of 2: test-image.jpg', exact: true }).locator('canvas')
-    const second = strip.getByRole('tab', { name: 'Image 2 of 2: test-image-2.jpg', exact: true }).locator('canvas')
+    await openImageChooser(page)
+    const strip = page.getByRole('tablist', { name: 'Image thumbnails', exact: true, includeHidden: true })
+    const first = strip.getByRole('tab', { name: 'Image 1 of 2: test-image.jpg', exact: true, includeHidden: true }).locator('canvas')
+    const second = strip.getByRole('tab', { name: 'Image 2 of 2: test-image-2.jpg', exact: true, includeHidden: true }).locator('canvas')
     for (const thumbnail of [first, second]) {
       await expect.poll(() => thumbnail.evaluate((canvas: HTMLCanvasElement) => {
         const context = canvas.getContext('2d')
@@ -227,8 +229,10 @@ test.describe('Editor — Preview Rendering', () => {
     }
     const processingSizes = await page.evaluate(() => (window as unknown as { stripWork: number[][] }).stripWork)
     expect(processingSizes.length).toBeGreaterThan(0)
-    for (const dimensions of processingSizes) expect(Math.max(...dimensions)).toBeLessThanOrEqual(80)
-    await expect(strip.getByRole('tab', { name: 'Image 1 of 2: test-image.jpg', exact: true })).toHaveAttribute('aria-selected', 'true')
+    // The film dock now also uses this processor, with its own 92px previews.
+    // Photo-strip canvases retain the tighter 80px budget checked above.
+    for (const dimensions of processingSizes) expect(Math.max(...dimensions)).toBeLessThanOrEqual(92)
+    await expect(strip.getByRole('tab', { name: 'Image 1 of 2: test-image.jpg', exact: true, includeHidden: true })).toHaveAttribute('aria-selected', 'true')
   })
 
 })

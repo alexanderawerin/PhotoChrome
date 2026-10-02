@@ -1,5 +1,6 @@
 import type { RecipeSettings } from '../src/engine/types'
 import { test, expect } from './helpers/fixtures'
+import { waitForEditor } from './helpers/upload'
 
 const cases: { name: string; settings: RecipeSettings; realLut?: boolean; original?: boolean }[] = [
   { name: 'Original ignores stale nonneutral effects', original: true, settings: { sharpness: 4, clarity: 5, color: 4, highlight: 4, dynamicRange: 'DR400', whiteBalanceKelvin: 2500 } },
@@ -17,6 +18,12 @@ const cases: { name: string; settings: RecipeSettings; realLut?: boolean; origin
 test.describe('Processing engine golden parity', () => {
   for (const fixture of cases) test(`CPU, worker, WebGL: ${fixture.name}`, async ({ page, landingPage, browserName }) => {
     test.skip(browserName !== 'chromium', 'WebGL golden parity is verified in Chromium')
+
+    // Demo initialization mounts the Editor under StrictMode; its lifecycle
+    // cleanup disposes the shared worker. Start independent engine work only
+    // after that initialization, rather than racing DOMContentLoaded.
+    await waitForEditor(page)
+    await expect(page.getByLabel('Applied color', { exact: true })).not.toContainText(/Preparing:|Unavailable:/)
 
     const result = await page.evaluate(async ({ settings, realLut, original }) => {
       // @ts-expect-error Vite browser module path is unavailable to the Node compiler.

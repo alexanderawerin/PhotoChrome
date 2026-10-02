@@ -1,0 +1,38 @@
+{
+  "browser": "Chromium /usr/bin/chromium through Playwright",
+  "sourceViewport": {
+    "width": 1487,
+    "height": 1058,
+    "deviceScaleFactor": 1
+  },
+  "otherViewports": [
+    {
+      "width": 768,
+      "height": 852
+    },
+    {
+      "width": 393,
+      "height": 852
+    },
+    {
+      "width": 852,
+      "height": 393
+    }
+  ],
+  "sourceMedia": "Existing coast WebP, own upload named Coast.jpg, with two other supplied demo assets",
+  "activeFilm": "Provia",
+  "largeTextPreview": {
+    "x": 12,
+    "y": 175.125,
+    "width": 369,
+    "height": 245.84375
+  },
+  "pageErrors": [],
+  "consoleErrors": [
+    {
+      "text": "Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED",
+      "url": "https://mc.yandex.ru/metrika/tag.js?id=105575838"
+    }
+  ],
+  "cloudBrowserGate": "blocked - callable cloud Browser/Node REPL js is unavailable"
+}

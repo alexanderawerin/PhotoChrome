@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { Plus, HelpCircle } from 'lucide-react'
 import { APP_VERSION, APP_URL } from '../constants'
 import { Button } from './ui/button'
@@ -7,7 +7,7 @@ import { Preview } from './Preview'
 import { FilmSelector } from './FilmSelector'
 import { getBaseFilm, hasModifiedSettings, isBaseProfile } from '../engine/film-profiles'
 import { AdvancedPanel } from './AdvancedPanel'
-import { EditorHeader, EditorModes, EditorActions, EditorControlDock, CropTools, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
+import { EditorHeader, EditorModes, EditorActions, EditorControlDock, EditorCompare, CropTools, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
 import { HelpDialog } from './HelpDialog'
 import { ExportCompletion, type ExportCompletionState } from './ExportCompletion'
 import { ThumbnailStrip } from './ThumbnailStrip'
@@ -91,8 +91,6 @@ export function Editor({
   const exportAbortControllerRef = useRef<AbortController | null>(null)
   const batchAbortControllerRef = useRef<AbortController | null>(null)
   const demoUploadRef = useRef<HTMLInputElement>(null)
-  const editorStageRef = useRef<HTMLDivElement>(null)
-  const workspaceRef = useRef<HTMLDivElement>(null)
   const [batchProgress, setBatchProgress] = useState<BatchExportProgress | null>(null)
   const [completion, setCompletion] = useState<ExportCompletionState | null>(null)
   const exportFocusRef = useRef<HTMLElement | null>(null)
@@ -105,26 +103,6 @@ export function Editor({
 
   const viewportHeight = useViewportHeight()
   const isMdUp = useIsMdUp()
-  // Let the grid reserve real header/dock space for Crop while the photo layer
-  // spans the viewport. Cover mode ignores these insets, so tab changes keep it still.
-  useLayoutEffect(() => {
-    if (isMdUp) return
-    const stage = editorStageRef.current
-    const workspace = workspaceRef.current
-    if (!stage || !workspace) return
-    const updateInsets = () => {
-      const stageRect = stage.getBoundingClientRect()
-      const workspaceRect = workspace.getBoundingClientRect()
-      stage.style.setProperty('--workspace-top', `${workspaceRect.top - stageRect.top}px`)
-      stage.style.setProperty('--workspace-bottom', `${stageRect.bottom - workspaceRect.bottom}px`)
-    }
-    updateInsets()
-    const observer = new ResizeObserver(updateInsets)
-    observer.observe(stage)
-    observer.observe(workspace)
-    return () => observer.disconnect()
-  }, [isMdUp])
-
   const edit = useEditorSession(currentImage, onImageUpdate)
   const isCropping = edit.session?.kind === 'crop'
   const isTuning = edit.session?.kind === 'tuning'
@@ -466,7 +444,6 @@ export function Editor({
   // ============================================================================
 
   const displayImage = showOriginal || preview.imageId !== currentImage.id ? transformedThumbnail : preview.data
-  const mobileCover = !isMdUp && mode !== 'crop' && !isCropping && !isTuning
 
   const actions: EditorAction[] = demoMode ? [{
     id: 'upload', label: 'Upload photos', ariaLabel: 'Upload photos',
@@ -487,7 +464,7 @@ export function Editor({
     }] : []),
     {
       id: 'export', label: isExporting ? 'Exporting…' : 'Export', ariaLabel: 'Export processed image (Ctrl+S)',
-      onClick: () => { void handleExport() }, disabled: !commands.export, busy: isExporting, desktopOnly: totalImages > 1,
+      onClick: () => { void handleExport() }, disabled: !commands.export, busy: isExporting,
     },
   ]
 
@@ -497,7 +474,7 @@ export function Editor({
       style={{ height: getViewportHeightStyle(viewportHeight) }}
     >
       {/* Главный блок: фото + toolbar */}
-      <div ref={editorStageRef} className="editor-stage mobile-editor-stage relative isolate flex-1 bg-zinc-950 min-w-0 min-h-0 overflow-hidden">
+      <div className="editor-stage mobile-editor-stage relative isolate flex-1 min-w-0 min-h-0 overflow-hidden">
         <div className="mobile-editor-header mobile-editor-surface relative z-20 flex-shrink-0">
         <input
           ref={demoUploadRef}
@@ -519,27 +496,31 @@ export function Editor({
           compact={isTuning}
           fileName={currentImage.fileName}
           details={totalImages > 1 ? `${currentIndex + 1} of ${totalImages}` : undefined}
+          navigation={totalImages > 1 ? { previous: onPreviousImage, next: onNextImage, disabled: !commands.navigate } : undefined}
+          files={isMdUp && totalImages > 1 && !demoMode ? <ThumbnailStrip images={images} currentIndex={currentIndex}
+            onSelectImage={index => { if (commands.navigate) onIndexChange(index) }} /> : undefined}
           leading={!demoMode && (
             <Button variant="ghost" size="sm" onClick={() => demoUploadRef.current?.click()} disabled={!commands.add}
               className="editor-control h-11 min-w-11 gap-1 rounded-lg px-2 text-zinc-300" aria-label="Add photos">
-              <Plus className="size-4" aria-hidden="true" /> Add
+              <Plus className="size-4" aria-hidden="true" /><span className="editor-add-label">Add photos</span>
             </Button>
           )}
-          trailing={(
+          trailing={<EditorActions actions={isCropping ? [] : actions} placement="header" primaryId={isMdUp || totalImages === 1 ? 'export' : 'export-all'} extra={(
             <Button variant="ghost" size="sm" onClick={() => { if (commands.help) setIsHelpOpen(true) }} disabled={!commands.help}
               className="editor-control relative h-11 min-w-11 gap-1 rounded-lg px-2 text-zinc-300" aria-label="Help">
               <HelpCircle className="size-4" aria-hidden="true" /> Help
               {hasUnreadHelp && <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-white" aria-hidden="true" />}
             </Button>
-          )}
+          )} />}
         />
 
-        <div className="mx-3 mb-2 flex items-center gap-2 text-xs text-zinc-400" aria-label="Applied color">
+        <div className="editor-color-status flex items-center gap-2 text-xs text-zinc-400" aria-label="Applied color"
+          data-quiet={!edit.session && !isProcessing && !previewError && (!currentImage.recipe || (isBaseProfile(currentImage.recipe) && !hasModifiedSettings(currentImage.recipe, currentImage.customSettings))) || undefined}>
           {(isProcessing || previewError) && <span>{previewError ? 'Unavailable:' : 'Preparing:'}</span>}
           <span>{currentImage.recipe ? getBaseFilm(currentImage.recipe.filmSimulation)?.name : 'Original'}</span>
           {currentImage.recipe && !isBaseProfile(currentImage.recipe) && <span>· {currentImage.recipe.name}</span>}
           {hasModifiedSettings(currentImage.recipe, currentImage.customSettings) && <span>· Modified</span>}
-          {currentImage.recipe && !demoMode && !edit.session && (
+          {currentImage.recipe && !demoMode && !edit.session && (!isBaseProfile(currentImage.recipe) || hasModifiedSettings(currentImage.recipe, currentImage.customSettings)) && (
             <button type="button" disabled={!commands.selectColor || !!edit.session} className="ml-auto min-h-9 shrink-0 underline disabled:opacity-40"
               onClick={() => handleRecipeSelect(getBaseFilm(currentImage.recipe!.filmSimulation) ?? null)}>Restore base film</button>
           )}
@@ -571,20 +552,10 @@ export function Editor({
 
         </div>
 
-        <div ref={workspaceRef} className="mobile-editor-workspace pointer-events-none min-h-0 md:hidden" aria-hidden="true" />
-        <div className="mobile-editor-status pointer-events-none relative z-10 h-0 md:hidden">
-          {isProcessing && (
-            <div className="absolute left-1/2 top-2 -translate-x-1/2">
-              <p className="rounded-full bg-black/70 px-3 py-1 text-xs text-white">Processing...</p>
-            </div>
-          )}
-        </div>
-
-        {/* A single photo layer stays behind the mobile chrome. */}
-        <div className="mobile-photo-stage flex flex-1 min-h-0 flex-col overflow-hidden md:px-6" data-preview-fit={mobileCover ? 'cover' : 'contain'}>
+        <div className="mobile-photo-stage flex min-h-0 flex-col overflow-hidden" data-preview-fit="contain">
           <div className="relative min-h-0 flex-1">
           {isProcessing && (
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 hidden md:block">
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
               <p className="text-sm text-zinc-400 bg-zinc-900/80 px-3 py-1 rounded">Processing...</p>
             </div>
           )}
@@ -600,7 +571,8 @@ export function Editor({
             cropScale={edit.transformState.cropScale}
             onCropScaleChange={cropScale => edit.changeCrop({ cropScale })}
             cropGridActive={isCropControlActive}
-            cover={mobileCover}
+            overlay={!isCropping && !isTuning ? <EditorCompare active={showOriginal} disabled={!commands.compare}
+              onStart={handleCompareStart} onEnd={handleCompareEnd} /> : undefined}
             onMouseDown={handleCompareStart}
             onMouseUp={handleCompareEnd}
             onMouseLeave={handleCompareEnd}
@@ -610,16 +582,6 @@ export function Editor({
           />
           </div>
 
-          {/* Desktop: Thumbnail Strip below preview */}
-          {isMdUp && totalImages > 1 && !demoMode && (
-            <div className="hidden md:block">
-              <ThumbnailStrip
-                images={images}
-                currentIndex={currentIndex}
-                onSelectImage={index => { if (commands.navigate) onIndexChange(index) }}
-              />
-            </div>
-          )}
         </div>
 
         <EditorControlDock
@@ -628,11 +590,10 @@ export function Editor({
             <EditorModes mode={mode} onChange={changeMode} demoMode={demoMode} advancedOpen={isTuning}
               disabled={{ films: !commands.selectColor, advanced: isTuning ? !commands.cancelDraft : !commands.advanced, crop: !commands.selectColor }} />
           )}
-          actions={<EditorActions actions={actions} />}
+          actions={<EditorActions actions={isCropping ? actions : []} />}
         >
           {mode === 'films' && (
-            <FilmSelector activeRecipe={currentImage.recipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor}
-              className="px-3 py-3" />
+            <FilmSelector sourceImage={currentImage.transformedThumbnail} activeRecipe={currentImage.recipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor} retryKey={previewRetry} />
           )}
           {mode === 'advanced' && isTuning && profile && (
             <AdvancedPanel profile={profile} settings={settings} sourceImage={transformedThumbnail}

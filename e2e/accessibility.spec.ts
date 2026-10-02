@@ -1,3 +1,4 @@
+import { clickEditorAction } from './helpers/editor-controls'
 import AxeBuilder from '@axe-core/playwright'
 import type { Page } from '@playwright/test'
 import { test, expect } from './helpers/fixtures'
@@ -25,7 +26,7 @@ test.describe('Accessibility', () => {
   })
 
   test('Help dialog has no detectable WCAG A/AA violations', async ({ page, editorPage }) => {
-    await page.getByRole('button', { name: 'Help', exact: true }).click()
+    await clickEditorAction(page, 'Help')
     await expect(page.getByRole('dialog')).toBeVisible()
     await expectNoAccessibilityViolations(page)
   })

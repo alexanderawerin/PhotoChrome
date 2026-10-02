@@ -1,0 +1,12 @@
+{
+  "selection": "первый вариант но в тёмной теме",
+  "ideation_set": 3,
+  "displayed_option": 1,
+  "original_concept": "Light viewing room",
+  "original_image": "assets/concepts/reference-grounded/light-viewing-room.png",
+  "revision_image": "assets/concepts/selected/dark-viewing-room.png",
+  "revision_generation_file": "exec-c7e159b5-c47b-42d9-8b96-784813acdc76.png",
+  "revision_prompt": "prompts/selected-dark-viewing-room.md",
+  "implementation_branch": "codex/ui-experiment-2026-10-02",
+  "constraints": ["No production deployment", "No CI run", "Preserve real editor/demo behavior and processing engine"]
+}

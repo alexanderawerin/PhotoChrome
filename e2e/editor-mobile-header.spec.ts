@@ -1,3 +1,4 @@
+import { clickEditorAction } from './helpers/editor-controls'
 import { test, expect } from './helpers/fixtures'
 import { fixturePath, selectBaseFilm } from './helpers/upload'
 import { advancedPanel } from './helpers/advanced'
@@ -19,12 +20,11 @@ test.describe('Editor — mobile header', () => {
   })
 
   test('opens unread updates first, then remembers them and opens Quick Guide', async ({ page, editorPage }) => {
-    const help = page.locator('header button[aria-label="Help"]:visible')
-    await help.click()
+    await clickEditorAction(page, 'Help')
     await expect(page.getByRole('tab', { name: "What's New" })).toHaveAttribute('aria-selected', 'true')
 
     await page.keyboard.press('Escape')
-    await help.click()
+    await clickEditorAction(page, 'Help')
     await expect(page.getByRole('tab', { name: 'Quick Guide' })).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByRole('tab', { name: 'Shortcuts' })).toHaveCount(0)
   })

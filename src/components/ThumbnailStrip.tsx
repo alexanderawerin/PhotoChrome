@@ -25,11 +25,12 @@ export function ThumbnailStrip({ images, currentIndex, onSelectImage }: Thumbnai
     const container = scrollContainerRef.current
     const thumbnail = container.children[currentIndex] as HTMLElement
 
-    if (thumbnail) {
-      thumbnail.scrollIntoView({
+    if (thumbnail && container.clientWidth > 0) {
+      const bounds = thumbnail.getBoundingClientRect()
+      const viewport = container.getBoundingClientRect()
+      if (bounds.left < viewport.left || bounds.right > viewport.right) container.scrollBy({
+        left: bounds.left - viewport.left - (container.clientWidth - bounds.width) / 2,
         behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-        block: 'nearest',
-        inline: 'center'
       })
     }
   }, [currentIndex])
@@ -42,7 +43,7 @@ export function ThumbnailStrip({ images, currentIndex, onSelectImage }: Thumbnai
     <div className="w-full bg-transparent p-2">
       <div
         ref={scrollContainerRef}
-        className="flex gap-2 overflow-x-auto scrollbar-hide justify-center"
+        className="flex gap-2 overflow-x-auto scrollbar-hide"
         role="tablist"
         aria-label="Image thumbnails"
       >
@@ -54,7 +55,7 @@ export function ThumbnailStrip({ images, currentIndex, onSelectImage }: Thumbnai
             aria-label={`Image ${index + 1} of ${images.length}: ${image.fileName}`}
             onClick={() => onSelectImage(index)}
             className={`
-              relative flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden
+              relative flex-shrink-0 w-11 h-11 rounded-lg overflow-hidden
               border-2 transition-all
               ${index === currentIndex
                 ? 'border-white scale-105'
@@ -111,7 +112,7 @@ function ThumbnailPreview({
     // An empty thumbnail while waiting cannot be mistaken for an applied film.
     const render = async () => {
       try {
-        const smallImage = resizePreviewImage(imageData, Math.round(40 * Math.min(2, Math.max(1, window.devicePixelRatio))))
+        const smallImage = resizePreviewImage(imageData, Math.round(44 * Math.min(2, Math.max(1, window.devicePixelRatio))))
         const plan = recipe
           ? await prepareProcessingPlan(recipe, smallImage, customSettings, { signal: controller.signal })
           : null

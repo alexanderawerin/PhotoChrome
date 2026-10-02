@@ -5,7 +5,7 @@ import { VideoPreview } from './VideoPreview'
 import { FilmSelector } from './FilmSelector'
 import { getBaseFilm, getProfileName, hasModifiedSettings } from '../engine/film-profiles'
 import { AdvancedPanel } from './AdvancedPanel'
-import { EditorHeader, EditorModes, EditorActions, EditorControlDock, CropTools, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
+import { EditorHeader, EditorModes, EditorActions, EditorControlDock, EditorCompare, CropTools, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
 import { activeEditorSession, beginTuningSession, beginCropSession, editorSessionChanges, selectTuningProfile, restoreTuningBase, updateTuningSession, updateCropSession, setCropRatio, type EditorSession } from '../engine/editor-sessions'
 import { createDefaultTransformState, nextQuarterTurn, renderImageTransform, type ImageTransformState } from '../engine/transform'
 import { getVideoOutputSize } from '../engine/video/geometry'
@@ -112,7 +112,7 @@ export function VideoEditor({
   const visibleSettings = session?.kind === 'tuning' ? session.draft : customSettings
   const visibleTransform = session?.kind === 'crop' ? session.draft : transform
   const previewTransform = useMemo(() => isCropping ? { ...visibleTransform, cropRatio: 'original' as const } : visibleTransform, [isCropping, visibleTransform])
-  const advancedThumbnail = useMemo(() => isTuning ? renderImageTransform(thumbnail, transform) : thumbnail, [isTuning, thumbnail, transform])
+  const transformedThumbnail = useMemo(() => renderImageTransform(thumbnail, transform), [thumbnail, transform])
   const [cropGridActive, setCropGridActive] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
   const [isPanelOpen, setIsPanelOpen] = useState(true)
@@ -453,7 +453,7 @@ export function VideoEditor({
       style={{ height: viewportHeight ? `${viewportHeight}px` : '100dvh' }}
     >
       {/* The media stage and persistent control dock share one responsive layout. */}
-      <div className="editor-stage editor-video-stage flex-1 bg-zinc-950 min-w-0 min-h-0 overflow-hidden">
+      <div className="editor-stage editor-video-stage flex-1 min-w-0 min-h-0 overflow-hidden">
         <div className="mobile-editor-header mobile-editor-surface">
           <EditorHeader compact={isTuning} fileName={fileName} details={`${Math.round(metadata.duration * 10) / 10}s • ${metadata.width}×${metadata.height}`}
             leading={
@@ -462,7 +462,7 @@ export function VideoEditor({
                 <ArrowLeft className="size-4" aria-hidden="true" />
               </Button>
             }
-            trailing={<>
+            trailing={<EditorActions actions={isCropping ? [] : actions} placement="header" extra={<>
               <Button variant="ghost" onClick={() => { if (commands.help) setIsHelpOpen(true) }} disabled={!commands.help}
                 className="editor-control min-h-11 min-w-11 rounded-lg p-0 text-zinc-300" aria-label="Help">
                 <HelpCircle className="size-4" aria-hidden="true" />
@@ -471,8 +471,9 @@ export function VideoEditor({
                 className="hidden min-h-11 min-w-11 p-0 text-zinc-300 md:inline-flex" aria-label={isPanelOpen ? 'Hide panel' : 'Show panel'}>
                 {isPanelOpen ? <PanelRightClose className="size-5" aria-hidden="true" /> : <PanelRightOpen className="size-5" aria-hidden="true" />}
               </Button>
-            </>} />
-        <div className="mx-3 md:mx-6 mb-2 flex items-center gap-2 text-xs text-zinc-400" aria-label="Applied color">
+            </>} />} />
+        <div className="editor-color-status flex items-center gap-2 text-xs text-zinc-400" aria-label="Applied color"
+          data-quiet={!session && !preparing && !preparationError && !hasModifiedSettings(activeRecipe, customSettings) || undefined}>
           {(preparing || preparationError) && <span>{preparationError ? 'Unavailable:' : 'Preparing:'}</span>}
           <span>{getProfileName(activeRecipe)}</span>
           {hasModifiedSettings(activeRecipe, customSettings) && <span>· Modified</span>}
@@ -514,6 +515,8 @@ export function VideoEditor({
             cropGridActive={cropGridActive}
             onProcessingError={handleRenderError}
             retryKey={preparationAttempt}
+            overlay={!isCropping && !isTuning ? <EditorCompare active={showOriginal} disabled={!canCompare}
+              onStart={handleCompareStart} onEnd={handleCompareEnd} /> : undefined}
             onMouseDown={handleCompareStart}
             onMouseUp={handleCompareEnd}
             onMouseLeave={handleCompareEnd}
@@ -522,10 +525,10 @@ export function VideoEditor({
       <EditorControlDock mode={mode} contentRef={contextualPanelRef} hideDesktop={!isPanelOpen}
         navigation={<EditorModes mode={mode} onChange={changeMode} advancedOpen={isTuning}
           disabled={{ films: !commands.selectColor, advanced: isTuning ? !commands.cancelDraft : !commands.advanced || !processingPlan, crop: !commands.selectColor }} />}
-        actions={<EditorActions actions={actions} />}>
-        {mode === 'films' && <FilmSelector activeRecipe={activeRecipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor} />}
+        actions={<EditorActions actions={isCropping ? actions : []} />}>
+        {mode === 'films' && <FilmSelector sourceImage={transformedThumbnail} activeRecipe={activeRecipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor} retryKey={preparationAttempt} />}
         {mode === 'advanced' && session?.kind === 'tuning' && session.profile && (
-          <AdvancedPanel profile={session.profile} settings={session.draft} sourceImage={advancedThumbnail}
+          <AdvancedPanel profile={session.profile} settings={session.draft} sourceImage={transformedThumbnail}
             onProfileSelect={changeDraftProfile} onSettingsChange={handleSettingsChange}
             onApply={handleTuningApply} onCancel={handleTuningCancel} onRestoreBase={restoreDraftBase}
             disabled={!commands.editDraft} applyDisabled={!processingPlan || !!renderError} />

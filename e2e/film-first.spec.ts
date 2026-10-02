@@ -5,7 +5,7 @@ const films = ['Provia', 'Velvia', 'Astia', 'Pro 400H', 'Superia', 'Acros', 'Neo
 
 test('new photo starts as Original and exposes exactly ten main films', async ({ page, editorPage }) => {
   const selection = page.getByRole('group', { name: 'Film selection' })
-  await expect(selection.getByRole('button')).toHaveCount(11)
+  await expect(selection.getByRole('button', { name: /^Select / })).toHaveCount(11)
   await expect(selection.getByRole('button', { name: 'Select Original', exact: true })).toHaveAttribute('aria-pressed', 'true')
   for (const film of films) await expect(selection.getByRole('button', { name: `Select film ${film}`, exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: /Random|Smart Picks|Editor's Choice/i })).toHaveCount(0)

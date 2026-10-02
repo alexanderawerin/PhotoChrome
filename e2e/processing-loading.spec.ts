@@ -1,6 +1,7 @@
 import sharp from 'sharp'
 import type { Page } from '@playwright/test'
 import { test, expect } from './helpers/fixtures'
+import { uploadImage, waitForEditor } from './helpers/upload'
 
 const exportButton = (page: Page) => page.getByRole('button', { name: 'Export processed image (Ctrl+S)', exact: true })
 const selectProvia = (page: Page) => page.getByRole('button', { name: 'Select film Provia', exact: true })
@@ -17,7 +18,7 @@ async function downloadedPixels(page: Page) {
   return { name: download.suggestedFilename(), pixels: decoded.data }
 }
 
-test('a delayed actual LUT blocks single export until the intended film is ready', async ({ page, editorPage }) => {
+test('a delayed actual LUT blocks single export until the intended film is ready', async ({ page }) => {
   let release!: () => void
   let requested!: () => void
   const gate = new Promise<void>(resolve => { release = resolve })
@@ -28,6 +29,9 @@ test('a delayed actual LUT blocks single export until the intended film is ready
     await gate
     await route.continue()
   })
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await uploadImage(page)
+  await waitForEditor(page)
   let downloads = 0
   page.on('download', () => { downloads++ })
   try {
@@ -46,14 +50,18 @@ test('a delayed actual LUT blocks single export until the intended film is ready
   expect(downloads).toBe(1)
 })
 
-test('required LUT failure has no fallback download and Retry loads the intended film', async ({ page, editorPage }) => {
+test('required LUT failure has no fallback download and Retry loads the intended film and thumbnail', async ({ page }) => {
   let requests = 0
+  let allowResource = false
   await page.route('**/lut/provia.png*', async route => {
     if (route.request().resourceType() !== 'image') return route.continue()
     requests++
-    if (requests === 1) return route.abort('failed')
+    if (!allowResource) return route.abort('failed')
     await route.continue()
   })
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await uploadImage(page)
+  await waitForEditor(page)
   let downloads = 0
   page.on('download', () => { downloads++ })
   await selectProvia(page).click()
@@ -62,10 +70,14 @@ test('required LUT failure has no fallback download and Retry loads the intended
   await expect(exportButton(page)).toBeDisabled()
   await page.keyboard.press('Control+s')
   expect(downloads).toBe(0)
+  const thumbnail = selectProvia(page).locator('.film-thumbnail')
+  await expect(thumbnail).toHaveAttribute('data-preview-state', 'error')
+  allowResource = true
   await alert.getByRole('button', { name: 'Retry film', exact: true }).click()
   await expect(exportButton(page)).toBeEnabled()
   await expect(alert).toHaveCount(0)
-  expect(requests).toBe(2)
+  await expect(thumbnail).toHaveAttribute('data-preview-state', 'ready')
+  expect(requests).toBeGreaterThanOrEqual(2)
   const retry = await downloadedPixels(page)
   expect(retry.name).toMatch(/provia/)
   await page.getByRole('button', { name: 'Back to editor', exact: true }).click()
@@ -77,7 +89,7 @@ test('required LUT failure has no fallback download and Retry loads the intended
   expect(difference).toBeGreaterThan(1)
 })
 
-test('late LUT completion after a film change cannot replace Original', async ({ page, editorPage }) => {
+test('late LUT completion after a film change cannot replace Original', async ({ page }) => {
   let release!: () => void
   let requested!: () => void
   const gate = new Promise<void>(resolve => { release = resolve })
@@ -91,6 +103,9 @@ test('late LUT completion after a film change cannot replace Original', async ({
     await route.fulfill({ response: await route.fetch() })
     completed()
   })
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await uploadImage(page)
+  await waitForEditor(page)
   const canvas = page.locator('canvas[aria-label="Preview"]')
   const originalPreview = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL())
   try {

@@ -1,3 +1,4 @@
+import { clickEditorAction } from './helpers/editor-controls'
 import { test, expect } from './helpers/fixtures'
 import { fixturePath, selectBaseFilm, uploadVideo, waitForEditor } from './helpers/upload'
 import { readFile } from 'node:fs/promises'
@@ -94,12 +95,12 @@ test.describe('Chromium performance budgets', () => {
     await waitForEditor(page)
     await expect(page.locator('[role="tablist"][aria-label="Image thumbnails"] [role="tab"]')).toHaveCount(20)
     await selectBaseFilm(page)
-    await page.getByRole('button', { name: 'Apply current color to all 20 images' }).click()
+    await clickEditorAction(page, 'Apply current color to all 20 images')
     await expect(page.getByRole('status', { name: 'Applying preset to all images', exact: true })).toBeHidden()
 
     const downloadPromise = page.waitForEvent('download')
     const startedAt = performance.now()
-    await page.getByRole('button', { name: 'Export all photos' }).click()
+    await clickEditorAction(page, 'Export all photos')
     const download = await downloadPromise
     const elapsed = performance.now() - startedAt
     expect(elapsed).toBeLessThanOrEqual(BUDGETS_MS.twentyPhotoBatch)

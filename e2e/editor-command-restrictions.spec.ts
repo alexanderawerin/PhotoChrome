@@ -1,3 +1,4 @@
+import { clickEditorAction } from './helpers/editor-controls'
 import { test, expect } from './helpers/fixtures'
 import { selectBaseFilm, waitForEditor } from './helpers/upload'
 
@@ -22,7 +23,7 @@ test('Help blocks rotate/export and shortcuts resume after dismissal', async ({ 
   const before = await canvas.evaluate((element: HTMLCanvasElement) => [element.width, element.height])
   const downloads: string[] = []
   page.on('download', download => downloads.push(download.suggestedFilename()))
-  await page.getByRole('button', { name: 'Help', exact: true }).click()
+  await clickEditorAction(page, 'Help')
   const help = page.getByRole('dialog', { name: 'Photochrome help' })
   await expect(help).toBeVisible()
   await page.keyboard.press('r')

@@ -2,7 +2,7 @@
   "date": "2026-10-02",
   "ideation_set": 3,
   "generation_tool": "image_gen.imagegen",
-  "status": "latest set awaiting user visual selection; previous two sets rejected",
+  "status": "User selected displayed option 1 with dark theme revision; see selected-design.json. Previous two sets rejected.",
   "selection_rule": "User numbers 1, 2, 3 resolve to DISPLAYED order in this third set only.",
   "state": "full editor after own media import; Coast.jpg, 1 of 3, Provia applied, Films active",
   "review": "All outputs directly inspected for one hero image, compact type, available mode entries, film previews/selected state, and Export. Visual style acceptance remains with user. No running application behavior tested.",

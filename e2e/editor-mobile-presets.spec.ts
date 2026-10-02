@@ -1,3 +1,4 @@
+import { clickEditorAction } from './helpers/editor-controls'
 import { test, expect } from './helpers/fixtures'
 import AxeBuilder from '@axe-core/playwright'
 import type { Locator, Page } from '@playwright/test'
@@ -30,7 +31,7 @@ async function visibleInSelection(locator: Locator) {
 test.describe('Editor — mobile films', () => {
   test('offers Original and exactly ten films with touch-sized main choices', async ({ page, editorPage }) => {
     await expect(selection(page)).toBeVisible()
-    await expect(selection(page).getByRole('button')).toHaveCount(11)
+    await expect(selection(page).getByRole('button', { name: /^Select / })).toHaveCount(11)
     const original = selection(page).getByRole('button', { name: 'Select Original', exact: true })
     await expect(original).toHaveAttribute('aria-pressed', 'true')
     await expectTouchTarget(original)
@@ -59,14 +60,13 @@ test.describe('Editor — mobile films', () => {
 
   test('keeps film-row scroll position and selected film after Help rerenders', async ({ page, editorPage }) => {
     await film(page, 'Classic Neg').click()
-    const scroll = await selection(page).evaluate(element => element.scrollLeft)
-    const help = page.locator('header:visible').getByRole('button', { name: 'Help', exact: true })
-    await help.click()
+    const scroll = await selection(page).locator('.film-selector-scroll').evaluate(element => element.scrollLeft)
+    await clickEditorAction(page, 'Help')
     const dialog = page.getByRole('dialog', { name: 'Photochrome help', exact: true })
     await expect(dialog).toBeVisible()
     await dialog.getByRole('button', { name: 'Close', exact: true }).click()
     await expect(film(page, 'Classic Neg')).toHaveAttribute('aria-pressed', 'true')
-    await expect.poll(() => selection(page).evaluate(element => element.scrollLeft)).toBe(scroll)
+    await expect.poll(() => selection(page).locator('.film-selector-scroll').evaluate(element => element.scrollLeft)).toBe(scroll)
   })
 
   test('favorites belong to film-scoped Advanced recipes and persist after Cancel', async ({ page, editorPage }) => {
@@ -120,7 +120,7 @@ test.describe('Editor — mobile films', () => {
     await uploadVideo(page)
     await expect(page.getByText('test-video.mp4', { exact: true })).toBeVisible()
     await expect(selection(page)).toBeVisible()
-    await expect(selection(page).getByRole('button')).toHaveCount(11)
+    await expect(selection(page).getByRole('button', { name: /^Select / })).toHaveCount(11)
     await expect(selection(page).getByRole('button', { name: 'Select Original', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await film(page, 'Provia').click()
     await expect(film(page, 'Provia')).toHaveAttribute('aria-pressed', 'true')

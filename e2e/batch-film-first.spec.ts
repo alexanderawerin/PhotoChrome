@@ -1,3 +1,4 @@
+import { clickEditorAction, chooseImage } from './helpers/editor-controls'
 import { readFile } from 'node:fs/promises'
 import sharp from 'sharp'
 import { strFromU8, unzipSync } from 'fflate'
@@ -5,9 +6,9 @@ import type { Page } from '@playwright/test'
 import { test, expect } from './helpers/fixtures'
 
 const preview = (page: Page) => page.locator('canvas[aria-label="Preview"]')
-const selectPhoto = (page: Page, index: number) => page.getByRole('tab', { name: `Image ${index} of 2: test-image${index === 1 ? '' : '-2'}.jpg`, exact: true })
-const exportAll = (page: Page) => page.getByRole('button', { name: 'Export all photos', exact: true })
-const applyAll = (page: Page) => page.getByRole('button', { name: 'Apply current color to all 2 images', exact: true })
+const photoName = (index: number) => `Image ${index} of 2: test-image${index === 1 ? '' : '-2'}.jpg`
+const exportAll = (page: Page) => page.getByRole('button', { name: 'Export all photos', exact: true, includeHidden: true })
+const applyAll = (page: Page) => page.getByRole('button', { name: 'Apply current color to all 2 images', exact: true, includeHidden: true })
 
 async function capturePreview(page: Page) {
   await expect(exportAll(page)).toBeEnabled()
@@ -17,7 +18,7 @@ async function capturePreview(page: Page) {
 
 async function archive(page: Page) {
   const pending = page.waitForEvent('download')
-  await exportAll(page).click()
+  await clickEditorAction(page, 'Export all photos')
   const download = await pending
   expect(download.suggestedFilename()).toMatch(/^photochrome_batch_.+\.zip$/)
   const file = await download.path()
@@ -46,7 +47,7 @@ test('Export all includes geometry-only Original and a film photo with matching 
   await page.keyboard.press('r')
   await expect.poll(() => preview(page).evaluate((canvas: HTMLCanvasElement) => [canvas.width, canvas.height])).toEqual([150, 200])
   const first = await capturePreview(page)
-  await selectPhoto(page, 2).click()
+  await chooseImage(page, photoName(2))
   await page.getByRole('button', { name: 'Select film Classic Neg', exact: true }).click()
   const second = await capturePreview(page)
   const entries = await archive(page)
@@ -58,7 +59,7 @@ test('Export all includes geometry-only Original and a film photo with matching 
 test('Apply to all copies committed manual color and preserves each composition', async ({ page, multiImageEditorPage }) => {
   await page.keyboard.press('r')
   await expect.poll(() => preview(page).evaluate((canvas: HTMLCanvasElement) => canvas.width)).toBe(150)
-  await selectPhoto(page, 2).click()
+  await chooseImage(page, photoName(2))
   await page.getByRole('button', { name: 'Select film Classic Neg', exact: true }).click()
   await page.getByRole('button', { name: 'Open Advanced settings', exact: true }).click()
   const advanced = page.getByRole('region', { name: 'Advanced settings', exact: true })
@@ -71,10 +72,10 @@ test('Apply to all copies committed manual color and preserves each composition'
   await expect(exportAll(page)).toHaveCount(0)
   await advanced.getByRole('button', { name: 'Apply', exact: true }).click()
   await expect(page.getByLabel('Applied color', { exact: true })).toContainText('Modified')
-  await applyAll(page).click()
+  await clickEditorAction(page, 'Apply current color to all 2 images')
   await expect(page.getByRole('status', { name: 'Applying preset to all images', exact: true })).toBeHidden()
   const second = await capturePreview(page)
-  await selectPhoto(page, 1).click()
+  await chooseImage(page, photoName(1))
   await expect(page.getByLabel('Applied color', { exact: true })).toContainText('Modified')
   const first = await capturePreview(page)
   const entries = await archive(page)
@@ -87,13 +88,13 @@ test('Apply Original to all removes color while retaining separate geometry', as
   await page.keyboard.press('r')
   await page.getByRole('button', { name: 'Select film Classic Neg', exact: true }).click()
   await expect(exportAll(page)).toBeEnabled()
-  await selectPhoto(page, 2).click()
+  await chooseImage(page, photoName(2))
   await expect(page.getByRole('button', { name: 'Select Original', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(applyAll(page)).toBeEnabled()
-  await applyAll(page).click()
+  await clickEditorAction(page, 'Apply current color to all 2 images')
   await expect(page.getByRole('status', { name: 'Applying preset to all images', exact: true })).toBeHidden()
   const second = await capturePreview(page)
-  await selectPhoto(page, 1).click()
+  await chooseImage(page, photoName(1))
   await expect(page.getByRole('button', { name: 'Select Original', exact: true })).toHaveAttribute('aria-pressed', 'true')
   const first = await capturePreview(page)
   const entries = await archive(page)
@@ -117,7 +118,7 @@ test('partial failure ZIP contains only saved JPEGs and reports the actual compl
     }
   })
   const pending = page.waitForEvent('download')
-  await exportAll(page).click()
+  await clickEditorAction(page, 'Export all photos')
   const path = await (await pending).path()
   if (!path) throw new Error('ZIP download unavailable')
   const entries = unzipSync(new Uint8Array(await readFile(path)))
@@ -133,7 +134,7 @@ test('zero successful files produce no ZIP and batch Retry saves the original re
   await page.keyboard.press('r')
   await expect.poll(() => preview(page).evaluate((canvas: HTMLCanvasElement) => [canvas.width, canvas.height])).toEqual([150, 200])
   const first = await capturePreview(page)
-  await selectPhoto(page, 2).click()
+  await chooseImage(page, photoName(2))
   const second = await capturePreview(page)
   await page.evaluate(() => {
     const original = Worker.prototype.postMessage
@@ -152,7 +153,7 @@ test('zero successful files produce no ZIP and batch Retry saves the original re
   })
   let downloads = 0
   page.on('download', () => { downloads++ })
-  await exportAll(page).click()
+  await clickEditorAction(page, 'Export all photos')
   const alert = page.getByRole('alert')
   await expect(alert).toContainText('No photos were exported')
   expect(downloads).toBe(0)

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { CropOverlay } from './CropOverlay'
 import { AspectRatio, type NormalizedCropRect } from '../engine/transform'
 import { RESIZE_DEBOUNCE_DELAY } from '../constants'
@@ -25,6 +25,7 @@ interface PreviewProps {
   cover?: boolean
   /** Media ownership changes invalidate an in-flight touch gesture. */
   gestureContextKey?: string
+  overlay?: ReactNode
 }
 
 export function Preview({
@@ -47,6 +48,7 @@ export function Preview({
   enableSwipe = false,
   cover = false,
   gestureContextKey,
+  overlay,
 }: PreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -259,7 +261,9 @@ export function Preview({
           aria-label={alt}
           draggable={false}
         />
-        
+        {overlay && <div className="editor-preview-overlay" onMouseDown={event => event.stopPropagation()}
+          onTouchStart={event => event.stopPropagation()} onTouchEnd={event => event.stopPropagation()}>{overlay}</div>}
+
         {/* Crop overlay */}
         {cropMode && canvasDisplaySize.width > 0 && (
           <div className="absolute inset-0 rounded-lg overflow-hidden">

@@ -30,13 +30,15 @@ export function AdvancedPanel({ profile, settings, sourceImage, onProfileSelect,
     .sort((a, b) => Number(favorites.has(b.id)) - Number(favorites.has(a.id)))
 
   return (
-    <section role="region" aria-label="Advanced settings" className="flex h-full min-h-0 flex-col bg-black">
-      <div className="shrink-0 border-b border-zinc-800 px-3 py-2">
+    <section role="region" aria-label="Advanced settings" className="editor-advanced-panel flex h-full min-h-0 flex-col">
+      <div className="editor-advanced-heading flex shrink-0 items-center justify-between gap-3 border-b border-zinc-800 px-4 py-2">
+        <div className="min-w-0">
         <h2 className="text-base font-semibold">Advanced</h2>
         <p className="mt-1 text-xs text-zinc-400">{getProfileName(profile)}</p>
-        <Button variant="ghost" className="mt-2 min-h-11 px-2 text-xs" onClick={onRestoreBase} disabled={disabled}>Restore base film</Button>
+        </div>
+        <Button variant="ghost" className="h-auto min-h-11 min-w-0 whitespace-normal px-2 text-xs" onClick={onRestoreBase} disabled={disabled}>Restore base film</Button>
       </div>
-      <div role="tablist" aria-label="Advanced settings mode" className="flex shrink-0 gap-2 border-b border-zinc-800 px-4 py-2">
+      <div role="tablist" aria-label="Advanced settings mode" className="flex shrink-0 gap-2 border-b border-zinc-800 px-4 py-1">
         {(['recipes', 'manual'] as const).map(value => (
           <button key={value} type="button" role="tab" id={`${id}-${value}`} aria-controls={`${id}-panel-${value}`} aria-selected={tab === value} tabIndex={tab === value ? 0 : -1}
             onClick={() => setTab(value)}
@@ -56,7 +58,7 @@ export function AdvancedPanel({ profile, settings, sourceImage, onProfileSelect,
       <div role="tabpanel" id={`${id}-panel-${tab}`} aria-labelledby={`${id}-${tab}`} className="min-h-0 flex-1 overflow-y-auto">
         <fieldset disabled={disabled} className="h-full min-w-0 border-0 p-0">
           {tab === 'recipes' ? (
-            <div className="grid grid-cols-2 gap-3 p-4">
+            <div className="editor-advanced-recipes grid grid-cols-2 gap-3 p-4">
               {recipes.map(recipe => (
                 <RecipeCard key={recipe.id} recipe={recipe} sourceImage={sourceImage} isActive={profile.id === recipe.id}
                   isFavorite={favorites.has(recipe.id)} onFavoriteToggle={toggleFavorite} onClick={() => onProfileSelect(recipe)} />

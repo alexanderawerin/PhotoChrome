@@ -1,5 +1,5 @@
 import { test, expect } from './helpers/fixtures'
-import { editorModes } from './helpers/editor-controls'
+import { chooseImage, editorModes } from './helpers/editor-controls'
 import { uploadMultipleImages, waitForEditor } from './helpers/upload'
 import { advancedPanel, advancedTrigger, appliedColor, changeHighlight, editorCanvas, openAdvanced, previewPixels, selectPortraitDraft, startAdvancedMedia, type AdvancedMedia } from './helpers/advanced'
 
@@ -173,11 +173,10 @@ test('changing photos discards an unfinished draft and preserves each applied pr
   await openAdvanced(page)
   await selectPortraitDraft(page)
   await changeHighlight(page)
-  const strip = page.getByRole('tablist', { name: 'Image thumbnails', exact: true })
-  await strip.getByRole('tab', { name: 'Image 2 of 2: test-image-2.jpg', exact: true }).click()
+  await chooseImage(page, 'Image 2 of 2: test-image-2.jpg')
   await expect(appliedColor(page)).toContainText('Original')
   await expect(advancedPanel(page)).toHaveCount(0)
-  await strip.getByRole('tab', { name: 'Image 1 of 2: test-image.jpg', exact: true }).click()
+  await chooseImage(page, 'Image 1 of 2: test-image.jpg')
   await expect(appliedColor(page)).toContainText('Provia')
   await expect(appliedColor(page)).not.toContainText('Portrait')
   await expect(appliedColor(page)).not.toContainText('Modified')

@@ -140,7 +140,7 @@ function RecipeCardComponent({
             role="status"
             aria-label="Loading preview"
           >
-            {visible && <Spinner className="size-4" randomColor />}
+            {visible && <Spinner className="size-4" />}
           </div>
         )}
         <button type="button" onClick={handleFavoriteClick}
