@@ -96,7 +96,7 @@ test.describe('Editor — Multi-Image Navigation', () => {
   test('arrow keys navigate between photos', async ({ page, multiImageEditorPage }) => {
     const firstPixels = await previewPixels(page, 'photo')
     // Focus a non-slider surface so arrows execute the editor navigation command.
-    await page.getByRole('button', { name: 'More editor actions', exact: true }).focus()
+    await page.getByRole('navigation', { name: 'Editor modes', exact: true }).getByRole('button', { name: 'Films', exact: true }).focus()
     await page.keyboard.press('ArrowRight')
     await expect.poll(() => previewPixels(page, 'photo')).not.toBe(firstPixels)
     await page.keyboard.press('ArrowLeft')

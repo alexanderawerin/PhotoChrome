@@ -19,6 +19,7 @@ interface VideoPreviewProps {
   onProcessingError?: (message: string | null) => void
   retryKey?: number
   overlay?: ReactNode
+  statusOverlay?: ReactNode
   /** Pause playback rendering while another process owns the video element. */
   isSuspended?: boolean
   /** Alt text for accessibility */
@@ -45,6 +46,7 @@ export function VideoPreview({
   onProcessingError,
   retryKey = 0,
   overlay,
+  statusOverlay,
   isSuspended = false,
   alt = 'Video preview',
   onMouseDown,
@@ -426,6 +428,7 @@ export function VideoPreview({
         {overlay && <div className="editor-preview-overlay"
           onMouseDown={event => event.stopPropagation()} onTouchStart={event => event.stopPropagation()}
           onTouchEnd={event => event.stopPropagation()}>{overlay}</div>}
+        {statusOverlay && <div className="editor-processing-overlay">{statusOverlay}</div>}
 
         {processingError && <div className="absolute inset-0 flex items-center justify-center bg-black/75 p-4 text-sm text-white">{processingError}</div>}
         {cropMode && <div className="absolute inset-0 rounded-lg overflow-hidden">

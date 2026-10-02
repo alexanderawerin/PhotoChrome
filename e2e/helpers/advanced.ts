@@ -30,6 +30,8 @@ export async function openAdvanced(page: Page) {
   await advancedTrigger(page).click()
   await expect(advancedPanel(page)).toHaveCount(1)
   await expect(advancedPanel(page)).toBeVisible()
+  await expect(advancedPanel(page).getByRole('heading', { name: 'Advanced', exact: true })).toHaveCount(0)
+  await expect(advancedPanel(page).getByRole('button', { name: 'Restore base film', exact: true })).toHaveCount(0)
 }
 
 export async function selectPortraitDraft(page: Page) {

@@ -4,7 +4,7 @@ import { advancedPanel, advancedTrigger, appliedColor, changeHighlight, openAdva
 async function expectOneControlHost(page: import('@playwright/test').Page) {
   await expect(page.getByRole('complementary', { name: 'Editor controls', exact: true, includeHidden: true })).toHaveCount(1)
   await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true, includeHidden: true })).toHaveCount(1)
-  // Advanced owns its Apply/Cancel footer; the common action toolbar is absent.
+  // Advanced owns its Apply/Cancel controls; the common action toolbar is absent.
   await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true, includeHidden: true })).toHaveCount(0)
   await expect(advancedPanel(page)).toHaveCount(1)
 }

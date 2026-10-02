@@ -7,15 +7,13 @@ const cropSettings = (page: Page) => editorControls(page).getByRole('region', { 
 
 export async function openCropSession(page: Page): Promise<void> {
   await editorModes(page).getByRole('button', { name: 'Crop', exact: true }).click()
-  await editorControls(page).getByRole('group', { name: 'Crop tools', exact: true })
-    .getByRole('button', { name: 'Open crop session', exact: true }).click()
   await expect(cropSettings(page)).toBeVisible()
 }
 
 /** Reveal relocated secondary actions without depending on responsive DOM order. */
 export async function clickEditorAction(page: Page, name: string | RegExp): Promise<void> {
-  const action = page.getByRole('button', { name, exact: typeof name === 'string' })
-  if (!await action.isVisible()) await page.getByRole('button', { name: 'More editor actions', exact: true }).click()
+  const action = page.getByRole('button', { name, exact: typeof name === 'string', includeHidden: true })
+  if (!await action.isVisible()) await page.getByRole('button', { name: 'More editor actions', exact: true, includeHidden: true }).click()
   await action.click()
 }
 

@@ -26,6 +26,7 @@ interface PreviewProps {
   /** Media ownership changes invalidate an in-flight touch gesture. */
   gestureContextKey?: string
   overlay?: ReactNode
+  statusOverlay?: ReactNode
 }
 
 export function Preview({
@@ -49,6 +50,7 @@ export function Preview({
   cover = false,
   gestureContextKey,
   overlay,
+  statusOverlay,
 }: PreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -263,6 +265,7 @@ export function Preview({
         />
         {overlay && <div className="editor-preview-overlay" onMouseDown={event => event.stopPropagation()}
           onTouchStart={event => event.stopPropagation()} onTouchEnd={event => event.stopPropagation()}>{overlay}</div>}
+        {statusOverlay && <div className="editor-processing-overlay">{statusOverlay}</div>}
 
         {/* Crop overlay */}
         {cropMode && canvasDisplaySize.width > 0 && (

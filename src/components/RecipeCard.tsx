@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, memo } from 'react'
-import { Heart } from 'lucide-react'
+import { Circle, Heart } from 'lucide-react'
 import { Spinner } from './ui/spinner'
 import { Recipe } from '../engine/types'
 import { ImageProcessor } from '../engine/processor'
@@ -20,6 +20,7 @@ interface RecipeCardProps {
   isFavorite: boolean
   onFavoriteToggle: (recipeId: string) => void
   onClick: () => void
+  compact?: boolean
 }
 
 function RecipeCardComponent({ 
@@ -29,11 +30,13 @@ function RecipeCardComponent({
   isFavorite,
   onFavoriteToggle,
   onClick,
+  compact = false,
 }: RecipeCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
   const visible = usePreviewVisibility(cardRef)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [previewData, setPreviewData] = useState<ImageData | null>(null)
+  const [previewError, setPreviewError] = useState(false)
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation() // Предотвращаем клик по карточке
@@ -42,6 +45,7 @@ function RecipeCardComponent({
 
   useEffect(() => {
     setPreviewData(null)
+    setPreviewError(false)
     if (!visible) return
     let cancelled = false
     const controller = new AbortController()
@@ -51,7 +55,10 @@ function RecipeCardComponent({
 
       try {
         const imageKey = getImageKey(sourceImage)
-        const cacheKey = `${recipe.id}_${imageKey}`
+        const size = compact
+          ? Math.round(92 * Math.min(2, Math.max(1, window.devicePixelRatio || 1)))
+          : RECIPE_CARD_PREVIEW_SIZE
+        const cacheKey = `recipes/${recipe.id}/${imageKey}/${size}`
 
         // Проверяем кэш обработанных превью
         const cachedPreview = processedPreviewCache.get(cacheKey)
@@ -60,7 +67,7 @@ function RecipeCardComponent({
           return
         }
 
-        const smallImage = resizePreviewImage(sourceImage, RECIPE_CARD_PREVIEW_SIZE)
+        const smallImage = resizePreviewImage(sourceImage, size)
         if (!smallImage || cancelled) {
           return
         }
@@ -83,8 +90,8 @@ function RecipeCardComponent({
           
           setPreviewData(processed)
         }
-      } catch (err) {
-        if (!cancelled) console.error('Ошибка генерации превью:', err)
+      } catch {
+        if (!cancelled) setPreviewError(true)
       }
     }
 
@@ -96,7 +103,7 @@ function RecipeCardComponent({
       controller.abort()
       clearTimeout(timeoutId)
     }
-  }, [recipe, sourceImage, visible])
+  }, [recipe, sourceImage, visible, compact])
 
   useEffect(() => {
     if (!previewData || !canvasRef.current) return
@@ -111,6 +118,29 @@ function RecipeCardComponent({
     ctx.putImageData(previewData, 0, 0)
     return () => { canvas.width = canvas.height = 0 }
   }, [previewData])
+
+  if (compact) {
+    return (
+      <div ref={cardRef} data-recipe-card className="editor-recipe-option">
+        <button type="button" className="film-option" onClick={onClick}
+          aria-pressed={isActive} aria-label={`Apply preset ${recipe.name}${isActive ? ', selected' : ''}`}>
+          {isActive && <Circle className="film-selected-marker" aria-hidden="true" fill="currentColor" />}
+          <span className="film-thumbnail" data-preview-state={previewError ? 'error' : previewData ? 'ready' : visible ? 'loading' : 'idle'}>
+            {previewData && <canvas ref={canvasRef} className="film-thumbnail-canvas" aria-hidden="true" />}
+            {!previewData && <span className="film-thumbnail-state" aria-hidden={previewError ? undefined : true}>
+              {previewError ? 'Preview unavailable' : visible && <Spinner className="size-3" />}
+            </span>}
+          </span>
+          <span className="film-label">{recipe.name}</span>
+        </button>
+        <button type="button" onClick={handleFavoriteClick}
+          className="editor-recipe-favorite grid size-11 place-items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'} aria-pressed={isFavorite}>
+          <Heart className={`size-4 ${isFavorite ? 'fill-current' : ''}`} aria-hidden="true" />
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -138,9 +168,9 @@ function RecipeCardComponent({
           <div 
             className="w-full h-full flex items-center justify-center"
             role="status"
-            aria-label="Loading preview"
+            aria-label={previewError ? 'Preview unavailable' : 'Loading preview'}
           >
-            {visible && <Spinner className="size-4" />}
+            {previewError ? 'Preview unavailable' : visible && <Spinner className="size-4" />}
           </div>
         )}
         <button type="button" onClick={handleFavoriteClick}

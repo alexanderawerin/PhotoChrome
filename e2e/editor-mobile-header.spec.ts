@@ -50,6 +50,7 @@ test.describe('Editor — mobile header', () => {
     await expect(modes).toBeVisible()
     await modes.getByRole('button', { name: 'Crop', exact: true }).click()
     await expect(panel).toHaveCount(0)
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click()
     await modes.getByRole('button', { name: 'Open Advanced settings', exact: true }).click()
     await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
     await expect(slider).toHaveAttribute('aria-valuenow', initialValue!)
@@ -60,7 +61,6 @@ test.describe('Editor — mobile header', () => {
     await modes.getByRole('button', { name: 'Crop' }).click()
     await expect(page.getByRole('button', { name: 'Rotate clockwise' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Flip horizontal' })).toBeVisible()
-    await page.getByRole('button', { name: 'Open crop session' }).click()
 
     const cropRegion = page.getByRole('region', { name: 'Crop settings', exact: true })
     await expect(cropRegion).toBeVisible()
@@ -86,7 +86,7 @@ test.describe('Editor — mobile header', () => {
     await page.keyboard.press('ArrowRight')
     await page.getByRole('button', { name: 'Cancel', exact: true }).click()
 
-    await page.getByRole('button', { name: 'Open crop session' }).click()
+    await modes.getByRole('button', { name: 'Crop', exact: true }).click()
     await expect(cropRegion.getByRole('slider', { name: 'Crop angle' })).toHaveAttribute('aria-valuenow', '0')
     await expect(cropRegion.getByRole('slider', { name: 'Crop zoom' })).toBeVisible()
   })

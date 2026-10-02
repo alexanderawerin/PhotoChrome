@@ -153,7 +153,7 @@ test.describe('Editor — Preview Rendering', () => {
 
   test('Advanced previews leave offscreen cards idle, render after scrolling, and stop in Manual', async ({ page, editorPage }) => {
     await selectBaseFilm(page)
-    await page.setViewportSize({ width: 1200, height: 480 })
+    await page.setViewportSize({ width: 393, height: 600 })
     await page.evaluate(async () => {
       // Instrument the existing processing boundary, without a public editor API.
       // Use the exact application-loaded URL: a Vite timestamp query creates

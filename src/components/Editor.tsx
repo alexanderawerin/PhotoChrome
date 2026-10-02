@@ -7,7 +7,7 @@ import { Preview } from './Preview'
 import { FilmSelector } from './FilmSelector'
 import { getBaseFilm, hasModifiedSettings, isBaseProfile } from '../engine/film-profiles'
 import { AdvancedPanel } from './AdvancedPanel'
-import { EditorHeader, EditorModes, EditorActions, EditorControlDock, EditorCompare, EditorPhotoNavigation, CropTools, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
+import { EditorHeader, EditorModes, EditorActions, EditorControlDock, EditorCompare, EditorPhotoNavigation, EditorProcessing, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
 import { HelpDialog } from './HelpDialog'
 import { ExportCompletion, type ExportCompletionState } from './ExportCompletion'
 import { Recipe, ImageItem } from '../engine/types'
@@ -197,27 +197,27 @@ export function Editor({
   /**
    * Переключение видимости панели
    */
-  const advancedFocusRef = useRef<HTMLElement | null>(null)
-  const restoreAdvancedFocus = useRef(false)
+  const sessionFocusRef = useRef<HTMLElement | null>(null)
+  const restoreSessionFocus = useRef(false)
   const closeAdvanced = useCallback((apply: boolean) => {
     if (apply && !isPreviewReady) return
     if (apply) edit.commit()
     else edit.cancel()
     setMode('films')
-    restoreAdvancedFocus.current = true
+    restoreSessionFocus.current = true
   }, [edit, isPreviewReady])
 
   useEffect(() => {
-    if (isTuning || !isPreviewReady || !restoreAdvancedFocus.current) return
+    if (edit.session || !isPreviewReady || !restoreSessionFocus.current) return
     const frame = requestAnimationFrame(() => {
-      const trigger = advancedFocusRef.current
+      const trigger = sessionFocusRef.current
       if (trigger?.isConnected && !(trigger instanceof HTMLButtonElement && trigger.disabled)) {
         trigger.focus({ preventScroll: true })
-        restoreAdvancedFocus.current = false
+        restoreSessionFocus.current = false
       }
     })
     return () => cancelAnimationFrame(frame)
-  }, [isTuning, isPreviewReady])
+  }, [edit.session, isPreviewReady])
 
   const handleTuningOpen = useCallback(() => {
     if (isTuning) {
@@ -225,22 +225,33 @@ export function Editor({
       return
     }
     if (!commands.advanced) return
-    advancedFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    sessionFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     edit.openTuning()
     setMode('advanced')
   }, [isTuning, commands.advanced, edit, closeAdvanced])
 
   const handleCropClick = useCallback(() => {
-    if (!commands.geometry) return
+    if (isCropping || !(commands.geometry || (isTuning && commands.editDraft))) return
+    sessionFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    restoreSessionFocus.current = false
     setMode('crop')
     edit.openCrop()
-  }, [edit, commands.geometry])
+  }, [edit, commands.geometry, commands.editDraft, isCropping, isTuning])
+
+  const closeCrop = useCallback((apply: boolean) => {
+    if (apply && !isPreviewReady) return
+    if (apply) edit.commit()
+    else edit.cancel()
+    setMode('films')
+    restoreSessionFocus.current = true
+  }, [edit, isPreviewReady])
 
   const changeMode = (next: EditorMode) => {
     if (next === 'advanced') {
       handleTuningOpen()
       return
     }
+    if (next === 'crop') { handleCropClick(); return }
     if (!commands.selectColor || (demoMode && next !== 'films')) return
     edit.cancel()
     setMode(next)
@@ -248,7 +259,7 @@ export function Editor({
 
   useEffect(() => {
     setMode('films')
-    restoreAdvancedFocus.current = false
+    restoreSessionFocus.current = false
   }, [currentImage.id])
 
   // ============================================================================
@@ -421,8 +432,8 @@ export function Editor({
       onRotateCounterClockwise: () => edit.rotate(270),
       onFlipHorizontal: edit.flip,
       onCropOpen: handleCropClick,
-      onCropCancel: edit.cancel,
-      onCropApply: edit.commit,
+      onCropCancel: () => closeCrop(false),
+      onCropApply: () => closeCrop(true),
       onTuningToggle: handleTuningOpen,
       onTuningCancel: () => closeAdvanced(false),
       onTuningApply: () => closeAdvanced(true),
@@ -446,9 +457,9 @@ export function Editor({
     id: 'upload', label: 'Upload photos', ariaLabel: 'Upload photos',
     onClick: () => demoUploadRef.current?.click(), disabled: !commands.add,
   }] : isTuning ? [] : isCropping ? [{
-    id: 'cancel-crop', label: 'Cancel', variant: 'outline', onClick: edit.cancel, disabled: !commands.cancelDraft,
+    id: 'cancel-crop', label: 'Cancel', variant: 'ghost', onClick: () => closeCrop(false), disabled: !commands.cancelDraft,
   }, {
-    id: 'apply-crop', label: 'Done', onClick: edit.commit, disabled: !commands.editDraft,
+    id: 'apply-crop', label: 'Done', onClick: () => closeCrop(true), disabled: !commands.editDraft,
   }] : [
     ...(totalImages > 1 ? [{
       id: 'apply-all', label: 'Apply to all', ariaLabel: `Apply current color to all ${totalImages} images`,
@@ -492,32 +503,25 @@ export function Editor({
         <EditorHeader
           compact={isTuning}
           modes={<EditorModes mode={mode} onChange={changeMode} demoMode={demoMode} advancedOpen={isTuning}
-            disabled={{ films: !commands.selectColor, advanced: isTuning ? !commands.cancelDraft : !commands.advanced, crop: !commands.selectColor }} />}
+            disabled={{ films: !commands.selectColor, advanced: isTuning ? !commands.cancelDraft : !commands.advanced, crop: isCropping ? !commands.cancelDraft : !(commands.geometry || (isTuning && commands.editDraft)) }} />}
           leading={!demoMode && (
             <Button variant="ghost" size="sm" onClick={() => demoUploadRef.current?.click()} disabled={!commands.add}
               className="editor-control h-11 min-w-11 gap-1 rounded-lg px-2 text-zinc-300" aria-label="Add photos">
               <Plus className="size-4" aria-hidden="true" /><span className="editor-add-label">Add photos</span>
             </Button>
           )}
-          trailing={<EditorActions actions={isCropping ? [] : actions} placement="header" primaryId={isMdUp || totalImages === 1 ? 'export' : 'export-all'} extra={(
-            <Button variant="ghost" size="sm" onClick={() => { if (commands.help) setIsHelpOpen(true) }} disabled={!commands.help}
-              className="editor-control relative h-11 min-w-11 gap-1 rounded-lg px-2 text-zinc-300" aria-label="Help">
-              <HelpCircle className="size-4" aria-hidden="true" /> Help
-              {hasUnreadHelp && <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-white" aria-hidden="true" />}
-            </Button>
-          )} />}
+          trailing={<EditorActions actions={isCropping ? [] : actions} placement="header" primaryId={isMdUp || totalImages === 1 ? 'export' : 'export-all'} extraActions={[{
+            id: 'help', label: 'Help', icon: <HelpCircle className="size-4" aria-hidden="true" />, unread: hasUnreadHelp,
+            onClick: () => { if (commands.help) setIsHelpOpen(true) }, disabled: !commands.help,
+          }]} />}
         />
 
         <div className="editor-color-status flex items-center gap-2 text-xs text-zinc-400" aria-label="Applied color"
-          data-quiet={!edit.session && !isProcessing && !previewError && (!currentImage.recipe || (isBaseProfile(currentImage.recipe) && !hasModifiedSettings(currentImage.recipe, currentImage.customSettings))) || undefined}>
-          {(isProcessing || previewError) && <span>{previewError ? 'Unavailable:' : 'Preparing:'}</span>}
+          data-quiet={!edit.session && !previewError && (!currentImage.recipe || (isBaseProfile(currentImage.recipe) && !hasModifiedSettings(currentImage.recipe, currentImage.customSettings))) || undefined}>
+          {(isProcessing || previewError) && <span className={previewError ? undefined : 'sr-only'}>{previewError ? 'Unavailable:' : 'Preparing:'}</span>}
           <span>{currentImage.recipe ? getBaseFilm(currentImage.recipe.filmSimulation)?.name : 'Original'}</span>
           {currentImage.recipe && !isBaseProfile(currentImage.recipe) && <span>· {currentImage.recipe.name}</span>}
           {hasModifiedSettings(currentImage.recipe, currentImage.customSettings) && <span>· Modified</span>}
-          {currentImage.recipe && !demoMode && !edit.session && (!isBaseProfile(currentImage.recipe) || hasModifiedSettings(currentImage.recipe, currentImage.customSettings)) && (
-            <button type="button" disabled={!commands.selectColor || !!edit.session} className="ml-auto min-h-9 shrink-0 underline disabled:opacity-40"
-              onClick={() => handleRecipeSelect(getBaseFilm(currentImage.recipe!.filmSimulation) ?? null)}>Restore base film</button>
-          )}
         </div>
 
         {previewError && (
@@ -548,11 +552,6 @@ export function Editor({
 
         <div className="mobile-photo-stage relative flex min-h-0 flex-col overflow-hidden" role="region" aria-label="Photo workspace" data-preview-fit="contain">
           <div className="relative min-h-0 flex-1">
-          {isProcessing && (
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
-              <p className="text-sm text-zinc-400 bg-zinc-900/80 px-3 py-1 rounded">Processing...</p>
-            </div>
-          )}
           <Preview
             gestureContextKey={`${currentImage.id}:${currentImage.recipe?.id ?? 'original'}`}
             imageData={displayImage}
@@ -565,6 +564,7 @@ export function Editor({
             cropScale={edit.transformState.cropScale}
             onCropScaleChange={cropScale => edit.changeCrop({ cropScale })}
             cropGridActive={isCropControlActive}
+            statusOverlay={isProcessing ? <EditorProcessing /> : undefined}
             overlay={!isCropping && !isTuning ? <EditorCompare active={showOriginal} disabled={!commands.compare}
               onStart={handleCompareStart} onEnd={handleCompareEnd} /> : undefined}
             onMouseDown={handleCompareStart}
@@ -580,7 +580,7 @@ export function Editor({
 
         <EditorControlDock
           mode={mode}
-          actions={<EditorActions actions={isCropping ? actions : []} />}
+          actions={<EditorActions actions={isCropping ? actions : []} primaryId="apply-crop" />}
         >
           {mode === 'films' && (
             <FilmSelector sourceImage={currentImage.transformedThumbnail} activeRecipe={currentImage.recipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor} retryKey={previewRetry} />
@@ -588,12 +588,8 @@ export function Editor({
           {mode === 'advanced' && isTuning && profile && (
             <AdvancedPanel profile={profile} settings={settings} sourceImage={transformedThumbnail}
               onProfileSelect={edit.selectDraftProfile} onSettingsChange={edit.changeSettings}
-              onRestoreBase={edit.restoreDraftBase} onApply={() => closeAdvanced(true)} onCancel={() => closeAdvanced(false)}
+              onApply={() => closeAdvanced(true)} onCancel={() => closeAdvanced(false)}
               disabled={interactionDisabled || isExporting || isBatchExporting} applyDisabled={!isPreviewReady} />
-          )}
-          {mode === 'crop' && !isCropping && (
-            <CropTools onOpen={handleCropClick} onRotate={() => { if (commands.geometry) edit.rotate(90) }}
-              onFlip={() => { if (commands.geometry) edit.flip() }} disabled={!commands.geometry} />
           )}
           {mode === 'crop' && isCropping && (
             <CropSessionControls

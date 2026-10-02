@@ -155,7 +155,7 @@ async function expectVisibleButtonTextFits(buttons: Locator): Promise<void> {
     while (node) {
       const text = node.textContent?.trim()
       const parent = node.parentElement
-      if (text && parent && !parent.closest('[aria-hidden="true"]')) {
+      if (text && parent && !parent.closest('[aria-hidden="true"], .sr-only')) {
         const range = document.createRange()
         range.selectNodeContents(node)
         textRects.push(...Array.from(range.getClientRects()).map(rect => ({ text, rect })))
@@ -372,7 +372,7 @@ test.describe('Editor — mobile preview layout', () => {
     }
   })
 
-  test('contains a portrait in the Crop workspace before and during a non-modal crop session', async ({ page }) => {
+  test('opens a contained non-modal portrait Crop session in one click', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' })
     await uploadImage(page, 'test-image-2.jpg')
     await waitForEditor(page)
@@ -384,8 +384,7 @@ test.describe('Editor — mobile preview layout', () => {
     await expect(page.getByLabel('Crop tools', { exact: true })).toBeVisible()
     await expectContainedInWorkspace(page)
 
-    const openCrop = page.getByRole('button', { name: 'Open crop session', exact: true })
-    await openCrop.click()
+    await expect(page.getByRole('button', { name: 'Open crop session', exact: true })).toHaveCount(0)
     const cropRegion = page.getByRole('region', { name: 'Crop settings', exact: true })
     await expect(cropRegion).toBeVisible()
     await expect(cropRegion).not.toHaveAttribute('aria-modal', 'true')
@@ -396,14 +395,14 @@ test.describe('Editor — mobile preview layout', () => {
 
     await page.getByRole('button', { name: 'Cancel', exact: true }).click()
     await expect(cropRegion).toBeHidden()
-    await expect(page.getByLabel('Crop tools', { exact: true })).toBeVisible()
+    await expect(modes.getByRole('button', { name: 'Films', exact: true })).toHaveAttribute('aria-current', 'page')
     await expectContainedInWorkspace(page)
 
-    await openCrop.click()
+    await modes.getByRole('button', { name: 'Crop', exact: true }).click()
     await expect(cropRegion).toBeVisible()
     await page.getByRole('button', { name: 'Done', exact: true }).click()
     await expect(cropRegion).toBeHidden()
-    await expect(page.getByLabel('Crop tools', { exact: true })).toBeVisible()
+    await expect(modes.getByRole('button', { name: 'Films', exact: true })).toHaveAttribute('aria-current', 'page')
     await expectContainedInWorkspace(page)
   })
 })

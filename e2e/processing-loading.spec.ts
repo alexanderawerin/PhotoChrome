@@ -18,7 +18,7 @@ async function downloadedPixels(page: Page) {
   return { name: download.suggestedFilename(), pixels: decoded.data }
 }
 
-test('a delayed actual LUT blocks single export until the intended film is ready', async ({ page }) => {
+test('a delayed actual LUT blocks export without moving the photo before or after readiness', async ({ page }) => {
   let release!: () => void
   let requested!: () => void
   const gate = new Promise<void>(resolve => { release = resolve })
@@ -32,12 +32,22 @@ test('a delayed actual LUT blocks single export until the intended film is ready
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   await uploadImage(page)
   await waitForEditor(page)
+  await expect(exportButton(page)).toBeEnabled()
+  const preview = page.getByLabel('Preview', { exact: true })
+  const baseline = await preview.boundingBox()
+  if (!baseline) throw new Error('Photo geometry unavailable')
+  const expectStablePhoto = async () => {
+    const current = await preview.boundingBox()
+    expect(current).not.toBeNull()
+    for (const key of ['x', 'y', 'width', 'height'] as const) expect(Math.abs(current![key] - baseline[key])).toBeLessThanOrEqual(1)
+  }
   let downloads = 0
   page.on('download', () => { downloads++ })
   try {
     await selectProvia(page).click()
     await started
     await expect(exportButton(page)).toBeDisabled()
+    await expectStablePhoto()
     await page.keyboard.press('Control+s')
     await expect(page.getByLabel('Applied color', { exact: true })).toContainText('Preparing:')
     expect(downloads).toBe(0)
@@ -45,6 +55,7 @@ test('a delayed actual LUT blocks single export until the intended film is ready
     release()
   }
   await expect(exportButton(page)).toBeEnabled()
+  await expectStablePhoto()
   const saved = await downloadedPixels(page)
   expect(saved.name).toMatch(/provia/)
   expect(downloads).toBe(1)

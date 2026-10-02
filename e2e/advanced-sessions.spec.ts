@@ -102,7 +102,7 @@ for (const width of [393, 1600]) {
         }
       })
 
-      test('choosing another draft recipe clears manual overrides and Restore base clears recipe', async ({ page }) => {
+      test('choosing another draft recipe clears manual overrides and reselecting the base film clears the applied recipe', async ({ page }) => {
         await startAdvancedMedia(page, media, width)
         await openAdvanced(page)
         await selectPortraitDraft(page)
@@ -115,9 +115,8 @@ for (const width of [393, 1600]) {
         await panel.getByRole('button', { name: 'Apply', exact: true }).click()
         await expect(appliedColor(page)).toContainText('Provia Daylight')
         await expect(appliedColor(page)).not.toContainText('Modified')
-        await openAdvanced(page)
-        await panel.getByRole('button', { name: 'Restore base film', exact: true }).click()
-        await panel.getByRole('button', { name: 'Apply', exact: true }).click()
+        await editorModes(page).getByRole('button', { name: 'Films', exact: true }).click()
+        await page.getByRole('button', { name: 'Select film Provia', exact: true }).click()
         await expect(appliedColor(page)).toContainText('Provia')
         await expect(appliedColor(page)).not.toContainText('Daylight')
         await expect(appliedColor(page)).not.toContainText('Modified')
@@ -144,7 +143,7 @@ for (const width of [393, 1600]) {
     await expect(appliedColor(page)).not.toContainText('Provia Portrait')
   })
 
-  test(`Restore base and film changes preserve approved photo geometry at ${width}px`, async ({ page }) => {
+  test(`Base film reselection and film changes preserve approved photo geometry at ${width}px`, async ({ page }) => {
     await startAdvancedMedia(page, 'photo', width)
     await page.keyboard.press('r')
     const canvas = editorCanvas(page, 'photo')
@@ -152,8 +151,9 @@ for (const width of [393, 1600]) {
     await openAdvanced(page)
     await selectPortraitDraft(page)
     await changeHighlight(page)
-    await advancedPanel(page).getByRole('button', { name: 'Restore base film', exact: true }).click()
     await advancedPanel(page).getByRole('button', { name: 'Apply', exact: true }).click()
+    await editorModes(page).getByRole('button', { name: 'Films', exact: true }).click()
+    await page.getByRole('button', { name: 'Select film Provia', exact: true }).click()
     await expect(appliedColor(page)).not.toContainText('Modified')
     await expect.poll(() => canvas.evaluate((element: HTMLCanvasElement) => [element.width, element.height])).toEqual([150, 200])
     await editorModes(page).getByRole('button', { name: 'Films', exact: true }).click()

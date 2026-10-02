@@ -1,8 +1,9 @@
 import { useEffect, useRef, type ComponentProps, type ReactNode, type Ref } from 'react'
-import { Blend, ChevronLeft, ChevronRight, Columns2, CopyCheck, Crop, Download, MoreHorizontal, Plus, SlidersHorizontal, Upload } from 'lucide-react'
+import { Blend, Check, ChevronLeft, ChevronRight, Columns2, CopyCheck, Crop, Download, FlipHorizontal, MoreHorizontal, Plus, RotateCw, SlidersHorizontal, Upload } from 'lucide-react'
 import { Button } from './ui/button'
 import { CropPanel } from './CropPanel'
 import { Spinner } from './ui/spinner'
+import { useIsMdUp } from '../hooks/useIsMdUp'
 
 export type EditorMode = 'films' | 'advanced' | 'crop'
 
@@ -16,6 +17,8 @@ export interface EditorAction {
   variant?: ComponentProps<typeof Button>['variant']
   desktopOnly?: boolean
   buttonRef?: Ref<HTMLButtonElement>
+  icon?: ReactNode
+  unread?: boolean
 }
 
 /** One header DOM for both layouts; media owners supply their permitted actions. */
@@ -43,7 +46,7 @@ export function EditorModes({ mode, onChange, disabled, demoMode = false, advanc
   demoMode?: boolean
   advancedOpen?: boolean
 }) {
-  const choices: EditorMode[] = demoMode ? ['films'] : ['films', 'advanced', 'crop']
+  const choices: EditorMode[] = demoMode ? ['films'] : ['films', 'crop', 'advanced']
   return (
     <nav className={`mobile-editor-modes grid shrink-0 ${demoMode ? 'grid-cols-1' : 'grid-cols-3'}`} aria-label="Editor modes">
       {choices.map(value => (
@@ -89,38 +92,46 @@ function EditorOverflow({ children }: { children: ReactNode }) {
   )
 }
 
-export function EditorActions({ actions, placement = 'dock', primaryId = 'export', extra }: {
+export function EditorActions({ actions, placement = 'dock', primaryId = 'export', extraActions = [] }: {
   actions: EditorAction[]
   placement?: 'dock' | 'header'
   primaryId?: string
-  extra?: ReactNode
+  extraActions?: EditorAction[]
 }) {
-  const renderAction = (action: EditorAction, primary = false) => (
-    <Button key={action.id} ref={action.buttonRef} variant={primary ? 'default' : action.variant ?? 'default'} onClick={action.onClick}
-      disabled={action.disabled} aria-label={action.ariaLabel} aria-busy={action.busy}
-      className={`${primary ? 'editor-primary-action' : 'editor-secondary-action'} min-h-11 min-w-0 whitespace-normal ${action.desktopOnly ? 'hidden md:inline-flex' : ''}`}>
-      {action.busy ? <Spinner className="size-4" /> : primary ? (action.id === 'upload' ? <Plus className="size-4" aria-hidden="true" /> : <Upload className="size-4" aria-hidden="true" />)
-        : placement === 'header' && (action.id === 'apply-all' ? <CopyCheck className="size-4" aria-hidden="true" /> : <Download className="size-4" aria-hidden="true" />)}
-      <span>{action.label}</span>
+  const isMdUp = useIsMdUp()
+  const visible = [...actions, ...extraActions].filter(action => !action.desktopOnly || isMdUp)
+  const renderAction = (action: EditorAction, primary = false, direct = false) => (
+    <Button key={action.id} ref={action.buttonRef} variant={primary ? 'default' : action.variant ?? 'ghost'} onClick={action.onClick}
+      disabled={action.disabled} aria-label={action.ariaLabel ?? (direct ? action.label : undefined)} aria-busy={action.busy} title={direct ? action.label : undefined}
+      className={`${direct ? 'editor-direct-action editor-control' : primary ? 'editor-primary-action' : 'editor-secondary-action'} min-h-11 min-w-0 whitespace-normal`}>
+      {action.busy ? <Spinner className="size-4" /> : action.icon ?? (primary ? (action.id === 'upload' ? <Plus className="size-4" aria-hidden="true" /> : action.id.startsWith('export') ? <Upload className="size-4" aria-hidden="true" /> : <Check className="size-4" aria-hidden="true" />)
+        : placement === 'header' && (action.id === 'apply-all' ? <CopyCheck className="size-4" aria-hidden="true" /> : <Download className="size-4" aria-hidden="true" />))}
+      <span className={direct ? 'sr-only' : undefined}>{action.label}</span>
+      {action.unread && <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-white" aria-hidden="true" />}
     </Button>
   )
   if (placement === 'header') {
-    const primary = actions.find(action => action.id === primaryId) ?? actions.find(action => action.id === 'upload')
-    const secondary = actions.filter(action => action !== primary)
-    const overflow = (extra || secondary.length > 0) && <EditorOverflow>{secondary.map(action => renderAction(action))}{extra}</EditorOverflow>
-    if (!actions.length) return overflow || null
-    return <div className="editor-header-actions" role="toolbar" aria-label="Editor actions"
+    const primary = visible.find(action => action.id === primaryId) ?? visible.find(action => action.id === 'upload')
+    const secondary = visible.filter(action => action !== primary)
+    if (!visible.length) return null
+    const secondaryControls = secondary.length === 1 ? renderAction(secondary[0], false, true)
+      : secondary.length > 1 ? <EditorOverflow>{secondary.map(action => renderAction(action))}</EditorOverflow> : null
+    return <div className="editor-header-actions" role={actions.length ? 'toolbar' : undefined} aria-label={actions.length ? 'Editor actions' : undefined}
       onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') event.stopPropagation() }}>
-      {primary && renderAction(primary, true)}{overflow}
+      {primary && renderAction(primary, true)}{secondaryControls}
     </div>
   }
   if (!actions.length) return null
   return (
     <div className="mobile-editor-actions flex min-h-11 shrink-0 flex-wrap gap-2 p-3" role="toolbar" aria-label="Editor actions"
       onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') event.stopPropagation() }}>
-      {actions.map(action => renderAction(action))}
+      {actions.map(action => renderAction(action, action.id === primaryId))}
     </div>
   )
+}
+
+export function EditorProcessing({ label = 'Processing...' }: { label?: string }) {
+  return <p role="status" aria-label="Processing preview" className="editor-processing-status"><Spinner className="size-3" />{label}</p>
 }
 
 /** A persistent host keeps an open Advanced tab/crop control mounted across resize. */
@@ -181,17 +192,15 @@ export function EditorPhotoNavigation({ previous, next, disabled }: {
   </>
 }
 
-export function CropTools({ onOpen, onRotate, onFlip, disabled = false }: {
-  onOpen?: () => void
+function CropTools({ onRotate, onFlip, disabled = false }: {
   onRotate: () => void
   onFlip: () => void
   disabled?: boolean
 }) {
   return (
-    <div className="editor-crop-tools flex min-h-28 items-center gap-2 p-3" role="group" aria-label="Crop tools">
-      {onOpen && <Button variant="outline" onClick={onOpen} disabled={disabled} className="min-h-20 min-w-0 flex-1" aria-label="Open crop session">Crop</Button>}
-      <Button variant="outline" onClick={onRotate} disabled={disabled} className="min-h-20 min-w-0 flex-1" aria-label="Rotate clockwise">Rotate</Button>
-      <Button variant="outline" onClick={onFlip} disabled={disabled} className="min-h-20 min-w-0 flex-1" aria-label="Flip horizontal">Flip</Button>
+    <div className="editor-crop-tools" role="group" aria-label="Crop tools">
+      <Button variant="ghost" onClick={onRotate} disabled={disabled} className="editor-crop-tool" aria-label="Rotate clockwise" title="Rotate clockwise"><RotateCw aria-hidden="true" /><span>Rotate</span></Button>
+      <Button variant="ghost" onClick={onFlip} disabled={disabled} className="editor-crop-tool" aria-label="Flip horizontal" title="Flip horizontal"><FlipHorizontal aria-hidden="true" /><span>Flip</span></Button>
     </div>
   )
 }

@@ -3,10 +3,10 @@ import { ArrowLeft, PanelRightClose, PanelRightOpen, Film, X, HelpCircle } from 
 import { Button } from './ui/button'
 import { VideoPreview } from './VideoPreview'
 import { FilmSelector } from './FilmSelector'
-import { getBaseFilm, getProfileName, hasModifiedSettings } from '../engine/film-profiles'
+import { getProfileName, hasModifiedSettings } from '../engine/film-profiles'
 import { AdvancedPanel } from './AdvancedPanel'
-import { EditorHeader, EditorModes, EditorActions, EditorControlDock, EditorCompare, CropTools, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
-import { activeEditorSession, beginTuningSession, beginCropSession, editorSessionChanges, selectTuningProfile, restoreTuningBase, updateTuningSession, updateCropSession, setCropRatio, type EditorSession } from '../engine/editor-sessions'
+import { EditorHeader, EditorModes, EditorActions, EditorControlDock, EditorCompare, EditorProcessing, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
+import { activeEditorSession, beginTuningSession, beginCropSession, editorSessionChanges, selectTuningProfile, updateTuningSession, updateCropSession, setCropRatio, type EditorSession } from '../engine/editor-sessions'
 import { createDefaultTransformState, nextQuarterTurn, renderImageTransform, type ImageTransformState } from '../engine/transform'
 import { getVideoOutputSize } from '../engine/video/geometry'
 import { HelpDialog } from './HelpDialog'
@@ -199,7 +199,7 @@ export function VideoEditor({
   const handleTuningCancel = useCallback(() => {
     setDraft(null)
     setCropGridActive(false)
-    setMode(previous => previous === 'advanced' ? 'films' : previous)
+    setMode('films')
     restoreSessionFocus.current = true
   }, [])
 
@@ -208,7 +208,7 @@ export function VideoEditor({
     const frame = requestAnimationFrame(() => {
       const trigger = sessionTriggerRef.current
       const target = trigger?.isConnected ? trigger
-        : contextualPanelRef.current?.querySelector<HTMLElement>('button[aria-label="Open crop session"]')
+        : document.querySelector<HTMLElement>('nav[aria-label="Editor modes"] button[aria-current="page"]')
       if (target && !(target instanceof HTMLButtonElement && target.disabled)) {
         target.focus({ preventScroll: true })
         restoreSessionFocus.current = false
@@ -253,14 +253,6 @@ export function VideoEditor({
     })
   }
 
-  const restoreDraftBase = () => {
-    if (!commands.editDraft) return
-    setDraft(previous => {
-      const current = activeEditorSession(previous, owner)
-      return current?.kind === 'tuning' ? restoreTuningBase(current) : current
-    })
-  }
-
   const changeCrop = useCallback((update: Partial<ImageTransformState>) => {
     if (!commands.cropGeometry) return
     setDraft(previous => {
@@ -276,12 +268,12 @@ export function VideoEditor({
   }, [isCropping, commands.geometry, changeCrop])
 
   const openCrop = useCallback(() => {
-    if (!commands.geometry) return
+    if (isCropping || !(commands.geometry || (isTuning && commands.editDraft))) return
     sessionTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setDraft(beginCropSession(owner, transform))
     setMode('crop')
     setIsPanelOpen(true)
-  }, [commands.geometry, owner, transform])
+  }, [commands.geometry, commands.editDraft, isCropping, isTuning, owner, transform])
 
   const handlePanelToggle = useCallback(() => {
     if (commands.panel) setIsPanelOpen(previous => !previous)
@@ -292,6 +284,7 @@ export function VideoEditor({
       handleTuningOpen()
       return
     }
+    if (next === 'crop') { openCrop(); return }
     if (!commands.selectColor) return
     setDraft(null)
     setCropGridActive(false)
@@ -432,13 +425,9 @@ export function VideoEditor({
   ])
 
   const actions: EditorAction[] = isCropping ? [
-    { id: 'cancel-crop', label: 'Cancel', onClick: handleTuningCancel, variant: 'outline', disabled: !commands.cancelDraft },
+    { id: 'cancel-crop', label: 'Cancel', onClick: handleTuningCancel, variant: 'ghost', disabled: !commands.cancelDraft },
     { id: 'apply-crop', label: 'Done', onClick: handleTuningApply, disabled: !commands.editDraft || !processingPlan || !!renderError },
   ] : isTuning ? [] : [
-    ...(activeRecipe && hasModifiedSettings(activeRecipe, customSettings) ? [{
-      id: 'restore-base', label: 'Restore base film', variant: 'outline' as const,
-      onClick: () => handleRecipeSelect(getBaseFilm(activeRecipe.filmSimulation) ?? null), disabled: !commands.selectColor,
-    }] : []),
     {
       id: 'export', label: exportState.isExporting ? 'Exporting...' : 'Export',
       ariaLabel: exportState.isExporting ? 'Exporting...' : 'Export video',
@@ -457,27 +446,24 @@ export function VideoEditor({
         <div className="mobile-editor-header mobile-editor-surface">
           <EditorHeader compact={isTuning}
             modes={<EditorModes mode={mode} onChange={changeMode} advancedOpen={isTuning}
-              disabled={{ films: !commands.selectColor, advanced: isTuning ? !commands.cancelDraft : !commands.advanced || !processingPlan, crop: !commands.selectColor }} />}
+              disabled={{ films: !commands.selectColor, advanced: isTuning ? !commands.cancelDraft : !commands.advanced || !processingPlan, crop: isCropping ? !commands.cancelDraft : !(commands.geometry || (isTuning && commands.editDraft)) }} />}
             leading={
               <Button variant="ghost" onClick={() => { if (commands.navigate) onBack() }} disabled={!commands.navigate}
                 className="editor-control min-h-11 min-w-11 rounded-lg p-0 text-zinc-300" aria-label="Back">
                 <ArrowLeft className="size-4" aria-hidden="true" />
               </Button>
             }
-            trailing={<EditorActions actions={isCropping ? [] : actions} placement="header" extra={<>
-              <Button variant="ghost" onClick={() => { if (commands.help) setIsHelpOpen(true) }} disabled={!commands.help}
-                className="editor-control min-h-11 min-w-11 rounded-lg p-0 text-zinc-300" aria-label="Help">
-                <HelpCircle className="size-4" aria-hidden="true" /><span>Help</span>
-              </Button>
-              <Button variant="ghost" onClick={handlePanelToggle} disabled={!commands.panel}
-                className="hidden min-h-11 min-w-11 p-0 text-zinc-300 md:inline-flex" aria-label={isPanelOpen ? 'Hide panel' : 'Show panel'}>
-                {isPanelOpen ? <PanelRightClose className="size-5" aria-hidden="true" /> : <PanelRightOpen className="size-5" aria-hidden="true" />}
-                <span>{isPanelOpen ? 'Hide panel' : 'Show panel'}</span>
-              </Button>
-            </>} />} />
+            trailing={<EditorActions actions={isCropping ? [] : actions} placement="header" extraActions={[{
+              id: 'help', label: 'Help', icon: <HelpCircle className="size-4" aria-hidden="true" />,
+              onClick: () => { if (commands.help) setIsHelpOpen(true) }, disabled: !commands.help,
+            }, {
+              id: 'panel', label: isPanelOpen ? 'Hide panel' : 'Show panel', desktopOnly: true,
+              icon: isPanelOpen ? <PanelRightClose className="size-4" aria-hidden="true" /> : <PanelRightOpen className="size-4" aria-hidden="true" />,
+              onClick: handlePanelToggle, disabled: !commands.panel,
+            }]} />} />
         <div className="editor-color-status flex items-center gap-2 text-xs text-zinc-400" aria-label="Applied color"
-          data-quiet={!session && !preparing && !preparationError && !hasModifiedSettings(activeRecipe, customSettings) || undefined}>
-          {(preparing || preparationError) && <span>{preparationError ? 'Unavailable:' : 'Preparing:'}</span>}
+          data-quiet={!session && !preparationError && !hasModifiedSettings(activeRecipe, customSettings) || undefined}>
+          {(preparing || preparationError) && <span className={preparationError ? undefined : 'sr-only'}>{preparationError ? 'Unavailable:' : 'Preparing:'}</span>}
           <span>{getProfileName(activeRecipe)}</span>
           {hasModifiedSettings(activeRecipe, customSettings) && <span>· Modified</span>}
         </div>
@@ -497,7 +483,6 @@ export function VideoEditor({
           </div>
         )}
 
-        {preparing && <p role="status" className="mx-3 md:mx-6 mb-2 text-sm text-zinc-300">Loading film…</p>}
         {(preparationError || renderError) && (
           <div role="alert" className="mx-3 md:mx-6 mb-2 flex items-center gap-3 text-sm text-rose-100">
             <p className="flex-1">{preparationError || renderError}</p>
@@ -518,6 +503,7 @@ export function VideoEditor({
             cropGridActive={cropGridActive}
             onProcessingError={handleRenderError}
             retryKey={preparationAttempt}
+            statusOverlay={preparing ? <EditorProcessing label="Loading film…" /> : undefined}
             overlay={!isCropping && !isTuning ? <EditorCompare active={showOriginal} disabled={!canCompare}
               onStart={handleCompareStart} onEnd={handleCompareEnd} /> : undefined}
             onMouseDown={handleCompareStart}
@@ -526,26 +512,22 @@ export function VideoEditor({
           />
         </div>
       <EditorControlDock mode={mode} contentRef={contextualPanelRef} hideDesktop={!isPanelOpen}
-        actions={<EditorActions actions={isCropping ? actions : []} />}>
+        actions={<EditorActions actions={isCropping ? actions : []} primaryId="apply-crop" />}>
         {mode === 'films' && <FilmSelector sourceImage={transformedThumbnail} activeRecipe={activeRecipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor} retryKey={preparationAttempt} />}
         {mode === 'advanced' && session?.kind === 'tuning' && session.profile && (
           <AdvancedPanel profile={session.profile} settings={session.draft} sourceImage={transformedThumbnail}
             onProfileSelect={changeDraftProfile} onSettingsChange={handleSettingsChange}
-            onApply={handleTuningApply} onCancel={handleTuningCancel} onRestoreBase={restoreDraftBase}
+            onApply={handleTuningApply} onCancel={handleTuningCancel}
             disabled={!commands.editDraft} applyDisabled={!processingPlan || !!renderError} />
         )}
-        {mode === 'crop' && (session?.kind === 'crop' ? (
+        {mode === 'crop' && session?.kind === 'crop' && (
           <CropSessionControls disabled={!commands.cropGeometry}
             onRotate={() => changeGeometry({ quarterTurns: nextQuarterTurn(visibleTransform.quarterTurns) })}
             onFlip={() => changeGeometry({ flipHorizontal: !visibleTransform.flipHorizontal })}
             cropRatio={session.draft.cropRatio} fineAngle={session.draft.fineAngle} cropScale={session.draft.cropScale}
             onCropRatioChange={cropRatio => changeCrop({ cropRatio })} onFineAngleChange={fineAngle => changeCrop({ fineAngle })}
             onCropScaleChange={cropScale => changeCrop({ cropScale })} onInteractionChange={setCropGridActive} />
-        ) : (
-          <CropTools onOpen={openCrop} disabled={!commands.geometry}
-            onRotate={() => changeGeometry({ quarterTurns: nextQuarterTurn(visibleTransform.quarterTurns) })}
-            onFlip={() => changeGeometry({ flipHorizontal: !visibleTransform.flipHorizontal })} />
-        ))}
+        )}
       </EditorControlDock>
       </div>
       {/* Export progress overlay */}

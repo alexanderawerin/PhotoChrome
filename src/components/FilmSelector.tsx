@@ -19,15 +19,20 @@ const scrollBehavior = (): ScrollBehavior => window.matchMedia('(prefers-reduced
 
 export function FilmSelector({ sourceImage, activeRecipe, onSelect, disabled, retryKey = 0, className = '' }: FilmSelectorProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const [edges, setEdges] = useState({ previous: false, next: false })
+  const [edges, setEdges] = useState({ overflow: false, previous: false, next: false })
   const activeId = activeRecipe?.filmSimulation ?? 'original'
 
   const updateEdges = useCallback(() => {
     const scroll = scrollRef.current
     if (!scroll) return
+    const group = scroll.parentElement!
+    const style = getComputedStyle(group)
+    // Measure capacity without arrows, so removing them cannot make the strip oscillate.
+    const capacity = group.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+    const overflow = scroll.scrollWidth > capacity + 1
     const previous = scroll.scrollLeft > 1
     const next = scroll.scrollLeft + scroll.clientWidth < scroll.scrollWidth - 1
-    setEdges(current => current.previous === previous && current.next === next ? current : { previous, next })
+    setEdges(current => current.overflow === overflow && current.previous === previous && current.next === next ? current : { overflow, previous, next })
   }, [])
 
   useEffect(() => {
@@ -35,6 +40,7 @@ export function FilmSelector({ sourceImage, activeRecipe, onSelect, disabled, re
     if (!scroll) return
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updateEdges)
     observer?.observe(scroll)
+    if (scroll.parentElement) observer?.observe(scroll.parentElement)
     for (const option of scroll.children) observer?.observe(option)
     updateEdges()
     return () => observer?.disconnect()
@@ -60,10 +66,10 @@ export function FilmSelector({ sourceImage, activeRecipe, onSelect, disabled, re
 
   return (
     <div role="group" aria-label="Film selection" className={`editor-film-selector ${className}`}>
-      <button type="button" className="film-scroll-button" aria-label="Previous films"
+      {edges.overflow && <button type="button" className="film-scroll-button" aria-label="Previous films"
         disabled={disabled || !edges.previous} onClick={() => scrollFilms(-1)}>
         <ChevronLeft aria-hidden="true" />
-      </button>
+      </button>}
       <div ref={scrollRef} className="film-selector-scroll" onScroll={updateEdges}>
         {choices.map(profile => {
           const active = (profile?.filmSimulation ?? 'original') === activeId
@@ -79,10 +85,10 @@ export function FilmSelector({ sourceImage, activeRecipe, onSelect, disabled, re
           )
         })}
       </div>
-      <button type="button" className="film-scroll-button" aria-label="Next films"
+      {edges.overflow && <button type="button" className="film-scroll-button" aria-label="Next films"
         disabled={disabled || !edges.next} onClick={() => scrollFilms(1)}>
         <ChevronRight aria-hidden="true" />
-      </button>
+      </button>}
     </div>
   )
 }

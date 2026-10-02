@@ -1,5 +1,6 @@
 import { test, expect } from './helpers/fixtures'
 import { clickEditorAction } from './helpers/editor-controls'
+import { uploadImage, uploadVideo, waitForEditor } from './helpers/upload'
 
 const thumbnail = (page: import('@playwright/test').Page, name: string) => page.getByRole('button', { name, exact: true }).locator('.film-thumbnail')
 const pixels = (canvas: import('@playwright/test').Locator) => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL())
@@ -122,4 +123,65 @@ test('secondary export returns focus to the visible More trigger after completio
     await expect(completion).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'More editor actions', exact: true })).toBeFocused()
   }
+})
+
+for (const width of [393, 1200]) {
+  test(`demo and single-photo Help are direct actions without More at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 852 })
+    await page.goto('/')
+    const header = page.locator('header')
+    await expect(header.getByRole('button', { name: 'Upload photos', exact: true })).toBeVisible()
+    await expect(header.getByRole('button', { name: 'Help', exact: true })).toBeVisible()
+    await expect(header.getByRole('button', { name: 'More editor actions', exact: true })).toHaveCount(0)
+    await expect(header.getByRole('button', { name: /Export/ })).toHaveCount(0)
+    await uploadImage(page)
+    await waitForEditor(page)
+    await expect(header.getByRole('button', { name: 'Help', exact: true })).toBeVisible()
+    await expect(header.getByRole('button', { name: 'More editor actions', exact: true })).toHaveCount(0)
+    await header.getByRole('button', { name: 'Help', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Photochrome help', exact: true })).toBeVisible()
+  })
+}
+
+test('modes are Films, Crop, Advanced and Crop opens the session in one click', async ({ page, editorPage }) => {
+  const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
+  expect(await modes.getByRole('button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label') || button.textContent?.trim()))).toEqual(['Films', 'Crop', 'Open Advanced settings'])
+  await modes.getByRole('button', { name: 'Crop', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Crop settings', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Open crop session', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Done', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible()
+})
+
+test('film arrows disappear when everything fits and both appear for desktop overflow', async ({ page, editorPage }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  const selection = page.getByRole('group', { name: 'Film selection', exact: true })
+  const scroll = selection.locator('.film-selector-scroll')
+  const previous = selection.getByRole('button', { name: 'Previous films', exact: true })
+  const next = selection.getByRole('button', { name: 'Next films', exact: true })
+  await page.setViewportSize({ width: 1600, height: 900 })
+  await expect.poll(() => scroll.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
+  await expect(previous).toBeHidden()
+  await expect(next).toBeHidden()
+  await page.setViewportSize({ width: 768, height: 900 })
+  await expect.poll(() => scroll.evaluate(element => element.scrollWidth > element.clientWidth + 1)).toBe(true)
+  await expect(previous).toBeVisible()
+  await expect(next).toBeVisible()
+  await next.click()
+  await expect.poll(() => scroll.evaluate(element => element.scrollLeft)).toBeGreaterThan(0)
+  await expect(selection.getByRole('button', { name: 'Select Original', exact: true })).toHaveAttribute('aria-pressed', 'true')
+})
+
+
+test('video keeps desktop More for two secondary actions and shows mobile Help directly', async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 852 })
+  await page.goto('/')
+  await uploadVideo(page)
+  const header = page.locator('header')
+  await expect(header.getByRole('button', { name: 'More editor actions', exact: true })).toBeVisible()
+  await expect(header.getByRole('button', { name: 'Help', exact: true })).toBeHidden()
+  await page.setViewportSize({ width: 393, height: 852 })
+  await expect(header.getByRole('button', { name: 'Help', exact: true })).toBeVisible()
+  await expect(header.getByRole('button', { name: 'More editor actions', exact: true })).toHaveCount(0)
+  await expect(header.getByRole('button', { name: 'Export video', exact: true })).toBeVisible()
 })
