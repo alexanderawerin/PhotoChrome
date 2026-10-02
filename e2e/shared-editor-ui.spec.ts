@@ -48,7 +48,8 @@ for (const media of ['photo', 'video'] as const satisfies readonly AdvancedMedia
     await openAdvanced(page)
     await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
     await expect(slider).toHaveAttribute('aria-valuenow', '0')
-    await expect(panel.getByRole('tabpanel', { name: 'Manual', exact: true }).getByText('Provia', { exact: true })).toBeVisible()
+    await expect(panel.getByText('Provia', { exact: true })).toHaveCount(1)
+    await expect(panel.getByText('Provia', { exact: true })).toBeVisible()
   })
 
   test(`${media} preserves Recipes content and favorites through 1200→393→1200 resize without applying its draft`, async ({ page }) => {

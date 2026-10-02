@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
-import { ArrowLeft, PanelRightClose, PanelRightOpen, Film, X, Share, HelpCircle } from 'lucide-react'
+import { ArrowLeft, PanelRightClose, PanelRightOpen, Film, X, HelpCircle } from 'lucide-react'
 import { Button } from './ui/button'
 import { VideoPreview } from './VideoPreview'
 import { FilmSelector } from './FilmSelector'
@@ -18,7 +18,6 @@ import { editorCommands } from '../engine/editor-commands'
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from './ui/sheet'
 import type { VideoData } from '../engine/media-loading'
 import type { VideoExportState } from '../hooks/useVideoExport'
-import { Spinner } from './ui/spinner'
 
 interface VideoEditorProps {
   videoData: VideoData
@@ -445,7 +444,6 @@ export function VideoEditor({
       ariaLabel: exportState.isExporting ? 'Exporting...' : 'Export video',
       onClick: () => { void handleExport() }, disabled: !canExport, busy: exportState.isExporting,
       buttonRef: exportButtonRef,
-      icon: exportState.isExporting ? <Spinner className="size-4" /> : <Share className="size-4" aria-hidden="true" />,
     },
   ]
 
@@ -460,13 +458,13 @@ export function VideoEditor({
           <EditorHeader compact={isTuning} fileName={fileName} details={`${Math.round(metadata.duration * 10) / 10}s • ${metadata.width}×${metadata.height}`}
             leading={
               <Button variant="ghost" onClick={() => { if (commands.navigate) onBack() }} disabled={!commands.navigate}
-                className="mobile-glass-control min-h-11 min-w-11 rounded-full p-0 text-zinc-300" aria-label="Back">
+                className="editor-control min-h-11 min-w-11 rounded-lg p-0 text-zinc-300" aria-label="Back">
                 <ArrowLeft className="size-4" aria-hidden="true" />
               </Button>
             }
             trailing={<>
               <Button variant="ghost" onClick={() => { if (commands.help) setIsHelpOpen(true) }} disabled={!commands.help}
-                className="mobile-glass-control min-h-11 min-w-11 rounded-full p-0 text-zinc-300" aria-label="Help">
+                className="editor-control min-h-11 min-w-11 rounded-lg p-0 text-zinc-300" aria-label="Help">
                 <HelpCircle className="size-4" aria-hidden="true" />
               </Button>
               <Button variant="ghost" onClick={handlePanelToggle} disabled={!commands.panel}
@@ -525,7 +523,7 @@ export function VideoEditor({
         navigation={<EditorModes mode={mode} onChange={changeMode} advancedOpen={isTuning}
           disabled={{ films: !commands.selectColor, advanced: isTuning ? !commands.cancelDraft : !commands.advanced || !processingPlan, crop: !commands.selectColor }} />}
         actions={<EditorActions actions={actions} />}>
-        {mode === 'films' && <FilmSelector activeRecipe={activeRecipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor} horizontal />}
+        {mode === 'films' && <FilmSelector activeRecipe={activeRecipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor} />}
         {mode === 'advanced' && session?.kind === 'tuning' && session.profile && (
           <AdvancedPanel profile={session.profile} settings={session.draft} sourceImage={advancedThumbnail}
             onProfileSelect={changeDraftProfile} onSettingsChange={handleSettingsChange}
@@ -538,8 +536,7 @@ export function VideoEditor({
             onFlip={() => changeGeometry({ flipHorizontal: !visibleTransform.flipHorizontal })}
             cropRatio={session.draft.cropRatio} fineAngle={session.draft.fineAngle} cropScale={session.draft.cropScale}
             onCropRatioChange={cropRatio => changeCrop({ cropRatio })} onFineAngleChange={fineAngle => changeCrop({ fineAngle })}
-            onCropScaleChange={cropScale => changeCrop({ cropScale })} onInteractionChange={setCropGridActive}
-            onApply={handleTuningApply} onCancel={handleTuningCancel} />
+            onCropScaleChange={cropScale => changeCrop({ cropScale })} onInteractionChange={setCropGridActive} />
         ) : (
           <CropTools onOpen={openCrop} disabled={!commands.geometry}
             onRotate={() => changeGeometry({ quarterTurns: nextQuarterTurn(visibleTransform.quarterTurns) })}

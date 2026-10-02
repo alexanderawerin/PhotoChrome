@@ -42,6 +42,7 @@ test.describe('Editor — Tuning Panel', () => {
     await expect(inspector(page).getByText('Highlight')).toBeVisible()
     await expect(inspector(page).getByRole('tab')).toHaveCount(2)
     await expect(inspector(page).getByRole('tab', { name: 'Manual', exact: true })).toHaveAttribute('aria-selected', 'true')
+    await expect(inspector(page).getByText('Provia', { exact: true })).toHaveCount(1)
     await expect(inspector(page).getByRole('button', { name: 'Choose crop ratio' })).toHaveCount(0)
   })
 })

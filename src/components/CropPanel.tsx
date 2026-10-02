@@ -1,6 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check } from 'lucide-react'
 import { Button } from './ui/button'
 import { Slider } from './ui/slider'
 import { AspectRatio } from '../engine/transform'
@@ -14,9 +13,6 @@ interface CropPanelProps {
   onFineAngleChange: (angle: number) => void
   onCropScaleChange: (scale: number) => void
   onInteractionChange: (active: boolean) => void
-  onApply: () => void
-  onCancel: () => void
-  showActions?: boolean
 }
 
 const MOBILE_CROP_RATIOS = cropRatioPanelItems(CROP_RATIO_ORDER_MOBILE)
@@ -30,9 +26,6 @@ export function CropPanel({
   onFineAngleChange,
   onCropScaleChange,
   onInteractionChange,
-  onApply,
-  onCancel,
-  showActions = true,
 }: CropPanelProps) {
   const [isRatioOpen, setIsRatioOpen] = useState(false)
   const [isChangingAngle, setIsChangingAngle] = useState(false)
@@ -103,11 +96,11 @@ export function CropPanel({
           >
             <Button
               ref={ratioButtonRef}
-              autoFocus={!showActions}
+              autoFocus
               variant="outline"
               size="sm"
               onClick={() => !isChangingAngle && setIsRatioOpen(open => !open)}
-              className="mobile-glass-control relative min-h-11 w-20 rounded-xl border-white/10 bg-white/5 px-2 text-xs text-white/80 tabular-nums"
+              className="editor-control relative min-h-11 w-20 rounded-lg px-2 text-xs text-white/80 tabular-nums"
               aria-label="Choose crop ratio"
               aria-expanded={isRatioOpen}
               aria-controls={isRatioOpen ? ratioListId : undefined}
@@ -160,7 +153,7 @@ export function CropPanel({
               aria-valuetext={`${fineAngle.toFixed(1)} degrees`}
             />
           </div>
-          <Button variant="ghost" size="sm" onClick={() => onFineAngleChange(0)} className="mobile-glass-control min-h-11 min-w-12 shrink-0 rounded-xl px-2 text-white/80" aria-label="Reset crop angle">Reset</Button>
+          <Button variant="ghost" size="sm" onClick={() => onFineAngleChange(0)} className="editor-control min-h-11 min-w-12 shrink-0 rounded-lg px-2 text-white/80" aria-label="Reset crop angle">Reset</Button>
         </div>
         <div className="flex min-h-11 items-center gap-3">
           <span className="w-20 shrink-0 text-center text-xs text-white/70">Zoom</span>
@@ -186,12 +179,6 @@ export function CropPanel({
           <span className="w-12 shrink-0 text-center text-xs text-white/70 tabular-nums" aria-hidden="true">{cropScale.toFixed(2)}×</span>
         </div>
       </div>
-      {showActions && (
-        <div className="flex shrink-0 gap-2 border-t border-zinc-800 bg-black px-4 py-4 pb-6">
-          <Button variant="outline" onClick={onApply} className="flex-1"><Check className="size-4" aria-hidden="true" />Apply</Button>
-          <Button variant="outline" onClick={onCancel} className="flex-1">Cancel</Button>
-        </div>
-      )}
     </div>
   )
 }

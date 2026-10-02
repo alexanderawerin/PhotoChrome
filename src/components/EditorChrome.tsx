@@ -1,7 +1,7 @@
 import type { ComponentProps, ReactNode, Ref } from 'react'
-import { Crop, Layers, Settings2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { CropPanel } from './CropPanel'
+import { Spinner } from './ui/spinner'
 
 export type EditorMode = 'films' | 'advanced' | 'crop'
 
@@ -9,7 +9,6 @@ export interface EditorAction {
   id: string
   label: string
   ariaLabel?: string
-  icon?: ReactNode
   onClick: () => void
   disabled?: boolean
   busy?: boolean
@@ -31,8 +30,8 @@ export function EditorHeader({ fileName, details, leading, trailing, compact = f
       <div className={`editor-header-row min-h-11 items-center justify-between gap-2 ${compact ? 'hidden md:flex' : 'flex'}`}>
         <div className="editor-header-leading flex min-w-11 shrink-0 items-center gap-2">{leading}</div>
         <div className="mobile-editor-file min-w-0 flex-1 text-center">
-          <p className="mobile-glass-control truncate rounded-xl px-2 py-2 text-sm font-medium text-white">{fileName}</p>
-          {details && <p className="mobile-glass-control mx-auto -mt-1 w-fit max-w-full rounded-b-lg px-2 pb-1 text-[11px] text-zinc-400">{details}</p>}
+          <p className="truncate text-sm font-medium text-white">{fileName}</p>
+          {details && <p className="mt-1 text-[11px] text-zinc-400">{details}</p>}
         </div>
         <div className="editor-header-trailing flex shrink-0 items-center gap-2">{trailing}</div>
       </div>
@@ -55,8 +54,7 @@ export function EditorModes({ mode, onChange, disabled, demoMode = false, advanc
           aria-current={mode === value ? 'page' : undefined}
           aria-label={value === 'advanced' ? advancedOpen ? 'Close Advanced settings' : 'Open Advanced settings' : undefined}
           aria-expanded={value === 'advanced' ? advancedOpen : undefined}
-          className={`relative flex min-h-11 min-w-0 flex-wrap items-center justify-center gap-x-1.5 gap-y-1 rounded-full px-1 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-40 ${mode === value ? 'text-white' : 'text-zinc-400'}`}>
-          {value === 'films' ? <Layers className="size-4 shrink-0" aria-hidden="true" /> : value === 'advanced' ? <Settings2 className="size-4 shrink-0" aria-hidden="true" /> : <Crop className="size-4 shrink-0" aria-hidden="true" />}
+          className={`flex min-h-11 min-w-0 items-center justify-center rounded-lg px-1 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-40 ${mode === value ? 'text-white' : 'text-zinc-400'}`}>
           <span className="min-w-0 break-words">{value === 'films' ? 'Films' : value === 'advanced' ? 'Advanced' : 'Crop'}</span>
         </button>
       ))}
@@ -67,17 +65,15 @@ export function EditorModes({ mode, onChange, disabled, demoMode = false, advanc
 export function EditorActions({ actions }: { actions: EditorAction[] }) {
   if (!actions.length) return null
   return (
-    <div className="mobile-editor-actions shrink-0 p-3" role="toolbar" aria-label="Editor actions"
+    <div className="mobile-editor-actions flex min-h-11 shrink-0 flex-wrap gap-2 p-3" role="toolbar" aria-label="Editor actions"
       onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') event.stopPropagation() }}>
-      <div className="flex min-h-11 flex-wrap gap-2">
         {actions.map(action => (
           <Button key={action.id} ref={action.buttonRef} variant={action.variant ?? 'default'} onClick={action.onClick}
             disabled={action.disabled} aria-label={action.ariaLabel} aria-busy={action.busy}
             className={`min-h-11 min-w-0 flex-1 whitespace-normal ${action.desktopOnly ? 'hidden md:inline-flex' : ''}`}>
-            {action.icon}{action.label}
+            {action.busy && <Spinner className="size-4" />}{action.label}
           </Button>
         ))}
-      </div>
     </div>
   )
 }
@@ -125,7 +121,7 @@ export function CropSessionControls({ disabled, geometryDisabled, onRotate, onFl
     <section role="region" aria-label="Crop settings" className="editor-crop-session min-h-0">
       <CropTools onRotate={onRotate} onFlip={onFlip} disabled={geometryDisabled ?? disabled} />
       <fieldset disabled={disabled} className="min-w-0 border-0 p-0">
-        <CropPanel {...panel} showActions={false} />
+        <CropPanel {...panel} />
       </fieldset>
     </section>
   )

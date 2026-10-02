@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import type { Recipe, RecipeSettings } from '../engine/types'
 import { getAllRecipes } from '../presets/recipes'
-import { getBaseFilm, getProfileName } from '../engine/film-profiles'
+import { getProfileName } from '../engine/film-profiles'
 import { useFavorites } from '../hooks/useFavorites'
 import { RecipeCard } from './RecipeCard'
 import { TuningPanel } from './TuningPanel'
@@ -15,7 +15,7 @@ interface AdvancedPanelProps {
   onSettingsChange: (settings: RecipeSettings) => void
   onApply: () => void
   onCancel: () => void
-  onRestoreBase?: () => void
+  onRestoreBase: () => void
   disabled?: boolean
   applyDisabled?: boolean
 }
@@ -28,20 +28,13 @@ export function AdvancedPanel({ profile, settings, sourceImage, onProfileSelect,
   const favorites = new Set(getFavoriteIds())
   const recipes = getAllRecipes().filter(recipe => recipe.filmSimulation === profile.filmSimulation)
     .sort((a, b) => Number(favorites.has(b.id)) - Number(favorites.has(a.id)))
-  const restoreBase = () => {
-    if (onRestoreBase) onRestoreBase()
-    else {
-      const base = getBaseFilm(profile.filmSimulation)
-      if (base) onProfileSelect(base)
-    }
-  }
 
   return (
     <section role="region" aria-label="Advanced settings" className="flex h-full min-h-0 flex-col bg-black">
       <div className="shrink-0 border-b border-zinc-800 px-3 py-2">
         <h2 className="text-base font-semibold">Advanced</h2>
         <p className="mt-1 text-xs text-zinc-400">{getProfileName(profile)}</p>
-        <Button variant="ghost" className="mt-2 min-h-11 px-2 text-xs md:min-h-9" onClick={restoreBase} disabled={disabled}>Restore base film</Button>
+        <Button variant="ghost" className="mt-2 min-h-11 px-2 text-xs" onClick={onRestoreBase} disabled={disabled}>Restore base film</Button>
       </div>
       <div role="tablist" aria-label="Advanced settings mode" className="flex shrink-0 gap-2 border-b border-zinc-800 px-4 py-2">
         {(['recipes', 'manual'] as const).map(value => (
@@ -66,11 +59,11 @@ export function AdvancedPanel({ profile, settings, sourceImage, onProfileSelect,
             <div className="grid grid-cols-2 gap-3 p-4">
               {recipes.map(recipe => (
                 <RecipeCard key={recipe.id} recipe={recipe} sourceImage={sourceImage} isActive={profile.id === recipe.id}
-                  largeTouchTargets isFavorite={favorites.has(recipe.id)} onFavoriteToggle={toggleFavorite} onClick={() => onProfileSelect(recipe)} />
+                  isFavorite={favorites.has(recipe.id)} onFavoriteToggle={toggleFavorite} onClick={() => onProfileSelect(recipe)} />
               ))}
             </div>
           ) : (
-            <TuningPanel recipe={profile} customSettings={settings} onSettingsChange={onSettingsChange} onApply={onApply} onCancel={onCancel} showActions={false} />
+            <TuningPanel recipe={profile} customSettings={settings} onSettingsChange={onSettingsChange} />
           )}
         </fieldset>
       </div>

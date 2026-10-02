@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from 'react'
-import { Layers, Plus, Share, HelpCircle } from 'lucide-react'
+import { Plus, HelpCircle } from 'lucide-react'
 import { APP_VERSION, APP_URL } from '../constants'
 import { Button } from './ui/button'
 import { Spinner } from './ui/spinner'
@@ -11,7 +11,6 @@ import { EditorHeader, EditorModes, EditorActions, EditorControlDock, CropTools,
 import { HelpDialog } from './HelpDialog'
 import { ExportCompletion, type ExportCompletionState } from './ExportCompletion'
 import { ThumbnailStrip } from './ThumbnailStrip'
-import { ImageCounter } from './ImageCounter'
 import { Recipe, ImageItem } from '../engine/types'
 import { ImageProcessor } from '../engine/processor'
 import { materializePhotoPixels } from '../engine/photo-source'
@@ -479,16 +478,15 @@ export function Editor({
   }] : [
     ...(totalImages > 1 ? [{
       id: 'apply-all', label: 'Apply to all', ariaLabel: `Apply current color to all ${totalImages} images`,
-      icon: <Layers className="size-4" aria-hidden="true" />, variant: 'outline' as const,
+      variant: 'outline' as const,
       onClick: handleApplyToAll, disabled: !commands.applyToAll,
     }, {
       id: 'export-all', label: 'Export all', ariaLabel: 'Export all photos',
-      icon: <Layers className="size-4" aria-hidden="true" />, onClick: () => { void handleExportAll() },
+      onClick: () => { void handleExportAll() },
       disabled: !canExportAll || !commands.export, busy: isBatchExporting,
     }] : []),
     {
       id: 'export', label: isExporting ? 'Exporting…' : 'Export', ariaLabel: 'Export processed image (Ctrl+S)',
-      icon: isExporting ? <Spinner className="size-4" randomColor /> : <Share className="size-4" aria-hidden="true" />,
       onClick: () => { void handleExport() }, disabled: !commands.export, busy: isExporting, desktopOnly: totalImages > 1,
     },
   ]
@@ -523,13 +521,13 @@ export function Editor({
           details={totalImages > 1 ? `${currentIndex + 1} of ${totalImages}` : undefined}
           leading={!demoMode && (
             <Button variant="ghost" size="sm" onClick={() => demoUploadRef.current?.click()} disabled={!commands.add}
-              className="mobile-glass-control h-11 min-w-11 gap-1 rounded-full px-2 text-zinc-300" aria-label="Add photos">
+              className="editor-control h-11 min-w-11 gap-1 rounded-lg px-2 text-zinc-300" aria-label="Add photos">
               <Plus className="size-4" aria-hidden="true" /> Add
             </Button>
           )}
           trailing={(
             <Button variant="ghost" size="sm" onClick={() => { if (commands.help) setIsHelpOpen(true) }} disabled={!commands.help}
-              className="mobile-glass-control relative h-11 min-w-11 gap-1 rounded-full px-2 text-zinc-300" aria-label="Help">
+              className="editor-control relative h-11 min-w-11 gap-1 rounded-lg px-2 text-zinc-300" aria-label="Help">
               <HelpCircle className="size-4" aria-hidden="true" /> Help
               {hasUnreadHelp && <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-white" aria-hidden="true" />}
             </Button>
@@ -575,9 +573,8 @@ export function Editor({
 
         <div ref={workspaceRef} className="mobile-editor-workspace pointer-events-none min-h-0 md:hidden" aria-hidden="true" />
         <div className="mobile-editor-status pointer-events-none relative z-10 h-0 md:hidden">
-          <ImageCounter currentIndex={currentIndex} totalImages={totalImages} />
           {isProcessing && (
-            <div className={`absolute left-1/2 -translate-x-1/2 ${totalImages > 1 ? 'top-11' : 'top-2'}`}>
+            <div className="absolute left-1/2 top-2 -translate-x-1/2">
               <p className="rounded-full bg-black/70 px-3 py-1 text-xs text-white">Processing...</p>
             </div>
           )}
@@ -635,7 +632,7 @@ export function Editor({
         >
           {mode === 'films' && (
             <FilmSelector activeRecipe={currentImage.recipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor}
-              horizontal className="px-3 py-3" />
+              className="px-3 py-3" />
           )}
           {mode === 'advanced' && isTuning && profile && (
             <AdvancedPanel profile={profile} settings={settings} sourceImage={transformedThumbnail}
@@ -660,7 +657,6 @@ export function Editor({
               onFlip={() => { if (commands.cropGeometry) edit.flip() }}
               disabled={interactionDisabled || isExporting || isBatchExporting}
               geometryDisabled={!commands.cropGeometry}
-              onApply={edit.commit} onCancel={edit.cancel}
             />
           )}
         </EditorControlDock>

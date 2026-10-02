@@ -5,14 +5,13 @@ interface FilmSelectorProps {
   activeRecipe: Recipe | null
   onSelect: (profile: Recipe | null) => void
   disabled: boolean
-  horizontal?: boolean
   className?: string
 }
 
-export function FilmSelector({ activeRecipe, onSelect, disabled, horizontal = false, className = '' }: FilmSelectorProps) {
+export function FilmSelector({ activeRecipe, onSelect, disabled, className = '' }: FilmSelectorProps) {
   const choices = [null, ...getBaseFilms()]
   return (
-    <div role="group" aria-label="Film selection" className={`${horizontal ? 'flex gap-2 overflow-x-auto pb-2 md:grid md:grid-cols-2 md:overflow-visible' : 'grid grid-cols-2 gap-2'} ${className}`}>
+    <div role="group" aria-label="Film selection" className={`flex gap-2 overflow-x-auto pb-2 md:grid md:grid-cols-2 md:overflow-visible ${className}`}>
       {choices.map(profile => {
         const active = profile ? activeRecipe?.filmSimulation === profile.filmSimulation : activeRecipe === null
         return (
@@ -23,7 +22,7 @@ export function FilmSelector({ activeRecipe, onSelect, disabled, horizontal = fa
             aria-pressed={active}
             disabled={disabled}
             onClick={() => onSelect(profile)}
-            className={`min-h-[44px] rounded-lg border px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${horizontal ? 'shrink-0' : ''} ${active ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card hover:bg-accent'}`}
+            className={`min-h-11 shrink-0 rounded-lg px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${active ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-white'}`}
           >
             {profile?.name ?? 'Original'}
           </button>
