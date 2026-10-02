@@ -5,7 +5,7 @@ export type AdvancedMedia = 'photo' | 'video'
 
 export const advancedPanel = (page: Page) => page.getByRole('region', { name: 'Advanced settings', exact: true })
 export const appliedColor = (page: Page) => page.getByLabel('Applied color', { exact: true })
-export const advancedTrigger = (page: Page) => page.getByRole('button', { name: /^(Open Advanced settings|Advanced settings|Advanced)$/ })
+export const advancedTrigger = (page: Page) => page.getByRole('navigation', { name: 'Editor modes', exact: true }).getByRole('button', { name: 'Open Advanced settings', exact: true })
 export const editorCanvas = (page: Page, media: AdvancedMedia) => page.getByLabel(media === 'photo' ? 'Preview' : 'Video preview', { exact: true })
 
 export async function startAdvancedMedia(page: Page, media: AdvancedMedia, width: number) {

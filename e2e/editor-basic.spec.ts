@@ -7,19 +7,20 @@ for (const width of [1200, 1600]) {
 
     test('starts with Original and keeps Advanced contextual', async ({ page, editorPage }) => {
       await expect(page.getByLabel('Preview', { exact: true })).toBeVisible()
-      await expect(page.getByRole('complementary', { name: 'Film browser', exact: true })).toBeVisible()
+      await expect(page.getByRole('complementary', { name: 'Editor controls', exact: true })).toBeVisible()
       await expect(page.getByRole('region', { name: 'Advanced settings', exact: true })).toHaveCount(0)
       await expect(page.getByRole('button', { name: 'Open Advanced settings', exact: true })).toBeDisabled()
       await expect(page.getByRole('button', { name: 'Export processed image (Ctrl+S)', exact: true })).toBeEnabled()
     })
 
-    test('opens and cancels Advanced without hiding the film choices', async ({ page, editorPage }) => {
+    test('opens and cancels Advanced while keeping the shared mode navigation', async ({ page, editorPage }) => {
       await selectBaseFilm(page)
       const open = page.getByRole('button', { name: 'Open Advanced settings', exact: true })
       await open.click()
       const advanced = page.getByRole('region', { name: 'Advanced settings', exact: true })
       await expect(advanced).toBeVisible()
-      await expect(page.getByRole('group', { name: 'Film selection', exact: true })).toBeVisible()
+      await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true }).getByRole('button', { name: 'Films', exact: true })).toBeVisible()
+      await expect(page.getByRole('group', { name: 'Film selection', exact: true })).toHaveCount(0)
       await page.getByRole('button', { name: 'Close Advanced settings', exact: true }).click()
       await expect(advanced).toHaveCount(0)
       await expect(open).toBeFocused()

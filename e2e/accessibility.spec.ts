@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import type { Page } from '@playwright/test'
 import { test, expect } from './helpers/fixtures'
+import { openCropSession } from './helpers/editor-controls'
 import { waitForEditor } from './helpers/upload'
 
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
@@ -30,7 +31,7 @@ test.describe('Accessibility', () => {
   })
 
   test('Crop inspector has no detectable WCAG A/AA violations', async ({ page, editorPage }) => {
-    await page.getByRole('button', { name: 'Open Crop inspector' }).click()
+    await openCropSession(page)
     await expect(page.getByRole('slider', { name: 'Crop angle' })).toBeVisible()
     await expectNoAccessibilityViolations(page)
   })

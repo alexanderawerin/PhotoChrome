@@ -61,7 +61,7 @@ export async function selectBaseFilm(page: Page, name = 'Provia') {
 /** Choose a detailed recipe in the active film's reversible Advanced draft. */
 export async function selectAdvancedRecipe(page: Page, recipeName: string, apply = true) {
   const panel = page.getByRole('region', { name: 'Advanced settings', exact: true })
-  if (!await panel.isVisible()) await page.getByRole('button', { name: /^(Open Advanced settings|Advanced settings|Advanced)$/ }).click()
+  if (!await panel.isVisible()) await page.getByRole('navigation', { name: 'Editor modes', exact: true }).getByRole('button', { name: 'Open Advanced settings', exact: true }).click()
   await panel.getByRole('tab', { name: 'Recipes', exact: true }).click()
   const escaped = recipeName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   await panel.getByRole('button', { name: new RegExp(`^Apply preset ${escaped}(?:, selected)?$`) }).click()

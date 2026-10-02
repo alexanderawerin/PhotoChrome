@@ -25,11 +25,11 @@ function cropTools(page: Page): Locator {
 }
 
 function cropRegion(page: Page): Locator {
-  return page.getByRole('region', { name: 'Crop image', exact: true })
+  return page.getByRole('region', { name: 'Crop settings', exact: true })
 }
 
 function actionZone(page: Page): Locator {
-  return page.locator('.mobile-editor-actions')
+  return page.getByRole('toolbar', { name: 'Editor actions', exact: true })
 }
 
 async function readRect(locator: Locator): Promise<Rect> {
@@ -127,7 +127,7 @@ test.describe('Editor — mobile Crop session', () => {
 
     const region = await openCropSession(page)
     await expect(region).not.toHaveAttribute('aria-modal', 'true')
-    await expect(page.getByRole('dialog', { name: 'Crop image', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('dialog', { name: /Crop/ })).toHaveCount(0)
     await expect(modes(page)).toBeVisible()
     await expect(modes(page).getByRole('button', { name: /^crop$/i })).toHaveAttribute('aria-current', 'page')
 
@@ -221,6 +221,7 @@ test.describe('Editor — mobile Crop session', () => {
     await page.keyboard.press('ArrowRight')
     const committedAngle = await committedAngleControl.getAttribute('aria-valuenow')
     const done = actionZone(page).getByRole('button', { name: 'Done', exact: true })
+    await expect(done).toBeEnabled()
     await done.focus()
     await page.keyboard.press('Space')
     await expect(cropRegion(page)).toBeHidden()
@@ -264,7 +265,8 @@ test.describe('Editor — mobile Crop session', () => {
     await slider.focus()
     await page.keyboard.press('ArrowRight')
     await expect(slider).not.toHaveAttribute('aria-valuenow', baseline!)
-    await page.locator('header:visible p:visible').filter({ hasText: 'test-image.jpg' }).click()
+    await page.getByLabel('Applied color', { exact: true }).click()
+    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur())
     await page.keyboard.press('c')
     await expect(panel).toBeVisible()
     await expect(cropRegion(page)).toHaveCount(0)
@@ -283,7 +285,7 @@ test.describe('Editor — mobile Crop session', () => {
     await page.keyboard.press('c')
     await expect(cropRegion(page)).toHaveCount(0)
     await expect(modes(page).getByRole('button', { name: /^films$/i })).toHaveAttribute('aria-current', 'page')
-    await expect(modes(page).getByRole('button', { name: /^advanced$/i })).toHaveCount(0)
+    await expect(modes(page).getByRole('button', { name: /^(Open|Close) Advanced settings$/ })).toHaveCount(0)
     await expect(modes(page).getByRole('button', { name: /^crop$/i })).toHaveCount(0)
   })
 })

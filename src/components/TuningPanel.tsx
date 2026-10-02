@@ -1,5 +1,4 @@
-import { Check, RotateCcw } from 'lucide-react'
-import { Button } from './ui/button'
+import { RotateCcw } from 'lucide-react'
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group'
 import { Slider } from './ui/slider'
 import { Recipe, RecipeSettings } from '../engine/types'
@@ -8,9 +7,6 @@ interface TuningPanelProps {
   recipe: Recipe
   customSettings: RecipeSettings
   onSettingsChange: (settings: RecipeSettings) => void
-  onApply: () => void
-  onCancel: () => void
-  showActions?: boolean
 }
 
 /** Slider parameter configuration */
@@ -81,20 +77,17 @@ const TOGGLE_PARAMS: ToggleParam[] = [
 export function TuningPanel({
   recipe,
   customSettings,
-  onSettingsChange,
-  onApply,
-  onCancel,
-  showActions = true
+  onSettingsChange
 }: TuningPanelProps) {
-  
-  // Получаем Dynamic Range
-  const getDynamicRange = (): DynamicRangeValue => {
-    const customValue = customSettings?.dynamicRange as DynamicRangeValue | undefined
-    if (customValue !== undefined) return customValue
-    const recipeValue = recipe?.settings?.dynamicRange as DynamicRangeValue | undefined
-    if (recipeValue !== undefined) return recipeValue
-    return 'DR100'
-  }
+  const dynamicRange = customSettings.dynamicRange ?? recipe.settings.dynamicRange ?? 'DR100'
+  const wbPreset = customSettings.whiteBalance ?? recipe.settings.whiteBalance ?? 'auto'
+  const kelvin = customSettings.whiteBalanceKelvin ?? recipe.settings.whiteBalanceKelvin ?? 5500
+  // An explicit preset overrides profile Kelvin; explicit Kelvin takes priority.
+  const wbMode = customSettings.whiteBalanceKelvin !== undefined ||
+    (customSettings.whiteBalance === undefined && recipe.settings.whiteBalanceKelvin !== undefined)
+    ? 'kelvin' : 'preset'
+  const grainEffect = customSettings.grainEffect ?? recipe.settings.grainEffect ?? 'off'
+  const grainSize = customSettings.grainSize ?? recipe.settings.grainSize ?? 'small'
 
   const handleDRChange = (value: string) => {
     if (value) {
@@ -102,35 +95,10 @@ export function TuningPanel({
     }
   }
 
-  // Получаем пресет баланса белого
-  const getWBPreset = (): WhiteBalanceValue => {
-    const customValue = customSettings?.whiteBalance as WhiteBalanceValue | undefined
-    if (customValue !== undefined) return customValue
-    const recipeValue = recipe?.settings?.whiteBalance as WhiteBalanceValue | undefined
-    if (recipeValue !== undefined) return recipeValue
-    return 'auto'
-  }
-
   const handleWBChange = (value: string) => {
     if (value) {
       onSettingsChange({ ...customSettings, whiteBalance: value as WhiteBalanceValue, whiteBalanceKelvin: undefined })
     }
-  }
-
-  const getWBMode = (): 'preset' | 'kelvin' => {
-    // customSettings.whiteBalanceKelvin explicitly set → user chose kelvin mode
-    if (customSettings?.whiteBalanceKelvin !== undefined) return 'kelvin'
-    // customSettings.whiteBalance explicitly set → user chose preset mode (overrides recipe kelvin)
-    if (customSettings?.whiteBalance !== undefined) return 'preset'
-    // Fall back to recipe's default
-    if (recipe?.settings?.whiteBalanceKelvin !== undefined) return 'kelvin'
-    return 'preset'
-  }
-
-  const getKelvinValue = (): number => {
-    if (customSettings?.whiteBalanceKelvin !== undefined) return customSettings.whiteBalanceKelvin
-    if (recipe?.settings?.whiteBalanceKelvin !== undefined) return recipe.settings.whiteBalanceKelvin
-    return 5500
   }
 
   const handleWBModeChange = (mode: 'preset' | 'kelvin') => {
@@ -143,33 +111,6 @@ export function TuningPanel({
 
   const handleKelvinChange = (value: number) => {
     onSettingsChange({ ...customSettings, whiteBalanceKelvin: value, whiteBalance: undefined })
-  }
-
-  // Получаем значение слайдера
-  const getSliderValue = (key: keyof RecipeSettings): number => {
-    const customValue = customSettings?.[key]
-    if (customValue !== undefined) return customValue as number
-    const recipeValue = recipe?.settings?.[key]
-    if (recipeValue !== undefined) return recipeValue as number
-    return SLIDER_PARAMS.find(p => p.key === key)?.defaultValue ?? 0
-  }
-
-  // Получаем значение toggle
-  const getToggleValue = (key: keyof RecipeSettings): ToggleValue => {
-    const customValue = customSettings?.[key] as ToggleValue | undefined
-    if (customValue !== undefined) return customValue
-    const recipeValue = recipe?.settings?.[key] as ToggleValue | undefined
-    if (recipeValue !== undefined) return recipeValue
-    return 'off'
-  }
-
-  // Получаем grain size
-  const getGrainSize = (): GrainSizeValue => {
-    const customValue = customSettings?.grainSize
-    if (customValue !== undefined) return customValue
-    const recipeValue = recipe?.settings?.grainSize
-    if (recipeValue !== undefined) return recipeValue
-    return 'small'
   }
 
   // Обработчики
@@ -189,8 +130,6 @@ export function TuningPanel({
     }
   }
 
-  const grainEffect = getToggleValue('grainEffect')
-
   const resetSetting = (key: keyof RecipeSettings) => {
     const next = { ...customSettings }
     delete next[key]
@@ -208,138 +147,57 @@ export function TuningPanel({
   )
 
   return (
-    <div className="h-full flex flex-col bg-black safe-area-inset">
-      {/* Header */}
-      <div className="flex-shrink-0 px-4 pt-4 md:pt-4 pb-3 border-b border-zinc-800">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-white">
-              Settings
-            </h2>
-            <p className="text-xs text-zinc-500 truncate">
-              {recipe.name}
-            </p>
-          </div>
-
-        </div>
-      </div>
-
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        <div className="space-y-5">
-
-          {/* Slider params */}
-          {SLIDER_PARAMS.map((param) => {
-            const value = getSliderValue(param.key)
-            const sliderId = `slider-${param.key}`
-            return (
-              <div key={param.key} className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <label htmlFor={sliderId} className="text-sm text-zinc-300">
-                    {param.label}
-                  </label>
-                  <div className="flex items-center gap-1">
-                    <span className="w-8 text-right text-sm tabular-nums text-zinc-500" aria-hidden="true">{value > 0 ? `+${value}` : value}</span>
-                    <button type="button" onClick={() => resetSetting(param.key)} className="grid size-11 place-items-center md:size-7 rounded text-zinc-600 hover:bg-zinc-800 hover:text-zinc-200" aria-label={`Reset ${param.label} to profile`}>
-                      <RotateCcw className="size-3" aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
-                <Slider
-                  id={sliderId}
-                  aria-label={param.label}
-                  value={[value]}
-                  min={param.min}
-                  max={param.max}
-                  step={param.step}
-                  onValueChange={(values) => handleSliderChange(param.key, values[0])}
-                  className="h-11 w-full"
-                  aria-valuetext={`${value > 0 ? '+' : ''}${value}`}
-                />
+    <div className="space-y-5 px-4 py-4">
+      {/* Slider params */}
+      {SLIDER_PARAMS.map((param) => {
+        const value = (customSettings[param.key] ?? recipe.settings[param.key] ?? param.defaultValue) as number
+        const sliderId = `slider-${param.key}`
+        return (
+          <div key={param.key} className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <label htmlFor={sliderId} className="text-sm text-zinc-300">
+                {param.label}
+              </label>
+              <div className="flex items-center gap-1">
+                <span className="w-8 text-right text-sm tabular-nums text-zinc-500" aria-hidden="true">{value > 0 ? `+${value}` : value}</span>
+                <button type="button" onClick={() => resetSetting(param.key)} className="grid size-11 place-items-center md:size-7 rounded text-zinc-600 hover:bg-zinc-800 hover:text-zinc-200" aria-label={`Reset ${param.label} to profile`}>
+                  <RotateCcw className="size-3" aria-hidden="true" />
+                </button>
               </div>
-            )
-          })}
-
-          {/* Divider */}
-          <div className="h-px bg-zinc-800 my-4" />
-
-          {/* Toggle params with ToggleGroup */}
-          {TOGGLE_PARAMS.map((param) => {
-            const value = getToggleValue(param.key)
-            const labelId = `toggle-label-${param.key}`
-            return (
-              <div key={param.key} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label id={labelId} className="text-sm text-zinc-300">{param.label}</label>
-                  {resetButton(param.key, param.label)}
-                </div>
-                <ToggleGroup
-                  type="single"
-                  value={value}
-                  onValueChange={(v) => handleToggleChange(param.key, v)}
-                  className="w-full justify-start"
-                  aria-labelledby={labelId}
-                >
-                  {TOGGLE_OPTIONS.map((option) => (
-                    <ToggleGroupItem
-                      key={option.value}
-                      value={option.value}
-                      aria-label={option.label}
-                      className="min-h-11 flex-1 text-xs md:min-h-9"
-                    >
-                      {option.label}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
-              </div>
-            )
-          })}
-
-          {/* Grain Size - only shown when grain is not off */}
-          {grainEffect !== 'off' && (
-            <div className="space-y-2 animate-in fade-in duration-200">
-              <div className="flex items-center justify-between">
-                <label id="toggle-label-grainSize" className="text-sm text-zinc-300">Grain Size</label>
-                {resetButton('grainSize', 'Grain Size')}
-              </div>
-              <ToggleGroup
-                type="single"
-                value={getGrainSize()}
-                onValueChange={handleGrainSizeChange}
-                className="w-full justify-start"
-                aria-labelledby="toggle-label-grainSize"
-              >
-                {GRAIN_SIZE_OPTIONS.map((option) => (
-                  <ToggleGroupItem
-                    key={option.value}
-                    value={option.value}
-                    aria-label={option.label}
-                    className="min-h-11 flex-1 text-xs md:min-h-9"
-                  >
-                    {option.label}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
             </div>
-          )}
+            <Slider
+              id={sliderId}
+              aria-label={param.label}
+              value={[value]}
+              min={param.min}
+              max={param.max}
+              step={param.step}
+              onValueChange={(values) => handleSliderChange(param.key, values[0])}
+              className="h-11 w-full"
+              aria-valuetext={`${value > 0 ? '+' : ''}${value}`}
+            />
+          </div>
+        )
+      })}
 
-          {/* Divider */}
-          <div className="h-px bg-zinc-800" />
-
-          {/* Dynamic Range */}
-          <div className="space-y-2">
+      {/* Toggle params with ToggleGroup */}
+      {TOGGLE_PARAMS.map((param) => {
+        const value = (customSettings[param.key] ?? recipe.settings[param.key] ?? 'off') as ToggleValue
+        const labelId = `toggle-label-${param.key}`
+        return (
+          <div key={param.key} className="space-y-2">
             <div className="flex items-center justify-between">
-              <label id="toggle-label-dynamicRange" className="text-sm text-zinc-300">Dynamic Range</label>
-              {resetButton('dynamicRange', 'Dynamic Range')}
+              <label id={labelId} className="text-sm text-zinc-300">{param.label}</label>
+              {resetButton(param.key, param.label)}
             </div>
             <ToggleGroup
               type="single"
-              value={getDynamicRange()}
-              onValueChange={handleDRChange}
+              value={value}
+              onValueChange={(v) => handleToggleChange(param.key, v)}
               className="w-full justify-start"
-              aria-labelledby="toggle-label-dynamicRange"
+              aria-labelledby={labelId}
             >
-              {DR_OPTIONS.map((option) => (
+              {TOGGLE_OPTIONS.map((option) => (
                 <ToggleGroupItem
                   key={option.value}
                   value={option.value}
@@ -351,105 +209,136 @@ export function TuningPanel({
               ))}
             </ToggleGroup>
           </div>
+        )
+      })}
 
-          {/* White Balance */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1 text-sm text-zinc-300">White Balance{resetButton('whiteBalance', 'White Balance')}</span>
-              <div className="flex rounded-md overflow-hidden border border-zinc-700">
-                <button
-                  onClick={() => handleWBModeChange('preset')}
-                  className={`min-h-11 min-w-11 px-2 py-1 text-xs transition-colors md:min-h-8 ${
-                    getWBMode() === 'preset'
-                      ? 'bg-zinc-600 text-white'
-                      : 'bg-transparent text-zinc-500 hover:text-zinc-300'
-                  }`}
-                  aria-pressed={getWBMode() === 'preset'}
-                  aria-label="White Balance Preset mode"
-                >
-                  Preset
-                </button>
-                <button
-                  onClick={() => handleWBModeChange('kelvin')}
-                  className={`min-h-11 min-w-11 px-2 py-1 text-xs transition-colors md:min-h-8 ${
-                    getWBMode() === 'kelvin'
-                      ? 'bg-zinc-600 text-white'
-                      : 'bg-transparent text-zinc-500 hover:text-zinc-300'
-                  }`}
-                  aria-pressed={getWBMode() === 'kelvin'}
-                  aria-label="White Balance Kelvin mode"
-                >
-                  Kelvin
-                </button>
-              </div>
-            </div>
-
-            {getWBMode() === 'preset' ? (
-              <ToggleGroup
-                type="single"
-                value={getWBPreset()}
-                onValueChange={handleWBChange}
-                className="grid grid-cols-2 gap-1"
-                aria-label="White Balance preset"
-              >
-                {WB_OPTIONS.map((option) => (
-                  <ToggleGroupItem
-                    key={option.value}
-                    value={option.value}
-                    aria-label={option.label}
-                    className="min-h-11 text-xs w-full md:min-h-9"
-                  >
-                    {option.label}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="slider-kelvin" className="text-sm text-zinc-500">Temperature</label>
-                  <span className="flex items-center gap-1 text-sm text-zinc-500 tabular-nums">
-                    <span aria-hidden="true">{getKelvinValue()}K</span>
-                    {resetButton('whiteBalanceKelvin', 'Temperature')}
-                  </span>
-                </div>
-                <Slider
-                  id="slider-kelvin"
-                  value={[getKelvinValue()]}
-                  min={2500}
-                  max={10000}
-                  step={100}
-                  onValueChange={(values) => handleKelvinChange(values[0])}
-                  className="h-11 w-full"
-                  aria-label={`White balance ${getKelvinValue()} Kelvin`}
-                />
-              </div>
-            )}
+      {/* Grain Size - only shown when grain is not off */}
+      {grainEffect !== 'off' && (
+        <div className="space-y-2 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between">
+            <label id="toggle-label-grainSize" className="text-sm text-zinc-300">Grain Size</label>
+            {resetButton('grainSize', 'Grain Size')}
           </div>
+          <ToggleGroup
+            type="single"
+            value={grainSize}
+            onValueChange={handleGrainSizeChange}
+            className="w-full justify-start"
+            aria-labelledby="toggle-label-grainSize"
+          >
+            {GRAIN_SIZE_OPTIONS.map((option) => (
+              <ToggleGroupItem
+                key={option.value}
+                value={option.value}
+                aria-label={option.label}
+                className="min-h-11 flex-1 text-xs md:min-h-9"
+              >
+                {option.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
         </div>
+      )}
+
+      {/* Dynamic Range */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label id="toggle-label-dynamicRange" className="text-sm text-zinc-300">Dynamic Range</label>
+          {resetButton('dynamicRange', 'Dynamic Range')}
+        </div>
+        <ToggleGroup
+          type="single"
+          value={dynamicRange}
+          onValueChange={handleDRChange}
+          className="w-full justify-start"
+          aria-labelledby="toggle-label-dynamicRange"
+        >
+          {DR_OPTIONS.map((option) => (
+            <ToggleGroupItem
+              key={option.value}
+              value={option.value}
+              aria-label={option.label}
+              className="min-h-11 flex-1 text-xs md:min-h-9"
+            >
+              {option.label}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
       </div>
 
-      {/* Footer with action buttons - fixed at bottom */}
-      {showActions && <div className="flex-shrink-0 px-4 py-4 pb-6 md:pb-4 border-t border-zinc-800 bg-black">
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="default"
-            onClick={onApply}
-            className="flex-1"
-          >
-            <Check className="w-4 h-4" aria-hidden="true" />
-            Apply
-          </Button>
-          <Button
-            variant="outline"
-            size="default"
-            onClick={onCancel}
-            className="flex-1"
-          >
-            Cancel
-          </Button>
+      {/* White Balance */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1 text-sm text-zinc-300">White Balance{resetButton('whiteBalance', 'White Balance')}</span>
+          <div className="flex rounded-md overflow-hidden border border-zinc-700">
+            <button
+              onClick={() => handleWBModeChange('preset')}
+              className={`min-h-11 min-w-11 px-2 py-1 text-xs transition-colors md:min-h-8 ${
+                wbMode === 'preset'
+                  ? 'bg-zinc-600 text-white'
+                  : 'bg-transparent text-zinc-500 hover:text-zinc-300'
+              }`}
+              aria-pressed={wbMode === 'preset'}
+              aria-label="White Balance Preset mode"
+            >
+              Preset
+            </button>
+            <button
+              onClick={() => handleWBModeChange('kelvin')}
+              className={`min-h-11 min-w-11 px-2 py-1 text-xs transition-colors md:min-h-8 ${
+                wbMode === 'kelvin'
+                  ? 'bg-zinc-600 text-white'
+                  : 'bg-transparent text-zinc-500 hover:text-zinc-300'
+              }`}
+              aria-pressed={wbMode === 'kelvin'}
+              aria-label="White Balance Kelvin mode"
+            >
+              Kelvin
+            </button>
+          </div>
         </div>
-      </div>}
+
+        {wbMode === 'preset' ? (
+          <ToggleGroup
+            type="single"
+            value={wbPreset}
+            onValueChange={handleWBChange}
+            className="grid grid-cols-2 gap-1"
+            aria-label="White Balance preset"
+          >
+            {WB_OPTIONS.map((option) => (
+              <ToggleGroupItem
+                key={option.value}
+                value={option.value}
+                aria-label={option.label}
+                className="min-h-11 text-xs w-full md:min-h-9"
+              >
+                {option.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label htmlFor="slider-kelvin" className="text-sm text-zinc-500">Temperature</label>
+              <span className="flex items-center gap-1 text-sm text-zinc-500 tabular-nums">
+                <span aria-hidden="true">{kelvin}K</span>
+                {resetButton('whiteBalanceKelvin', 'Temperature')}
+              </span>
+            </div>
+            <Slider
+              id="slider-kelvin"
+              value={[kelvin]}
+              min={2500}
+              max={10000}
+              step={100}
+              onValueChange={(values) => handleKelvinChange(values[0])}
+              className="h-11 w-full"
+              aria-label={`White balance ${kelvin} Kelvin`}
+            />
+          </div>
+        )}
+      </div>
     </div>
   )
 }

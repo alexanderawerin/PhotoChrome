@@ -1,13 +1,11 @@
 import { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
-import { ArrowLeft, PanelRightClose, PanelRightOpen, Film, X, Settings2, Share, HelpCircle, Crop, RotateCw, FlipHorizontal } from 'lucide-react'
-import { APP_VERSION } from '../constants'
+import { ArrowLeft, PanelRightClose, PanelRightOpen, Film, X, HelpCircle } from 'lucide-react'
 import { Button } from './ui/button'
 import { VideoPreview } from './VideoPreview'
 import { FilmSelector } from './FilmSelector'
 import { getBaseFilm, getProfileName, hasModifiedSettings } from '../engine/film-profiles'
-import { useIsMdUp } from '../hooks/useIsMdUp'
 import { AdvancedPanel } from './AdvancedPanel'
-import { CropPanel } from './CropPanel'
+import { EditorHeader, EditorModes, EditorActions, EditorControlDock, CropTools, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
 import { activeEditorSession, beginTuningSession, beginCropSession, editorSessionChanges, selectTuningProfile, restoreTuningBase, updateTuningSession, updateCropSession, setCropRatio, type EditorSession } from '../engine/editor-sessions'
 import { createDefaultTransformState, nextQuarterTurn, renderImageTransform, type ImageTransformState } from '../engine/transform'
 import { getVideoOutputSize } from '../engine/video/geometry'
@@ -20,7 +18,6 @@ import { editorCommands } from '../engine/editor-commands'
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from './ui/sheet'
 import type { VideoData } from '../engine/media-loading'
 import type { VideoExportState } from '../hooks/useVideoExport'
-import { Spinner } from './ui/spinner'
 
 interface VideoEditorProps {
   videoData: VideoData
@@ -101,7 +98,6 @@ export function VideoEditor({
     clearPreviewCaches()
     disposePhotoWebGLProcessor()
   }, [videoData])
-  const isDesktop = useIsMdUp()
   const [color, setColor] = useState<{ recipe: Recipe | null; settings: RecipeSettings }>({ recipe: null, settings: {} })
   const activeRecipe = color.recipe
   const customSettings = color.settings
@@ -120,6 +116,7 @@ export function VideoEditor({
   const [cropGridActive, setCropGridActive] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
   const [isPanelOpen, setIsPanelOpen] = useState(true)
+  const [mode, setMode] = useState<EditorMode>('films')
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [preparationAttempt, setPreparationAttempt] = useState(0)
   const [renderError, setRenderError] = useState<string | null>(null)
@@ -183,6 +180,7 @@ export function VideoEditor({
     setDraft(null)
     setColor({ recipe: null, settings: {} })
     setTransform(createDefaultTransformState())
+    setMode('films')
   }, [videoData])
 
   useEffect(() => {
@@ -194,12 +192,14 @@ export function VideoEditor({
   const handleRecipeSelect = useCallback((recipe: Recipe | null) => {
     if (!commands.selectColor) return
     setDraft(null)
+    setMode('films')
     setColor({ recipe, settings: {} })
   }, [commands.selectColor])
 
   const handleTuningCancel = useCallback(() => {
     setDraft(null)
     setCropGridActive(false)
+    setMode(previous => previous === 'advanced' ? 'films' : previous)
     restoreSessionFocus.current = true
   }, [])
 
@@ -207,8 +207,10 @@ export function VideoEditor({
     if (session || !processingPlan || renderError || !restoreSessionFocus.current) return
     const frame = requestAnimationFrame(() => {
       const trigger = sessionTriggerRef.current
-      if (trigger?.isConnected && !(trigger instanceof HTMLButtonElement && trigger.disabled)) {
-        trigger.focus({ preventScroll: true })
+      const target = trigger?.isConnected ? trigger
+        : contextualPanelRef.current?.querySelector<HTMLElement>('button[aria-label="Open crop session"]')
+      if (target && !(target instanceof HTMLButtonElement && target.disabled)) {
+        target.focus({ preventScroll: true })
         restoreSessionFocus.current = false
       }
     })
@@ -216,14 +218,16 @@ export function VideoEditor({
   }, [session, processingPlan, renderError])
 
   const handleTuningOpen = useCallback(() => {
-    if (!commands.advanced || !activeRecipe || !processingPlan) return
-    if (isTuning) handleTuningCancel()
-    else {
-      sessionTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
-      setDraft(beginTuningSession(owner, customSettings, activeRecipe))
-      setIsPanelOpen(true)
+    if (isTuning) {
+      if (commands.cancelDraft) handleTuningCancel()
+      return
     }
-  }, [commands.advanced, activeRecipe, processingPlan, isTuning, handleTuningCancel, owner, customSettings])
+    if (!commands.advanced || !activeRecipe || !processingPlan) return
+    sessionTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setDraft(beginTuningSession(owner, customSettings, activeRecipe))
+    setMode('advanced')
+    setIsPanelOpen(true)
+  }, [commands.advanced, commands.cancelDraft, activeRecipe, processingPlan, isTuning, handleTuningCancel, owner, customSettings])
 
   const handleTuningApply = useCallback(() => {
     if (!commands.editDraft || !processingPlan || renderError) return
@@ -275,12 +279,26 @@ export function VideoEditor({
     if (!commands.geometry) return
     sessionTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setDraft(beginCropSession(owner, transform))
+    setMode('crop')
     setIsPanelOpen(true)
   }, [commands.geometry, owner, transform])
 
   const handlePanelToggle = useCallback(() => {
     if (commands.panel) setIsPanelOpen(previous => !previous)
   }, [commands.panel])
+
+  const changeMode = (next: EditorMode) => {
+    if (next === 'advanced') {
+      handleTuningOpen()
+      return
+    }
+    if (!commands.selectColor) return
+    setDraft(null)
+    setCropGridActive(false)
+    restoreSessionFocus.current = false
+    setMode(next)
+    setIsPanelOpen(true)
+  }
 
   const runExportRequest = useCallback(async (allowSilentAudio = false) => {
     const request = exportRequest.current
@@ -413,90 +431,47 @@ export function VideoEditor({
     handleCompareEnd,
   ])
 
-  function renderContextualPanel() {
-    if (session?.kind === 'tuning' && session.profile) return (
-      <AdvancedPanel profile={session.profile} settings={session.draft} sourceImage={advancedThumbnail}
-        onProfileSelect={changeDraftProfile} onSettingsChange={handleSettingsChange}
-        onApply={handleTuningApply} onCancel={handleTuningCancel} onRestoreBase={restoreDraftBase}
-        disabled={!commands.editDraft} applyDisabled={!processingPlan || !!renderError} />
-    )
-    if (session?.kind === 'crop') return (
-      <section role="region" aria-label="Crop settings" className="h-full overflow-y-auto">
-        <div className="flex justify-between gap-2 p-3">
-          <h2>Crop</h2>
-          <Button variant="ghost" onClick={handleTuningCancel} aria-label="Close crop"><X className="size-4" aria-hidden="true" /></Button>
-        </div>
-        <div className="flex gap-2 px-3">
-          <Button variant="outline" onClick={() => changeGeometry({ quarterTurns: nextQuarterTurn(visibleTransform.quarterTurns) })}>Rotate</Button>
-          <Button variant="outline" onClick={() => changeGeometry({ flipHorizontal: !visibleTransform.flipHorizontal })}>Reflect</Button>
-        </div>
-        <fieldset disabled={!commands.cropGeometry} className="border-0 p-0 min-w-0">
-          <CropPanel cropRatio={session.draft.cropRatio} fineAngle={session.draft.fineAngle} cropScale={session.draft.cropScale}
-            onCropRatioChange={cropRatio => changeCrop({ cropRatio })} onFineAngleChange={fineAngle => changeCrop({ fineAngle })}
-            onCropScaleChange={cropScale => changeCrop({ cropScale })} onInteractionChange={setCropGridActive}
-            onApply={handleTuningApply} onCancel={handleTuningCancel} />
-        </fieldset>
-      </section>
-    )
-    return null
-  }
+  const actions: EditorAction[] = isCropping ? [
+    { id: 'cancel-crop', label: 'Cancel', onClick: handleTuningCancel, variant: 'outline', disabled: !commands.cancelDraft },
+    { id: 'apply-crop', label: 'Done', onClick: handleTuningApply, disabled: !commands.editDraft || !processingPlan || !!renderError },
+  ] : isTuning ? [] : [
+    ...(activeRecipe && hasModifiedSettings(activeRecipe, customSettings) ? [{
+      id: 'restore-base', label: 'Restore base film', variant: 'outline' as const,
+      onClick: () => handleRecipeSelect(getBaseFilm(activeRecipe.filmSimulation) ?? null), disabled: !commands.selectColor,
+    }] : []),
+    {
+      id: 'export', label: exportState.isExporting ? 'Exporting...' : 'Export',
+      ariaLabel: exportState.isExporting ? 'Exporting...' : 'Export video',
+      onClick: () => { void handleExport() }, disabled: !canExport, busy: exportState.isExporting,
+      buttonRef: exportButtonRef,
+    },
+  ]
 
   return (
     <main
       className="flex flex-col md:flex-row overflow-hidden"
       style={{ height: viewportHeight ? `${viewportHeight}px` : '100dvh' }}
     >
-      {/* Main area: preview + toolbar */}
-      <div className="flex-1 flex flex-col bg-zinc-950 min-w-0 min-h-0 overflow-hidden">
-        {/* Header */}
-        <header className="flex-shrink-0 px-3 py-2 md:p-4">
-          <div className="relative flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => { if (commands.navigate) onBack() }}
-              disabled={!commands.navigate}
-              className="text-zinc-400 hover:text-white h-8 w-8 p-0"
-              aria-label="Back"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-
-            <div className="absolute left-1/2 -translate-x-1/2 text-center">
-              <h1 className="text-sm md:text-lg font-semibold text-white">
-                Photochrome
-                <sup className="text-[8px] md:text-[10px] text-zinc-400 ml-0.5">
-                  {APP_VERSION}
-                </sup>
-              </h1>
-              <div className="flex items-center justify-center gap-2">
-                <Film className="w-3 h-3 text-zinc-400" />
-                <p className="text-[10px] md:text-xs text-zinc-400 truncate max-w-[140px] md:max-w-none">
-                  {fileName}
-                </p>
-              </div>
-            </div>
-
-            {/* Desktop: Panel toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handlePanelToggle}
-              disabled={!commands.panel}
-              className="text-zinc-400 hover:text-white hidden md:flex"
-              aria-label={isPanelOpen ? 'Hide panel' : 'Show panel'}
-            >
-              {isPanelOpen ? (
-                <PanelRightClose className="w-5 h-5" />
-              ) : (
-                <PanelRightOpen className="w-5 h-5" />
-              )}
-            </Button>
-            {/* Spacer for mobile */}
-            <div className="w-8 h-8 md:hidden" />
-          </div>
-        </header>
-
+      {/* The media stage and persistent control dock share one responsive layout. */}
+      <div className="editor-stage editor-video-stage flex-1 bg-zinc-950 min-w-0 min-h-0 overflow-hidden">
+        <div className="mobile-editor-header mobile-editor-surface">
+          <EditorHeader compact={isTuning} fileName={fileName} details={`${Math.round(metadata.duration * 10) / 10}s • ${metadata.width}×${metadata.height}`}
+            leading={
+              <Button variant="ghost" onClick={() => { if (commands.navigate) onBack() }} disabled={!commands.navigate}
+                className="editor-control min-h-11 min-w-11 rounded-lg p-0 text-zinc-300" aria-label="Back">
+                <ArrowLeft className="size-4" aria-hidden="true" />
+              </Button>
+            }
+            trailing={<>
+              <Button variant="ghost" onClick={() => { if (commands.help) setIsHelpOpen(true) }} disabled={!commands.help}
+                className="editor-control min-h-11 min-w-11 rounded-lg p-0 text-zinc-300" aria-label="Help">
+                <HelpCircle className="size-4" aria-hidden="true" />
+              </Button>
+              <Button variant="ghost" onClick={handlePanelToggle} disabled={!commands.panel}
+                className="hidden min-h-11 min-w-11 p-0 text-zinc-300 md:inline-flex" aria-label={isPanelOpen ? 'Hide panel' : 'Show panel'}>
+                {isPanelOpen ? <PanelRightClose className="size-5" aria-hidden="true" /> : <PanelRightOpen className="size-5" aria-hidden="true" />}
+              </Button>
+            </>} />
         <div className="mx-3 md:mx-6 mb-2 flex items-center gap-2 text-xs text-zinc-400" aria-label="Applied color">
           {(preparing || preparationError) && <span>{preparationError ? 'Unavailable:' : 'Preparing:'}</span>}
           <span>{getProfileName(activeRecipe)}</span>
@@ -525,9 +500,10 @@ export function VideoEditor({
             <Button size="sm" variant="outline" onClick={() => setPreparationAttempt(attempt => attempt + 1)} disabled={interactionDisabled || exportState.isExporting || isHelpOpen}>Retry film</Button>
           </div>
         )}
+        </div>
 
         {/* Preview area */}
-        <div className="flex-1 min-h-0 px-3 md:px-6 relative overflow-hidden">
+        <div className="editor-video-preview flex-1 min-h-0 px-3 md:px-6 relative overflow-hidden">
           <VideoPreview
             video={video}
             processingPlan={showOriginal ? null : processingPlan}
@@ -542,107 +518,32 @@ export function VideoEditor({
             onMouseUp={handleCompareEnd}
             onMouseLeave={handleCompareEnd}
           />
-          
-          {/* Video info badge */}
-          <div className="absolute bottom-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-lg pointer-events-none">
-            <Film className="w-3.5 h-3.5 text-zinc-400" />
-            <span className="text-xs text-zinc-300">
-              {Math.round(metadata.duration * 10) / 10}s • {metadata.width}×{metadata.height}
-            </span>
-          </div>
         </div>
-
-        {/* Video toolbar - Order: Help → Preset settings → Export */}
-        <div className={`flex-shrink-0 p-3 md:p-4 ${session && !isDesktop ? 'hidden' : ''}`}>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {/* Help button */}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => { if (commands.help) setIsHelpOpen(true) }}
-              disabled={!commands.help}
-              aria-label="Help"
-            >
-              <HelpCircle className="w-4 h-4" aria-hidden="true" />
-            </Button>
-
-            {/* Recipe chip — toggle tuning panel */}
-            {activeRecipe ? (
-              <Button
-                variant="outline"
-                size="default"
-                onClick={handleTuningOpen}
-                disabled={!commands.advanced || !processingPlan}
-                aria-label="Advanced settings"
-                aria-pressed={isTuning}
-              >
-                <Film className="w-4 h-4" aria-hidden="true" />
-                <span className="max-w-32 truncate">
-                  {activeRecipe.name}
-                </span>
-                <Settings2 className="w-4 h-4" aria-hidden="true" />
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                size="default"
-                disabled
-              >
-                <Film className="w-4 h-4" aria-hidden="true" />
-                Original
-              </Button>
-            )}
-
-            {activeRecipe && !isTuning && hasModifiedSettings(activeRecipe, customSettings) && (
-              <Button variant="outline" onClick={() => { if (commands.selectColor) handleRecipeSelect(getBaseFilm(activeRecipe.filmSimulation) ?? null) }} disabled={!commands.selectColor}>Restore base film</Button>
-            )}
-
-            <Button variant="outline" size="icon" aria-label="Crop" onClick={openCrop} disabled={!commands.geometry}><Crop className="w-4 h-4" aria-hidden="true" /></Button>
-            <Button variant="outline" size="icon" aria-label="Rotate clockwise" onClick={() => changeGeometry({ quarterTurns: nextQuarterTurn(visibleTransform.quarterTurns) })} disabled={!commands.geometry && !commands.cropGeometry}><RotateCw className="w-4 h-4" aria-hidden="true" /></Button>
-            <Button variant="outline" size="icon" aria-label="Flip horizontal" onClick={() => changeGeometry({ flipHorizontal: !visibleTransform.flipHorizontal })} disabled={!commands.geometry && !commands.cropGeometry}><FlipHorizontal className="w-4 h-4" aria-hidden="true" /></Button>
-
-            {/* Export button */}
-            <Button
-              variant="default"
-              size="default"
-              ref={exportButtonRef}
-              onClick={handleExport}
-              disabled={!canExport}
-              aria-label={exportState.isExporting ? 'Exporting...' : 'Export video'}
-              aria-busy={exportState.isExporting}
-            >
-              {exportState.isExporting ? (
-                <Spinner className="w-4 h-4" />
-              ) : (
-                <Share className="w-4 h-4" aria-hidden="true" />
-              )}
-              {exportState.isExporting ? 'Exporting...' : 'Export'}
-            </Button>
-          </div>
-        </div>
-
-        {!isDesktop && (
-          <div className={`flex-shrink-0 ${session ? 'p-1' : 'p-3'}`}>
-            <FilmSelector activeRecipe={activeRecipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor} horizontal />
-          </div>
+      <EditorControlDock mode={mode} contentRef={contextualPanelRef} hideDesktop={!isPanelOpen}
+        navigation={<EditorModes mode={mode} onChange={changeMode} advancedOpen={isTuning}
+          disabled={{ films: !commands.selectColor, advanced: isTuning ? !commands.cancelDraft : !commands.advanced || !processingPlan, crop: !commands.selectColor }} />}
+        actions={<EditorActions actions={actions} />}>
+        {mode === 'films' && <FilmSelector activeRecipe={activeRecipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor} />}
+        {mode === 'advanced' && session?.kind === 'tuning' && session.profile && (
+          <AdvancedPanel profile={session.profile} settings={session.draft} sourceImage={advancedThumbnail}
+            onProfileSelect={changeDraftProfile} onSettingsChange={handleSettingsChange}
+            onApply={handleTuningApply} onCancel={handleTuningCancel} onRestoreBase={restoreDraftBase}
+            disabled={!commands.editDraft} applyDisabled={!processingPlan || !!renderError} />
         )}
-        {!isDesktop && session && (
-        <div ref={contextualPanelRef} className="relative flex-shrink-0 z-30 h-[60dvh] min-h-0 overflow-hidden border-t border-zinc-800 bg-black">
-          {renderContextualPanel()}
-        </div>
-      )}
-
+        {mode === 'crop' && (session?.kind === 'crop' ? (
+          <CropSessionControls disabled={!commands.cropGeometry}
+            onRotate={() => changeGeometry({ quarterTurns: nextQuarterTurn(visibleTransform.quarterTurns) })}
+            onFlip={() => changeGeometry({ flipHorizontal: !visibleTransform.flipHorizontal })}
+            cropRatio={session.draft.cropRatio} fineAngle={session.draft.fineAngle} cropScale={session.draft.cropScale}
+            onCropRatioChange={cropRatio => changeCrop({ cropRatio })} onFineAngleChange={fineAngle => changeCrop({ fineAngle })}
+            onCropScaleChange={cropScale => changeCrop({ cropScale })} onInteractionChange={setCropGridActive} />
+        ) : (
+          <CropTools onOpen={openCrop} disabled={!commands.geometry}
+            onRotate={() => changeGeometry({ quarterTurns: nextQuarterTurn(visibleTransform.quarterTurns) })}
+            onFlip={() => changeGeometry({ flipHorizontal: !visibleTransform.flipHorizontal })} />
+        ))}
+      </EditorControlDock>
       </div>
-
-      {isDesktop && isPanelOpen && (
-        <aside aria-label="Film browser" className="flex-shrink-0 h-full min-h-0 w-[320px] overflow-hidden bg-black border-l border-zinc-800">
-          {!session && <FilmSelector activeRecipe={activeRecipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor} className="p-3" />}
-          {session && <div className="flex h-full min-h-0 flex-col">
-            <FilmSelector activeRecipe={activeRecipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor} horizontal className="shrink-0 border-b border-zinc-800 p-2" />
-            <div ref={contextualPanelRef} className="min-h-0 flex-1">{renderContextualPanel()}</div>
-          </div>}
-        </aside>
-      )}
       {/* Export progress overlay */}
       {exportState.isExporting && (
         <ExportOverlay
