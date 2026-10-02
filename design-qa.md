@@ -1,5 +1,7 @@
 # Dark viewing room — design QA
 
+> Historical report for the initial image-to-code iteration. Its screenshots, counts and formal Product Design gate status describe that iteration. The current desktop review build, behavior and validation are recorded in [implementation.md](docs/design-experiments/2026-10-02/implementation.md); current application code is authoritative. This report does not claim that the previously unavailable Product Design cloud-browser gate was subsequently passed.
+
 ## Gate status
 
 **final result: blocked**
