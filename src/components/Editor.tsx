@@ -5,9 +5,8 @@ import { Button } from './ui/button'
 import { Spinner } from './ui/spinner'
 import { Preview } from './Preview'
 import { FilmSelector } from './FilmSelector'
-import { getBaseFilm, hasModifiedSettings, isBaseProfile } from '../engine/film-profiles'
 import { AdvancedPanel } from './AdvancedPanel'
-import { EditorHeader, EditorModes, EditorActions, EditorControlDock, EditorCompare, EditorPhotoNavigation, EditorProcessing, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
+import { EditorHeader, EditorModes, EditorActions, EditorControlDock, EditorCompare, EditorPhotoNavigation, EditorProcessing, EditorAppliedColor, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
 import { HelpDialog } from './HelpDialog'
 import { ExportCompletion, type ExportCompletionState } from './ExportCompletion'
 import { Recipe, ImageItem } from '../engine/types'
@@ -511,18 +510,10 @@ export function Editor({
             </Button>
           )}
           trailing={<EditorActions actions={isCropping ? [] : actions} placement="header" primaryId={isMdUp || totalImages === 1 ? 'export' : 'export-all'} extraActions={[{
-            id: 'help', label: 'Help', icon: <HelpCircle className="size-4" aria-hidden="true" />, unread: hasUnreadHelp,
+            id: 'help', label: 'Help', icon: <HelpCircle className="size-4" aria-hidden="true" />,
             onClick: () => { if (commands.help) setIsHelpOpen(true) }, disabled: !commands.help,
           }]} />}
         />
-
-        <div className="editor-color-status flex items-center gap-2 text-xs text-zinc-400" aria-label="Applied color"
-          data-quiet={!edit.session && !previewError && (!currentImage.recipe || (isBaseProfile(currentImage.recipe) && !hasModifiedSettings(currentImage.recipe, currentImage.customSettings))) || undefined}>
-          {(isProcessing || previewError) && <span className={previewError ? undefined : 'sr-only'}>{previewError ? 'Unavailable:' : 'Preparing:'}</span>}
-          <span>{currentImage.recipe ? getBaseFilm(currentImage.recipe.filmSimulation)?.name : 'Original'}</span>
-          {currentImage.recipe && !isBaseProfile(currentImage.recipe) && <span>· {currentImage.recipe.name}</span>}
-          {hasModifiedSettings(currentImage.recipe, currentImage.customSettings) && <span>· Modified</span>}
-        </div>
 
         {previewError && (
           <div role="alert" className="mx-3 mb-2 flex items-center gap-3 rounded-lg bg-rose-950 px-3 py-2 text-sm text-rose-100">
@@ -565,6 +556,7 @@ export function Editor({
             onCropScaleChange={cropScale => edit.changeCrop({ cropScale })}
             cropGridActive={isCropControlActive}
             statusOverlay={isProcessing ? <EditorProcessing /> : undefined}
+            colorOverlay={<EditorAppliedColor profile={currentImage.recipe} settings={currentImage.customSettings} preparing={isProcessing} unavailable={!!previewError} />}
             overlay={!isCropping && !isTuning ? <EditorCompare active={showOriginal} disabled={!commands.compare}
               onStart={handleCompareStart} onEnd={handleCompareEnd} /> : undefined}
             onMouseDown={handleCompareStart}
@@ -578,10 +570,7 @@ export function Editor({
           {totalImages > 1 && <EditorPhotoNavigation previous={onPreviousImage} next={onNextImage} disabled={!commands.navigate} />}
         </div>
 
-        <EditorControlDock
-          mode={mode}
-          actions={<EditorActions actions={isCropping ? actions : []} primaryId="apply-crop" />}
-        >
+        <EditorControlDock mode={mode}>
           {mode === 'films' && (
             <FilmSelector sourceImage={currentImage.transformedThumbnail} activeRecipe={currentImage.recipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor} retryKey={previewRetry} />
           )}
@@ -593,6 +582,7 @@ export function Editor({
           )}
           {mode === 'crop' && isCropping && (
             <CropSessionControls
+              actions={<EditorActions actions={actions} primaryId="apply-crop" />}
               cropRatio={edit.transformState.cropRatio}
               fineAngle={edit.transformState.fineAngle}
               cropScale={edit.transformState.cropScale}

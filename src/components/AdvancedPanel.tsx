@@ -1,9 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { Recipe, RecipeSettings } from '../engine/types'
 import { getAllRecipes } from '../presets/recipes'
-import { getProfileName } from '../engine/film-profiles'
-import { useFavorites } from '../hooks/useFavorites'
-import { RecipeCard } from './RecipeCard'
+import { getBaseFilm, isBaseProfile } from '../engine/film-profiles'
+import { FilmOption } from './FilmOption'
 import { TuningPanel } from './TuningPanel'
 import { Button } from './ui/button'
 
@@ -24,11 +23,9 @@ export function AdvancedPanel({ profile, settings, sourceImage, onProfileSelect,
   const [tab, setTab] = useState<'recipes' | 'manual'>('recipes')
   const id = useId()
   const recipesRef = useRef<HTMLDivElement>(null)
-  const { getFavoriteIds, toggleFavorite } = useFavorites()
-  const favorites = new Set(getFavoriteIds())
   const recipes = getAllRecipes().filter(recipe => recipe.filmSimulation === profile.filmSimulation)
-    .sort((a, b) => Number(favorites.has(b.id)) - Number(favorites.has(a.id)))
   const recipeOrder = recipes.map(recipe => recipe.id).join(',')
+  const baseName = getBaseFilm(profile.filmSimulation)?.name ?? profile.filmSimulation
 
   useEffect(() => {
     const strip = recipesRef.current
@@ -47,8 +44,11 @@ export function AdvancedPanel({ profile, settings, sourceImage, onProfileSelect,
   return (
     <section role="region" aria-label="Advanced settings" data-advanced-tab={tab} className="editor-advanced-panel flex h-full min-h-0 flex-col">
       <div className="editor-advanced-heading">
-        <p className="editor-advanced-profile">{getProfileName(profile)}</p>
-        <div className="editor-advanced-controls">
+        <div className="editor-advanced-leading">
+          <div className="editor-advanced-profile">
+            <p className="editor-advanced-base-name">{baseName}</p>
+            {!isBaseProfile(profile) && <p className="editor-advanced-recipe-name">{profile.name}</p>}
+          </div>
           <div role="tablist" aria-label="Advanced settings mode" className="editor-advanced-tabs">
             {(['recipes', 'manual'] as const).map(value => (
               <button key={value} type="button" role="tab" id={`${id}-${value}`} aria-controls={`${id}-panel-${value}`} aria-selected={tab === value} tabIndex={tab === value ? 0 : -1}
@@ -66,10 +66,10 @@ export function AdvancedPanel({ profile, settings, sourceImage, onProfileSelect,
               </button>
             ))}
           </div>
-          <div className="editor-advanced-actions">
-            <Button variant="ghost" className="editor-advanced-cancel" onClick={onCancel}>Cancel</Button>
-            <Button className="editor-advanced-apply" onClick={onApply} disabled={disabled || applyDisabled}>Apply</Button>
-          </div>
+        </div>
+        <div className="editor-advanced-actions">
+          <Button variant="ghost" className="editor-advanced-cancel" onClick={onCancel}>Cancel</Button>
+          <Button className="editor-advanced-apply" onClick={onApply} disabled={disabled || applyDisabled}>Apply</Button>
         </div>
       </div>
       <div role="tabpanel" id={`${id}-panel-${tab}`} aria-labelledby={`${id}-${tab}`} className="min-h-0 flex-1 overflow-y-auto">
@@ -77,8 +77,9 @@ export function AdvancedPanel({ profile, settings, sourceImage, onProfileSelect,
           {tab === 'recipes' ? (
             <div ref={recipesRef} className="editor-advanced-recipes film-selector-scroll">
               {recipes.map(recipe => (
-                <RecipeCard key={recipe.id} compact recipe={recipe} sourceImage={sourceImage} isActive={profile.id === recipe.id}
-                  isFavorite={favorites.has(recipe.id)} onFavoriteToggle={toggleFavorite} onClick={() => onProfileSelect(recipe)} />
+                <FilmOption key={recipe.id} recipeOption recipe={recipe} sourceImage={sourceImage} active={profile.id === recipe.id}
+                  ariaLabel={`Apply preset ${recipe.name}${profile.id === recipe.id ? ', selected' : ''}`}
+                  disabled={disabled} onSelect={() => onProfileSelect(recipe)} />
               ))}
             </div>
           ) : (

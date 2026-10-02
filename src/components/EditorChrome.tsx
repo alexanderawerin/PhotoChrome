@@ -4,6 +4,8 @@ import { Button } from './ui/button'
 import { CropPanel } from './CropPanel'
 import { Spinner } from './ui/spinner'
 import { useIsMdUp } from '../hooks/useIsMdUp'
+import { getProfileName, hasModifiedSettings } from '../engine/film-profiles'
+import type { Recipe, RecipeSettings } from '../engine/types'
 
 export type EditorMode = 'films' | 'advanced' | 'crop'
 
@@ -18,7 +20,6 @@ export interface EditorAction {
   desktopOnly?: boolean
   buttonRef?: Ref<HTMLButtonElement>
   icon?: ReactNode
-  unread?: boolean
 }
 
 /** One header DOM for both layouts; media owners supply their permitted actions. */
@@ -107,7 +108,6 @@ export function EditorActions({ actions, placement = 'dock', primaryId = 'export
       {action.busy ? <Spinner className="size-4" /> : action.icon ?? (primary ? (action.id === 'upload' ? <Plus className="size-4" aria-hidden="true" /> : action.id.startsWith('export') ? <Upload className="size-4" aria-hidden="true" /> : <Check className="size-4" aria-hidden="true" />)
         : placement === 'header' && (action.id === 'apply-all' ? <CopyCheck className="size-4" aria-hidden="true" /> : <Download className="size-4" aria-hidden="true" />))}
       <span className={direct ? 'sr-only' : undefined}>{action.label}</span>
-      {action.unread && <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-white" aria-hidden="true" />}
     </Button>
   )
   if (placement === 'header') {
@@ -134,18 +134,28 @@ export function EditorProcessing({ label = 'Processing...' }: { label?: string }
   return <p role="status" aria-label="Processing preview" className="editor-processing-status"><Spinner className="size-3" />{label}</p>
 }
 
+export function EditorAppliedColor({ profile, settings, preparing, unavailable }: {
+  profile: Recipe | null
+  settings: RecipeSettings
+  preparing: boolean
+  unavailable: boolean
+}) {
+  return <div className="editor-color-status" aria-label="Applied color">
+    {(preparing || unavailable) && <span className="sr-only">{unavailable ? 'Unavailable:' : 'Preparing:'}</span>}
+    <span>{getProfileName(profile)}{hasModifiedSettings(profile, settings) ? ' · Modified' : ''}</span>
+  </div>
+}
+
 /** A persistent host keeps an open Advanced tab/crop control mounted across resize. */
-export function EditorControlDock({ children, mode, actions, contentRef, hideDesktop = false }: {
+export function EditorControlDock({ children, mode, contentRef, hideDesktop = false }: {
   children: ReactNode
   mode: EditorMode
-  actions: ReactNode
   contentRef?: Ref<HTMLDivElement>
   hideDesktop?: boolean
 }) {
   return (
     <aside className="editor-control-dock mobile-editor-dock mobile-editor-surface relative z-20 min-w-0" aria-label="Editor controls" data-editor-mode={mode} data-desktop-hidden={hideDesktop || undefined}>
       <div ref={contentRef} className="editor-context-panel min-h-0" data-editor-mode={mode}>{children}</div>
-      {actions}
     </aside>
   )
 }
@@ -205,15 +215,19 @@ function CropTools({ onRotate, onFlip, disabled = false }: {
   )
 }
 
-export function CropSessionControls({ disabled, geometryDisabled, onRotate, onFlip, ...panel }: ComponentProps<typeof CropPanel> & {
+export function CropSessionControls({ disabled, geometryDisabled, onRotate, onFlip, actions, ...panel }: ComponentProps<typeof CropPanel> & {
   disabled?: boolean
   geometryDisabled?: boolean
   onRotate: () => void
   onFlip: () => void
+  actions: ReactNode
 }) {
   return (
     <section role="region" aria-label="Crop settings" className="editor-crop-session min-h-0">
-      <CropTools onRotate={onRotate} onFlip={onFlip} disabled={geometryDisabled ?? disabled} />
+      <div className="editor-crop-heading">
+        <CropTools onRotate={onRotate} onFlip={onFlip} disabled={geometryDisabled ?? disabled} />
+        {actions}
+      </div>
       <fieldset disabled={disabled} className="min-w-0 border-0 p-0">
         <CropPanel {...panel} />
       </fieldset>

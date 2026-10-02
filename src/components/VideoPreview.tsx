@@ -20,6 +20,7 @@ interface VideoPreviewProps {
   retryKey?: number
   overlay?: ReactNode
   statusOverlay?: ReactNode
+  colorOverlay?: ReactNode
   /** Pause playback rendering while another process owns the video element. */
   isSuspended?: boolean
   /** Alt text for accessibility */
@@ -47,6 +48,7 @@ export function VideoPreview({
   retryKey = 0,
   overlay,
   statusOverlay,
+  colorOverlay,
   isSuspended = false,
   alt = 'Video preview',
   onMouseDown,
@@ -411,7 +413,7 @@ export function VideoPreview({
       onTouchEnd={() => { pinchRef.current = null; if (!cropMode) onMouseUp?.() }}
     >
       <div
-        className="relative group"
+        className="editor-preview-canvas relative group"
         style={{
           width: canvasSize.width || 'auto',
           height: canvasSize.height || 'auto',
@@ -429,6 +431,7 @@ export function VideoPreview({
           onMouseDown={event => event.stopPropagation()} onTouchStart={event => event.stopPropagation()}
           onTouchEnd={event => event.stopPropagation()}>{overlay}</div>}
         {statusOverlay && <div className="editor-processing-overlay">{statusOverlay}</div>}
+        {colorOverlay && <div className="editor-color-overlay">{colorOverlay}</div>}
 
         {processingError && <div className="absolute inset-0 flex items-center justify-center bg-black/75 p-4 text-sm text-white">{processingError}</div>}
         {cropMode && <div className="absolute inset-0 rounded-lg overflow-hidden">

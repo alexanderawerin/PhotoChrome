@@ -229,7 +229,6 @@ test.describe('Editor — mobile Crop session', () => {
     await slider.focus()
     await page.keyboard.press('ArrowRight')
     await expect(slider).not.toHaveAttribute('aria-valuenow', baseline!)
-    await page.getByLabel('Applied color', { exact: true }).click()
     await page.evaluate(() => (document.activeElement as HTMLElement)?.blur())
     await page.keyboard.press('c')
     await expect(panel).toBeVisible()

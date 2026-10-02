@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Circle } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Recipe } from '../engine/types'
 import { getBaseFilms } from '../engine/film-profiles'
-import { FilmThumbnail } from './FilmThumbnail'
+import { FilmOption } from './FilmOption'
 
 interface FilmSelectorProps {
   sourceImage: ImageData
@@ -74,14 +74,9 @@ export function FilmSelector({ sourceImage, activeRecipe, onSelect, disabled, re
         {choices.map(profile => {
           const active = (profile?.filmSimulation ?? 'original') === activeId
           return (
-            <button key={profile?.id ?? 'original'} type="button"
-              aria-label={profile ? `Select film ${profile.name}` : 'Select Original'}
-              aria-pressed={active} disabled={disabled} onClick={() => onSelect(profile)}
-              className="film-option">
-              {active && <Circle className="film-selected-marker" aria-hidden="true" fill="currentColor" />}
-              <FilmThumbnail sourceImage={sourceImage} recipe={profile} retryKey={retryKey} />
-              <span className="film-label" title={profile?.name ?? 'Original'}>{profile?.name ?? 'Original'}</span>
-            </button>
+            <FilmOption key={profile?.id ?? 'original'} recipe={profile} sourceImage={sourceImage} retryKey={retryKey}
+              ariaLabel={profile ? `Select film ${profile.name}` : 'Select Original'}
+              active={active} disabled={disabled} onSelect={() => onSelect(profile)} />
           )
         })}
       </div>

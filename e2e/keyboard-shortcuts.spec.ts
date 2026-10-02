@@ -51,7 +51,6 @@ test.describe('Keyboard Shortcuts', () => {
       .getByRole('button', { name: 'Done', exact: true })).toBeEnabled()
     // Enter on the focused ratio button opens its chooser; exercise the global
     // shortcut from a neutral surface after the crop draft is ready to apply.
-    await page.getByLabel('Applied color', { exact: true }).click()
     await page.evaluate(() => (document.activeElement as HTMLElement)?.blur())
 
     await page.keyboard.press('Enter')

@@ -147,13 +147,13 @@ export function TuningPanel({
   )
 
   return (
-    <div className="space-y-5 px-4 py-4">
+    <div className="editor-tuning-panel">
       {/* Slider params */}
       {SLIDER_PARAMS.map((param) => {
         const value = (customSettings[param.key] ?? recipe.settings[param.key] ?? param.defaultValue) as number
         const sliderId = `slider-${param.key}`
         return (
-          <div key={param.key} className="space-y-2">
+          <div key={param.key} className="editor-tuning-control">
             <div className="flex items-center justify-between gap-2">
               <label htmlFor={sliderId} className="text-sm text-zinc-300">
                 {param.label}
@@ -173,7 +173,7 @@ export function TuningPanel({
               max={param.max}
               step={param.step}
               onValueChange={(values) => handleSliderChange(param.key, values[0])}
-              className="h-11 w-full"
+              className="editor-tuning-slider h-11 w-full"
               aria-valuetext={`${value > 0 ? '+' : ''}${value}`}
             />
           </div>
@@ -185,7 +185,7 @@ export function TuningPanel({
         const value = (customSettings[param.key] ?? recipe.settings[param.key] ?? 'off') as ToggleValue
         const labelId = `toggle-label-${param.key}`
         return (
-          <div key={param.key} className="space-y-2">
+          <div key={param.key} className="editor-tuning-control">
             <div className="flex items-center justify-between">
               <label id={labelId} className="text-sm text-zinc-300">{param.label}</label>
               {resetButton(param.key, param.label)}
@@ -214,7 +214,7 @@ export function TuningPanel({
 
       {/* Grain Size - only shown when grain is not off */}
       {grainEffect !== 'off' && (
-        <div className="space-y-2 animate-in fade-in duration-200">
+        <div className="editor-tuning-control animate-in fade-in duration-200">
           <div className="flex items-center justify-between">
             <label id="toggle-label-grainSize" className="text-sm text-zinc-300">Grain Size</label>
             {resetButton('grainSize', 'Grain Size')}
@@ -241,7 +241,7 @@ export function TuningPanel({
       )}
 
       {/* Dynamic Range */}
-      <div className="space-y-2">
+      <div className="editor-tuning-control">
         <div className="flex items-center justify-between">
           <label id="toggle-label-dynamicRange" className="text-sm text-zinc-300">Dynamic Range</label>
           {resetButton('dynamicRange', 'Dynamic Range')}
@@ -267,7 +267,7 @@ export function TuningPanel({
       </div>
 
       {/* White Balance */}
-      <div className="space-y-2">
+      <div className="editor-tuning-control editor-tuning-white-balance">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1 text-sm text-zinc-300">White Balance{resetButton('whiteBalance', 'White Balance')}</span>
           <div className="flex rounded-md overflow-hidden border border-zinc-700">
@@ -303,7 +303,7 @@ export function TuningPanel({
             type="single"
             value={wbPreset}
             onValueChange={handleWBChange}
-            className="grid grid-cols-2 gap-1"
+            className="editor-tuning-wb-presets grid grid-cols-2 gap-1"
             aria-label="White Balance preset"
           >
             {WB_OPTIONS.map((option) => (
@@ -318,7 +318,7 @@ export function TuningPanel({
             ))}
           </ToggleGroup>
         ) : (
-          <div className="space-y-2">
+          <div className="editor-tuning-temperature">
             <div className="flex items-center justify-between">
               <label htmlFor="slider-kelvin" className="text-sm text-zinc-500">Temperature</label>
               <span className="flex items-center gap-1 text-sm text-zinc-500 tabular-nums">
@@ -333,7 +333,7 @@ export function TuningPanel({
               max={10000}
               step={100}
               onValueChange={(values) => handleKelvinChange(values[0])}
-              className="h-11 w-full"
+              className="editor-tuning-slider h-11 w-full"
               aria-label={`White balance ${kelvin} Kelvin`}
             />
           </div>

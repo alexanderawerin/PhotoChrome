@@ -3,9 +3,8 @@ import { ArrowLeft, PanelRightClose, PanelRightOpen, Film, X, HelpCircle } from 
 import { Button } from './ui/button'
 import { VideoPreview } from './VideoPreview'
 import { FilmSelector } from './FilmSelector'
-import { getProfileName, hasModifiedSettings } from '../engine/film-profiles'
 import { AdvancedPanel } from './AdvancedPanel'
-import { EditorHeader, EditorModes, EditorActions, EditorControlDock, EditorCompare, EditorProcessing, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
+import { EditorHeader, EditorModes, EditorActions, EditorControlDock, EditorCompare, EditorProcessing, EditorAppliedColor, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
 import { activeEditorSession, beginTuningSession, beginCropSession, editorSessionChanges, selectTuningProfile, updateTuningSession, updateCropSession, setCropRatio, type EditorSession } from '../engine/editor-sessions'
 import { createDefaultTransformState, nextQuarterTurn, renderImageTransform, type ImageTransformState } from '../engine/transform'
 import { getVideoOutputSize } from '../engine/video/geometry'
@@ -461,13 +460,6 @@ export function VideoEditor({
               icon: isPanelOpen ? <PanelRightClose className="size-4" aria-hidden="true" /> : <PanelRightOpen className="size-4" aria-hidden="true" />,
               onClick: handlePanelToggle, disabled: !commands.panel,
             }]} />} />
-        <div className="editor-color-status flex items-center gap-2 text-xs text-zinc-400" aria-label="Applied color"
-          data-quiet={!session && !preparationError && !hasModifiedSettings(activeRecipe, customSettings) || undefined}>
-          {(preparing || preparationError) && <span className={preparationError ? undefined : 'sr-only'}>{preparationError ? 'Unavailable:' : 'Preparing:'}</span>}
-          <span>{getProfileName(activeRecipe)}</span>
-          {hasModifiedSettings(activeRecipe, customSettings) && <span>· Modified</span>}
-        </div>
-
         {exportState.error && !exportState.requiresSilentAudioConsent && (
           <div
             role="alert"
@@ -504,6 +496,7 @@ export function VideoEditor({
             onProcessingError={handleRenderError}
             retryKey={preparationAttempt}
             statusOverlay={preparing ? <EditorProcessing label="Loading film…" /> : undefined}
+            colorOverlay={<EditorAppliedColor profile={activeRecipe} settings={customSettings} preparing={preparing} unavailable={!!preparationError} />}
             overlay={!isCropping && !isTuning ? <EditorCompare active={showOriginal} disabled={!canCompare}
               onStart={handleCompareStart} onEnd={handleCompareEnd} /> : undefined}
             onMouseDown={handleCompareStart}
@@ -511,8 +504,7 @@ export function VideoEditor({
             onMouseLeave={handleCompareEnd}
           />
         </div>
-      <EditorControlDock mode={mode} contentRef={contextualPanelRef} hideDesktop={!isPanelOpen}
-        actions={<EditorActions actions={isCropping ? actions : []} primaryId="apply-crop" />}>
+      <EditorControlDock mode={mode} contentRef={contextualPanelRef} hideDesktop={!isPanelOpen}>
         {mode === 'films' && <FilmSelector sourceImage={transformedThumbnail} activeRecipe={activeRecipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor} retryKey={preparationAttempt} />}
         {mode === 'advanced' && session?.kind === 'tuning' && session.profile && (
           <AdvancedPanel profile={session.profile} settings={session.draft} sourceImage={transformedThumbnail}
@@ -522,6 +514,7 @@ export function VideoEditor({
         )}
         {mode === 'crop' && session?.kind === 'crop' && (
           <CropSessionControls disabled={!commands.cropGeometry}
+            actions={<EditorActions actions={actions} primaryId="apply-crop" />}
             onRotate={() => changeGeometry({ quarterTurns: nextQuarterTurn(visibleTransform.quarterTurns) })}
             onFlip={() => changeGeometry({ flipHorizontal: !visibleTransform.flipHorizontal })}
             cropRatio={session.draft.cropRatio} fineAngle={session.draft.fineAngle} cropScale={session.draft.cropScale}

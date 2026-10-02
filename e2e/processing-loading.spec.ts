@@ -48,6 +48,12 @@ test('a delayed actual LUT blocks export without moving the photo before or afte
     await started
     await expect(exportButton(page)).toBeDisabled()
     await expectStablePhoto()
+    const overlay = await page.getByRole('status', { name: 'Processing preview', exact: true }).boundingBox()
+    expect(overlay).not.toBeNull()
+    expect(overlay!.x).toBeGreaterThanOrEqual(baseline.x)
+    expect(overlay!.y).toBeGreaterThanOrEqual(baseline.y)
+    expect(overlay!.x + overlay!.width).toBeLessThanOrEqual(baseline.x + baseline.width)
+    expect(overlay!.y + overlay!.height).toBeLessThanOrEqual(baseline.y + baseline.height)
     await page.keyboard.press('Control+s')
     await expect(page.getByLabel('Applied color', { exact: true })).toContainText('Preparing:')
     expect(downloads).toBe(0)

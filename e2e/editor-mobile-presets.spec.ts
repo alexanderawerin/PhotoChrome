@@ -3,7 +3,7 @@ import { test, expect } from './helpers/fixtures'
 import AxeBuilder from '@axe-core/playwright'
 import type { Locator, Page } from '@playwright/test'
 import { uploadVideo } from './helpers/upload'
-import { advancedPanel, openAdvanced } from './helpers/advanced'
+import { advancedPanel, openAdvanced, previewPixels } from './helpers/advanced'
 
 test.use({ viewport: { width: 393, height: 852 } })
 
@@ -69,17 +69,22 @@ test.describe('Editor — mobile films', () => {
     await expect.poll(() => selection(page).locator('.film-selector-scroll').evaluate(element => element.scrollLeft)).toBe(scroll)
   })
 
-  test('favorites belong to film-scoped Advanced recipes and persist after Cancel', async ({ page, editorPage }) => {
+  test('touch-sized recipe selection stays a draft and Cancel restores the applied film', async ({ page, editorPage }) => {
     await film(page, 'Provia').click()
+    await expect(page.getByRole('button', { name: 'Open Advanced settings', exact: true })).toBeEnabled()
+    const appliedPixels = await previewPixels(page, 'photo')
     await openAdvanced(page)
     const panel = advancedPanel(page)
-    const card = panel.locator('[data-recipe-card]').filter({ has: page.getByRole('button', { name: 'Apply preset Provia Portrait', exact: true }) })
-    const favorite = card.getByRole('button', { name: 'Add to favorites', exact: true })
-    await expectTouchTarget(favorite)
-    await favorite.click()
+    const recipe = panel.getByRole('button', { name: /^Apply preset Provia Portrait(?:, selected)?$/ })
+    await expectTouchTarget(recipe)
+    await expect(panel.getByRole('button', { name: /favorites/i })).toHaveCount(0)
+    await recipe.click()
+    await expect(recipe).toHaveAttribute('aria-pressed', 'true')
+    await expect.poll(() => previewPixels(page, 'photo')).not.toBe(appliedPixels)
     await panel.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await expect.poll(() => previewPixels(page, 'photo')).toBe(appliedPixels)
     await openAdvanced(page)
-    await expect(card.getByRole('button', { name: 'Remove from favorites', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(recipe).toHaveAttribute('aria-pressed', 'false')
     await expect(panel.getByRole('button', { name: /^Apply preset/ })).toHaveCount(8)
   })
 
