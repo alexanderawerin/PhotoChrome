@@ -1,0 +1,72 @@
+{
+  "date": "2026-10-02",
+  "ideation_set": 2,
+  "generation_tool": "image_gen.imagegen",
+  "latest_user_feedback": "Не нравится визуальный стиль",
+  "status": "latest set: awaiting user selection; no application source changes",
+  "selection_rule": "Numbers 1, 2, 3 refer to displayed order in THIS revised set, not the rejected initial set.",
+  "concepts": [
+    {
+      "displayed_order_in_revised_set": 1,
+      "direction": "Строгий контактный лист",
+      "image": "assets/concepts/revised/swiss-contact-sheet.png",
+      "prompt": "prompts/revised/swiss-contact-sheet.txt",
+      "target_dimensions": [
+        1440,
+        1024
+      ],
+      "actual_dimensions": [
+        1487,
+        1058
+      ],
+      "sha256": "afb622c62246d64af6310c1457d23008618e9299fae6234513a7d74987bdb04c",
+      "attached_images": [
+        "assets/current/desktop-demo-1200x900.png",
+        "images/01-vsco-films.jpg",
+        "../../../img/alexander-awerin-AQI2wTv1SWo-unsplash.webp"
+      ]
+    },
+    {
+      "displayed_order_in_revised_set": 2,
+      "direction": "Редакционный фотостол",
+      "image": "assets/concepts/revised/editorial-print-room.png",
+      "prompt": "prompts/revised/editorial-print-room.txt",
+      "target_dimensions": [
+        1440,
+        1024
+      ],
+      "actual_dimensions": [
+        1487,
+        1058
+      ],
+      "sha256": "39299f89d81c155bdb7a937ad96f6d5784baa9a504cc2fd88a3ee0275fcc2084",
+      "attached_images": [
+        "assets/current/desktop-demo-1200x900.png",
+        "images/04-apple-photos-filters.jpg",
+        "images/08-wix-desktop-adjust.jpg",
+        "../../../img/alexander-awerin-AQI2wTv1SWo-unsplash.webp"
+      ]
+    },
+    {
+      "displayed_order_in_revised_set": 3,
+      "direction": "Ночная просмотровая",
+      "image": "assets/concepts/revised/nocturne-screening-room.png",
+      "prompt": "prompts/revised/nocturne-screening-room.txt",
+      "target_dimensions": [
+        1440,
+        1024
+      ],
+      "actual_dimensions": [
+        1487,
+        1058
+      ],
+      "sha256": "7be5b3f437a24be114957d11d13c122a28372ab8016abe56c55a8ce2ec90ac68",
+      "attached_images": [
+        "assets/current/desktop-demo-1200x900.png",
+        "images/06-halide-quick-edit.jpg",
+        "images/01-vsco-films.jpg",
+        "../../../img/alexander-awerin-AQI2wTv1SWo-unsplash.webp"
+      ]
+    }
+  ]
+}

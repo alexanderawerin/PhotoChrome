@@ -2,7 +2,7 @@
   "date": "2026-10-02",
   "generation_tool": "image_gen.imagegen",
   "state": "full photo editor after user media import, Provia applied, Films active",
-  "status": "awaiting user selection; no application source changed",
+  "status": "first set rejected by user; latest feedback: visual style does not fit; revised set in preparation",
   "concepts": [
     {
       "displayed_order": 1,
@@ -68,6 +68,16 @@
         "images/01-vsco-films.jpg",
         "../../../img/alexander-awerin-3yqVPhHHsdI-unsplash.webp"
       ]
+    }
+  ],
+  "user_feedback": [
+    {
+      "text": "Слишком похоже на прежний UI",
+      "scope": "first answer"
+    },
+    {
+      "text": "Не нравится визуальный стиль",
+      "scope": "latest answer after repeating the question"
     }
   ]
 }
