@@ -68,44 +68,18 @@ async function waitForPreview(page: Page): Promise<void> {
   }).toBe(true)
 }
 
-async function expectFullViewportCover(page: Page): Promise<void> {
-  await expect.poll(async () => {
-    const box = await readPreviewGeometry(page)
-    return box.sourceWidth > 0
-      && box.sourceHeight > 0
-      && box.width >= box.viewportWidth - EPSILON
-      && box.height >= box.viewportHeight - EPSILON
-      && box.left <= EPSILON
-      && box.top <= EPSILON
-      && box.right >= box.viewportWidth - EPSILON
-      && box.bottom >= box.viewportHeight - EPSILON
-  }).toBe(true)
-}
-
-async function visibleLowerControl(page: Page): Promise<Rect> {
-  const cropTools = page.getByLabel('Crop tools', { exact: true })
-  const cropRegion = page.getByRole('region', { name: 'Crop settings', exact: true })
-
-  for (const control of [cropTools, cropRegion, advancedPanel(page)]) {
-    if (await control.isVisible().catch(() => false)) return readRect(control)
-  }
-
-  throw new Error('Expected visible mobile lower controls for preview workspace')
-}
-
 async function expectContainedInWorkspace(page: Page): Promise<void> {
-  const header = page.locator('header:visible')
   await expect.poll(async () => {
     const box = await readPreviewGeometry(page)
-    const headerRect = await readRect(header)
-    const lowerRect = await visibleLowerControl(page)
+    const modes = await readRect(page.getByRole('navigation', { name: 'Editor modes', exact: true }))
+    const dock = await readRect(page.getByRole('complementary', { name: 'Editor controls', exact: true }))
     return box.sourceWidth > 0
       && box.sourceHeight > 0
       && Math.abs(box.width / box.height - box.sourceWidth / box.sourceHeight) < 0.01
       && box.left >= -EPSILON
       && box.right <= box.viewportWidth + EPSILON
-      && box.top >= headerRect.bottom - EPSILON
-      && box.bottom <= lowerRect.top + EPSILON
+      && box.top >= modes.bottom - EPSILON
+      && box.bottom <= dock.top + EPSILON
   }).toBe(true)
 }
 
@@ -181,7 +155,7 @@ async function expectVisibleButtonTextFits(buttons: Locator): Promise<void> {
     while (node) {
       const text = node.textContent?.trim()
       const parent = node.parentElement
-      if (text && parent && !parent.closest('[aria-hidden="true"]')) {
+      if (text && parent && !parent.closest('[aria-hidden="true"], .sr-only')) {
         const range = document.createRange()
         range.selectNodeContents(node)
         textRects.push(...Array.from(range.getClientRects()).map(rect => ({ text, rect })))
@@ -212,7 +186,7 @@ async function expectVisibleButtonTextFits(buttons: Locator): Promise<void> {
 }
 
 async function stressTextSize(page: Page): Promise<void> {
-  await page.locator('header button, nav[aria-label="Editor modes"] button, .mobile-editor-actions button, section[aria-label="Advanced settings"] button, section[aria-label="Advanced settings"] label, section[aria-label="Advanced settings"] p, section[aria-label="Advanced settings"] h2').evaluateAll(elements => {
+  await page.locator('header button, nav[aria-label="Editor modes"] button, .editor-header-actions button, section[aria-label="Advanced settings"] button, section[aria-label="Advanced settings"] label, section[aria-label="Advanced settings"] p, section[aria-label="Advanced settings"] h2').evaluateAll(elements => {
     const sizes = elements.map(element => Number.parseFloat(getComputedStyle(element).fontSize))
     for (const [index, element] of elements.entries()) {
       const fontSize = sizes[index]
@@ -223,10 +197,10 @@ async function stressTextSize(page: Page): Promise<void> {
 }
 
 test.describe('Editor — mobile preview layout', () => {
-  test('keeps the demo preview fullbleed while preserving demo restrictions', async ({ page, landingPage }) => {
+  test('contains the demo preview while preserving demo restrictions', async ({ page, landingPage }) => {
     await waitForPreview(page)
     await expect(page.getByRole('button', { name: 'Upload photos', exact: true })).toBeVisible({ timeout: 15_000 })
-    await expectFullViewportCover(page)
+    await expectContainedInWorkspace(page)
 
     const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
     await expect(modes.getByRole('button', { name: /^films$/i })).toHaveAttribute('aria-current', 'page')
@@ -236,13 +210,13 @@ test.describe('Editor — mobile preview layout', () => {
   })
 
   for (const fixture of ['test-image.jpg', 'test-image-2.jpg']) {
-    test(`keeps ${fixture} fullbleed in Films and contained while Advanced is open`, async ({ page }) => {
+    test(`keeps ${fixture} contained in Films and while Advanced is open`, async ({ page }) => {
       await page.goto('/', { waitUntil: 'domcontentloaded' })
       await uploadImage(page, fixture)
       await waitForEditor(page)
       await waitForPreview(page)
       await selectMobileFilm(page)
-      await expectFullViewportCover(page)
+      await expectContainedInWorkspace(page)
 
       const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
       await modes.getByRole('button', { name: /^(Open|Close) Advanced settings$/ }).click()
@@ -250,7 +224,7 @@ test.describe('Editor — mobile preview layout', () => {
       await expect(advancedPanel(page)).toBeVisible()
       await expectContainedInWorkspace(page)
       await advancedPanel(page).getByRole('button', { name: 'Cancel', exact: true }).click()
-      await expectFullViewportCover(page)
+      await expectContainedInWorkspace(page)
     })
   }
 
@@ -320,6 +294,8 @@ test.describe('Editor — mobile preview layout', () => {
         await selectMobileFilm(page)
 
         const batchActions = page.getByRole('toolbar', { name: 'Editor actions', exact: true })
+        await expect(batchActions.getByRole('button', { name: /Apply current color to all 2 images/ })).toBeHidden()
+        await batchActions.getByRole('button', { name: 'More editor actions', exact: true }).click()
         await expect(batchActions.getByRole('button', { name: /Apply current color to all 2 images/ })).toBeVisible()
         await expect(batchActions.getByRole('button', { name: 'Export all photos', exact: true })).toBeVisible()
         await stressTextSize(page)
@@ -389,14 +365,14 @@ test.describe('Editor — mobile preview layout', () => {
     const dimensions = [150, 200]
     for (const width of [320, 393]) {
       await page.setViewportSize({ width, height: width === 320 ? 740 : 852 })
-      await expectFullViewportCover(page)
+      await expectContainedInWorkspace(page)
       await expect(page.getByRole('button', { name: 'Select film Provia', exact: true })).toHaveAttribute('aria-pressed', 'true')
       await expect.poll(() => canvas.evaluate((element: HTMLCanvasElement) => [element.width, element.height])).toEqual(dimensions)
       await expectNoHorizontalOverflow(page)
     }
   })
 
-  test('contains a portrait in the Crop workspace before and during a non-modal crop session', async ({ page }) => {
+  test('opens a contained non-modal portrait Crop session in one click', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' })
     await uploadImage(page, 'test-image-2.jpg')
     await waitForEditor(page)
@@ -408,8 +384,7 @@ test.describe('Editor — mobile preview layout', () => {
     await expect(page.getByLabel('Crop tools', { exact: true })).toBeVisible()
     await expectContainedInWorkspace(page)
 
-    const openCrop = page.getByRole('button', { name: 'Open crop session', exact: true })
-    await openCrop.click()
+    await expect(page.getByRole('button', { name: 'Open crop session', exact: true })).toHaveCount(0)
     const cropRegion = page.getByRole('region', { name: 'Crop settings', exact: true })
     await expect(cropRegion).toBeVisible()
     await expect(cropRegion).not.toHaveAttribute('aria-modal', 'true')
@@ -420,14 +395,14 @@ test.describe('Editor — mobile preview layout', () => {
 
     await page.getByRole('button', { name: 'Cancel', exact: true }).click()
     await expect(cropRegion).toBeHidden()
-    await expect(page.getByLabel('Crop tools', { exact: true })).toBeVisible()
+    await expect(modes.getByRole('button', { name: 'Films', exact: true })).toHaveAttribute('aria-current', 'page')
     await expectContainedInWorkspace(page)
 
-    await openCrop.click()
+    await modes.getByRole('button', { name: 'Crop', exact: true }).click()
     await expect(cropRegion).toBeVisible()
     await page.getByRole('button', { name: 'Done', exact: true }).click()
     await expect(cropRegion).toBeHidden()
-    await expect(page.getByLabel('Crop tools', { exact: true })).toBeVisible()
+    await expect(modes.getByRole('button', { name: 'Films', exact: true })).toHaveAttribute('aria-current', 'page')
     await expectContainedInWorkspace(page)
   })
 })

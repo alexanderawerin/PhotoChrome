@@ -5,23 +5,8 @@ import { selectBaseFilm } from './helpers/upload'
 
 test.use({ viewport: { width: 393, height: 852 } })
 
-const EPSILON = 2
-
-type Rect = {
-  top: number
-  right: number
-  bottom: number
-  left: number
-  width: number
-  height: number
-}
-
 function modes(page: Page): Locator {
   return page.getByRole('navigation', { name: 'Editor modes', exact: true })
-}
-
-function cropTools(page: Page): Locator {
-  return page.getByLabel('Crop tools', { exact: true })
 }
 
 function cropRegion(page: Page): Locator {
@@ -32,24 +17,8 @@ function actionZone(page: Page): Locator {
   return page.getByRole('toolbar', { name: 'Editor actions', exact: true })
 }
 
-async function readRect(locator: Locator): Promise<Rect> {
-  return locator.evaluate(element => {
-    const rect = element.getBoundingClientRect()
-    return {
-      top: rect.top,
-      right: rect.right,
-      bottom: rect.bottom,
-      left: rect.left,
-      width: rect.width,
-      height: rect.height,
-    }
-  })
-}
-
 async function openCropSession(page: Page): Promise<Locator> {
   await modes(page).getByRole('button', { name: /^crop$/i }).click()
-  await expect(cropTools(page)).toBeVisible()
-  await cropTools(page).getByRole('button', { name: 'Open crop session', exact: true }).click()
 
   const region = cropRegion(page)
   await expect(region).toBeVisible()
@@ -120,10 +89,9 @@ async function expectTouchTarget(locator: Locator): Promise<void> {
 }
 
 test.describe('Editor — mobile Crop session', () => {
-  test('keeps the action zone stable and exposes Crop as a non-modal region', async ({ page, editorPage }) => {
+  test('moves completion actions into the Crop dock and exposes a non-modal region', async ({ page, editorPage }) => {
     const actions = actionZone(page)
     await expect(actions).toBeVisible()
-    const presetsActions = await readRect(actions)
 
     const region = await openCropSession(page)
     await expect(region).not.toHaveAttribute('aria-modal', 'true')
@@ -131,9 +99,7 @@ test.describe('Editor — mobile Crop session', () => {
     await expect(modes(page)).toBeVisible()
     await expect(modes(page).getByRole('button', { name: /^crop$/i })).toHaveAttribute('aria-current', 'page')
 
-    const cropActions = await readRect(actions)
-    expect(Math.abs(cropActions.width - presetsActions.width)).toBeLessThanOrEqual(EPSILON)
-    expect(Math.abs(cropActions.height - presetsActions.height)).toBeLessThanOrEqual(EPSILON)
+    await expect(page.locator('header').getByRole('toolbar', { name: 'Editor actions', exact: true })).toHaveCount(0)
 
     const cancel = actions.getByRole('button', { name: 'Cancel', exact: true })
     const done = actions.getByRole('button', { name: 'Done', exact: true })
@@ -165,9 +131,8 @@ test.describe('Editor — mobile Crop session', () => {
 
     await trigger.click()
     await expect(ratios).toBeVisible()
-    // The crop overlay intentionally sits above the canvas.  Click the inert
-    // filename in the header as a real outside target for the chooser.
-    await page.locator('header:visible p:visible').filter({ hasText: 'test-image.jpg' }).click()
+    // The brand is an inert outside target that preserves the Crop session.
+    await page.locator('header').getByText('PhotoChrome', { exact: true }).click()
     await expect(ratios).toBeHidden()
     await expect(region).toBeVisible()
 
@@ -209,7 +174,7 @@ test.describe('Editor — mobile Crop session', () => {
     await page.keyboard.press('Enter')
     await expect(cropRegion(page)).toBeHidden()
 
-    await cropTools(page).getByRole('button', { name: 'Open crop session', exact: true }).click()
+    await modes(page).getByRole('button', { name: 'Crop', exact: true }).click()
     region = cropRegion(page)
     await expect(region).toBeVisible()
     expect(await selectedRatio(region)).toBe(baselineRatio)
@@ -226,7 +191,7 @@ test.describe('Editor — mobile Crop session', () => {
     await page.keyboard.press('Space')
     await expect(cropRegion(page)).toBeHidden()
 
-    await cropTools(page).getByRole('button', { name: 'Open crop session', exact: true }).click()
+    await modes(page).getByRole('button', { name: 'Crop', exact: true }).click()
     region = cropRegion(page)
     await expect(region).toBeVisible()
     expect(await selectedRatio(region)).toBe('1:1')
@@ -248,7 +213,6 @@ test.describe('Editor — mobile Crop session', () => {
     await expect(modes(page).getByRole('button', { name: /^films$/i })).toHaveAttribute('aria-current', 'page')
 
     await modes(page).getByRole('button', { name: /^crop$/i }).click()
-    await cropTools(page).getByRole('button', { name: 'Open crop session', exact: true }).click()
     region = cropRegion(page)
     await expect(region).toBeVisible()
     expect(await selectedRatio(region)).toBe(baselineRatio)
@@ -265,7 +229,6 @@ test.describe('Editor — mobile Crop session', () => {
     await slider.focus()
     await page.keyboard.press('ArrowRight')
     await expect(slider).not.toHaveAttribute('aria-valuenow', baseline!)
-    await page.getByLabel('Applied color', { exact: true }).click()
     await page.evaluate(() => (document.activeElement as HTMLElement)?.blur())
     await page.keyboard.press('c')
     await expect(panel).toBeVisible()
@@ -273,7 +236,6 @@ test.describe('Editor — mobile Crop session', () => {
 
     await modes(page).getByRole('button', { name: 'Crop', exact: true }).click()
     await expect(panel).toHaveCount(0)
-    await cropTools(page).getByRole('button', { name: 'Open crop session', exact: true }).click()
     await expect(cropRegion(page)).toBeVisible()
     await actionZone(page).getByRole('button', { name: 'Cancel', exact: true }).click()
     await openAdvanced(page)

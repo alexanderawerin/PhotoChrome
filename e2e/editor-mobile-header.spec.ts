@@ -1,3 +1,4 @@
+import { clickEditorAction } from './helpers/editor-controls'
 import { test, expect } from './helpers/fixtures'
 import { fixturePath, selectBaseFilm } from './helpers/upload'
 import { advancedPanel } from './helpers/advanced'
@@ -9,22 +10,25 @@ test.describe('Editor — mobile header', () => {
     await page.addInitScript(() => localStorage.removeItem('photochrome-help-version'))
   })
 
-  test('shows the current file, batch position, and appends through Add', async ({ page, multiImageEditorPage }) => {
+  test('keeps modes in the header, omits filename navigation, and appends through Add', async ({ page, multiImageEditorPage }) => {
     await expect(page.getByRole('button', { name: 'Add photos', exact: true })).toBeVisible()
-    await expect(page.getByText('1 of 2', { exact: true })).toBeVisible()
+    await expect(page.locator('header').getByRole('navigation', { name: 'Editor modes', exact: true })).toBeVisible()
+    await expect(page.locator('header').getByText(/test-image|of 2/)).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Previous image', exact: true })).toBeHidden()
+    await expect(page.getByRole('button', { name: 'Next image', exact: true })).toBeHidden()
+    await expect(page.getByRole('button', { name: 'Apply current color to all 2 images', exact: true, includeHidden: true })).toHaveCount(1)
     await expect(page.getByRole('button', { name: 'Back' })).toBeHidden()
 
     await page.getByLabel('Add photos to current batch').setInputFiles(fixturePath('test-image.jpg'))
-    await expect(page.getByText('1 of 3', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Apply current color to all 3 images', exact: true, includeHidden: true })).toHaveCount(1)
   })
 
   test('opens unread updates first, then remembers them and opens Quick Guide', async ({ page, editorPage }) => {
-    const help = page.locator('header button[aria-label="Help"]:visible')
-    await help.click()
+    await clickEditorAction(page, 'Help')
     await expect(page.getByRole('tab', { name: "What's New" })).toHaveAttribute('aria-selected', 'true')
 
     await page.keyboard.press('Escape')
-    await help.click()
+    await clickEditorAction(page, 'Help')
     await expect(page.getByRole('tab', { name: 'Quick Guide' })).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByRole('tab', { name: 'Shortcuts' })).toHaveCount(0)
   })
@@ -46,6 +50,7 @@ test.describe('Editor — mobile header', () => {
     await expect(modes).toBeVisible()
     await modes.getByRole('button', { name: 'Crop', exact: true }).click()
     await expect(panel).toHaveCount(0)
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click()
     await modes.getByRole('button', { name: 'Open Advanced settings', exact: true }).click()
     await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
     await expect(slider).toHaveAttribute('aria-valuenow', initialValue!)
@@ -56,7 +61,6 @@ test.describe('Editor — mobile header', () => {
     await modes.getByRole('button', { name: 'Crop' }).click()
     await expect(page.getByRole('button', { name: 'Rotate clockwise' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Flip horizontal' })).toBeVisible()
-    await page.getByRole('button', { name: 'Open crop session' }).click()
 
     const cropRegion = page.getByRole('region', { name: 'Crop settings', exact: true })
     await expect(cropRegion).toBeVisible()
@@ -82,7 +86,7 @@ test.describe('Editor — mobile header', () => {
     await page.keyboard.press('ArrowRight')
     await page.getByRole('button', { name: 'Cancel', exact: true }).click()
 
-    await page.getByRole('button', { name: 'Open crop session' }).click()
+    await modes.getByRole('button', { name: 'Crop', exact: true }).click()
     await expect(cropRegion.getByRole('slider', { name: 'Crop angle' })).toHaveAttribute('aria-valuenow', '0')
     await expect(cropRegion.getByRole('slider', { name: 'Crop zoom' })).toBeVisible()
   })

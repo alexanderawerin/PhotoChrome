@@ -37,7 +37,7 @@ test('every retained recipe is available only inside its film Advanced catalog',
 })
 
 for (const media of ['photo', 'video'] as const) {
-  test(`${media} preserves saved favorite recipe IDs and scopes them to their film`, async ({ page }) => {
+  test(`${media} ignores legacy favorite ordering and scopes recipes to their film`, async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('photochrome_favorites', JSON.stringify(['provia-daylight', 'classic-color'])))
     await page.goto('/', { waitUntil: 'domcontentloaded' })
     if (media === 'photo') { await uploadImage(page); await waitForEditor(page) }
@@ -45,10 +45,9 @@ for (const media of ['photo', 'video'] as const) {
     await selectBaseFilm(page)
     await page.getByRole('button', { name: /^(Open Advanced settings|Advanced settings)$/ }).click()
     const panel = page.getByRole('region', { name: 'Advanced settings', exact: true })
-    const card = panel.locator('[data-recipe-card]').filter({ has: page.getByRole('button', { name: 'Apply preset Provia Daylight', exact: true }) })
-    await expect(card.getByRole('button', { name: 'Remove from favorites', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(panel.getByRole('button', { name: /favorites/i })).toHaveCount(0)
     const labels = await panel.getByRole('button', { name: /^Apply preset / }).evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))
-    expect(labels[0]).toBe('Apply preset Provia Daylight')
+    expect(labels[0]).toBe('Apply preset Provia Portrait')
     expect(new Set(labels).size).toBe(8)
     await expect(panel.getByRole('button', { name: /^Apply preset Classic Color/ })).toHaveCount(0)
     await panel.getByRole('button', { name: 'Cancel', exact: true }).click()

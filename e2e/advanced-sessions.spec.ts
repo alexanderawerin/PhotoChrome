@@ -1,5 +1,5 @@
 import { test, expect } from './helpers/fixtures'
-import { editorModes } from './helpers/editor-controls'
+import { navigateImage, editorModes } from './helpers/editor-controls'
 import { uploadMultipleImages, waitForEditor } from './helpers/upload'
 import { advancedPanel, advancedTrigger, appliedColor, changeHighlight, editorCanvas, openAdvanced, previewPixels, selectPortraitDraft, startAdvancedMedia, type AdvancedMedia } from './helpers/advanced'
 
@@ -102,7 +102,7 @@ for (const width of [393, 1600]) {
         }
       })
 
-      test('choosing another draft recipe clears manual overrides and Restore base clears recipe', async ({ page }) => {
+      test('choosing another draft recipe clears manual overrides and reselecting the base film clears the applied recipe', async ({ page }) => {
         await startAdvancedMedia(page, media, width)
         await openAdvanced(page)
         await selectPortraitDraft(page)
@@ -115,9 +115,8 @@ for (const width of [393, 1600]) {
         await panel.getByRole('button', { name: 'Apply', exact: true }).click()
         await expect(appliedColor(page)).toContainText('Provia Daylight')
         await expect(appliedColor(page)).not.toContainText('Modified')
-        await openAdvanced(page)
-        await panel.getByRole('button', { name: 'Restore base film', exact: true }).click()
-        await panel.getByRole('button', { name: 'Apply', exact: true }).click()
+        await editorModes(page).getByRole('button', { name: 'Films', exact: true }).click()
+        await page.getByRole('button', { name: 'Select film Provia', exact: true }).click()
         await expect(appliedColor(page)).toContainText('Provia')
         await expect(appliedColor(page)).not.toContainText('Daylight')
         await expect(appliedColor(page)).not.toContainText('Modified')
@@ -125,26 +124,26 @@ for (const width of [393, 1600]) {
     })
   }
 
-  test(`photo favorites survive Cancel and stay first within the film at ${width}px`, async ({ page }) => {
+  test(`photo recipe order survives draft Cancel without favorite controls at ${width}px`, async ({ page }) => {
     await startAdvancedMedia(page, 'photo', width)
+    const appliedPixels = await previewPixels(page, 'photo')
     await openAdvanced(page)
     const panel = advancedPanel(page)
-    const card = panel.locator('[data-recipe-card]').filter({ has: page.getByRole('button', { name: 'Apply preset Provia Daylight', exact: true }) })
-    await card.getByRole('button', { name: 'Add to favorites', exact: true }).click()
-    await expect(card.getByRole('button', { name: 'Remove from favorites', exact: true })).toHaveAttribute('aria-pressed', 'true')
-    await selectPortraitDraft(page)
-    await panel.getByRole('button', { name: 'Cancel', exact: true }).click()
-    await openAdvanced(page)
-    await expect(card.getByRole('button', { name: 'Remove from favorites', exact: true })).toHaveAttribute('aria-pressed', 'true')
-    const choices = await panel.getByRole('button', { name: /^Apply preset/ }).allTextContents()
-    expect(choices).toHaveLength(8)
-    const labels = await panel.getByRole('button', { name: /^Apply preset/ }).evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))
-    expect(labels[0]).toBe('Apply preset Provia Daylight')
+    const choices = panel.getByRole('button', { name: /^Apply preset/ })
+    const labels = await choices.evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))
+    expect(labels).toHaveLength(8)
     expect(new Set(labels).size).toBe(8)
+    await expect(panel.getByRole('button', { name: /favorites/i })).toHaveCount(0)
+    await selectPortraitDraft(page)
+    await expect.poll(() => previewPixels(page, 'photo')).not.toBe(appliedPixels)
+    await panel.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await expect.poll(() => previewPixels(page, 'photo')).toBe(appliedPixels)
+    await openAdvanced(page)
+    expect(await choices.evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))).toEqual(labels)
     await expect(appliedColor(page)).not.toContainText('Provia Portrait')
   })
 
-  test(`Restore base and film changes preserve approved photo geometry at ${width}px`, async ({ page }) => {
+  test(`Base film reselection and film changes preserve approved photo geometry at ${width}px`, async ({ page }) => {
     await startAdvancedMedia(page, 'photo', width)
     await page.keyboard.press('r')
     const canvas = editorCanvas(page, 'photo')
@@ -152,8 +151,9 @@ for (const width of [393, 1600]) {
     await openAdvanced(page)
     await selectPortraitDraft(page)
     await changeHighlight(page)
-    await advancedPanel(page).getByRole('button', { name: 'Restore base film', exact: true }).click()
     await advancedPanel(page).getByRole('button', { name: 'Apply', exact: true }).click()
+    await editorModes(page).getByRole('button', { name: 'Films', exact: true }).click()
+    await page.getByRole('button', { name: 'Select film Provia', exact: true }).click()
     await expect(appliedColor(page)).not.toContainText('Modified')
     await expect.poll(() => canvas.evaluate((element: HTMLCanvasElement) => [element.width, element.height])).toEqual([150, 200])
     await editorModes(page).getByRole('button', { name: 'Films', exact: true }).click()
@@ -173,11 +173,10 @@ test('changing photos discards an unfinished draft and preserves each applied pr
   await openAdvanced(page)
   await selectPortraitDraft(page)
   await changeHighlight(page)
-  const strip = page.getByRole('tablist', { name: 'Image thumbnails', exact: true })
-  await strip.getByRole('tab', { name: 'Image 2 of 2: test-image-2.jpg', exact: true }).click()
+  await navigateImage(page, 'next')
   await expect(appliedColor(page)).toContainText('Original')
   await expect(advancedPanel(page)).toHaveCount(0)
-  await strip.getByRole('tab', { name: 'Image 1 of 2: test-image.jpg', exact: true }).click()
+  await navigateImage(page, 'previous')
   await expect(appliedColor(page)).toContainText('Provia')
   await expect(appliedColor(page)).not.toContainText('Portrait')
   await expect(appliedColor(page)).not.toContainText('Modified')

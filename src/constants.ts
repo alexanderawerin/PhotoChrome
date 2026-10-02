@@ -23,9 +23,6 @@ export const GITHUB_REPO_URL = 'https://github.com/alexanderawerin/photochrome'
 /** Maximum size of thumbnail for editor preview (pixels) */
 export const THUMBNAIL_MAX_SIZE = 1600
 
-/** Size of small preview images in recipe cards (pixels) */
-export const RECIPE_CARD_PREVIEW_SIZE = 250
-
 // ============================================================================
 // Video Processing
 // ============================================================================

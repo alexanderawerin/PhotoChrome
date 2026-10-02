@@ -1,3 +1,4 @@
+import { clickEditorAction } from './helpers/editor-controls'
 import { readFile } from 'node:fs/promises'
 import { unzipSync } from 'fflate'
 import { test, expect } from './helpers/fixtures'
@@ -25,7 +26,7 @@ test('Export all creates a stored-JPEG ZIP including Original photos', async ({ 
   await selectBaseFilm(page)
 
   const downloadPromise = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Export all photos' }).click()
+  await clickEditorAction(page, 'Export all photos')
   const download = await downloadPromise
   expect(download.suggestedFilename()).toMatch(/^photochrome_batch_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.zip$/)
 
@@ -49,7 +50,7 @@ test('cancelling batch export destroys the partial archive and does not download
   await uploadMultipleImages(page)
   await waitForEditor(page)
   await selectBaseFilm(page)
-  await page.getByRole('button', { name: 'Apply current color to all 2 images' }).click()
+  await clickEditorAction(page, 'Apply current color to all 2 images')
   await expect(page.getByRole('status', { name: 'Applying preset to all images', exact: true })).toBeHidden()
 
   await page.evaluate(() => {
@@ -68,7 +69,7 @@ test('cancelling batch export destroys the partial archive and does not download
 
   let downloaded = false
   page.on('download', () => { downloaded = true })
-  await page.getByRole('button', { name: 'Export all photos' }).click()
+  await clickEditorAction(page, 'Export all photos')
   const progress = page.getByRole('status', { name: 'Batch export progress' })
   await expect(progress).toBeVisible()
   await page.waitForFunction(() => {

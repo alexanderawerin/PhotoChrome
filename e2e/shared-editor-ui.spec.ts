@@ -4,7 +4,7 @@ import { advancedPanel, advancedTrigger, appliedColor, changeHighlight, openAdva
 async function expectOneControlHost(page: import('@playwright/test').Page) {
   await expect(page.getByRole('complementary', { name: 'Editor controls', exact: true, includeHidden: true })).toHaveCount(1)
   await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true, includeHidden: true })).toHaveCount(1)
-  // Advanced owns its Apply/Cancel footer; the common action toolbar is absent.
+  // Advanced owns its Apply/Cancel controls; the common action toolbar is absent.
   await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true, includeHidden: true })).toHaveCount(0)
   await expect(advancedPanel(page)).toHaveCount(1)
 }
@@ -35,7 +35,8 @@ for (const media of ['photo', 'video'] as const satisfies readonly AdvancedMedia
       await expect(slider).toHaveAttribute('aria-valuenow', highlight!)
       await expect(manual).toHaveAttribute('aria-selected', 'true')
       await expect(panel.getByRole('button', { name: /^Apply preset/ })).toHaveCount(0)
-      await expect(panel.getByText('Provia · Provia Portrait', { exact: true })).toBeVisible()
+      await expect(panel.getByText('Provia', { exact: true })).toBeVisible()
+      await expect(panel.getByText('Provia Portrait', { exact: true })).toBeVisible()
       await expect.poll(() => previewPixels(page, media)).toBe(draftPixels)
       await expect(appliedColor(page)).not.toContainText('Provia Portrait')
       await expect(appliedColor(page)).not.toContainText('Modified')
@@ -52,19 +53,18 @@ for (const media of ['photo', 'video'] as const satisfies readonly AdvancedMedia
     await expect(panel.getByText('Provia', { exact: true })).toBeVisible()
   })
 
-  test(`${media} preserves Recipes content and favorites through 1200→393→1200 resize without applying its draft`, async ({ page }) => {
+  test(`${media} preserves Recipes selection and focus through 1200→393→1200 resize without applying its draft`, async ({ page }) => {
     await startAdvancedMedia(page, media, 1200)
     const appliedPixels = await previewPixels(page, media)
     await openAdvanced(page)
     const panel = advancedPanel(page)
     const recipes = panel.getByRole('tab', { name: 'Recipes', exact: true })
-    const card = panel.locator('[data-recipe-card]').filter({ has: page.getByRole('button', { name: /^Apply preset Provia Portrait(?:, selected)?$/ }) })
-    await card.getByRole('button', { name: 'Add to favorites', exact: true }).click()
-    await card.getByRole('button', { name: 'Apply preset Provia Portrait', exact: true }).click()
-    const favorite = card.getByRole('button', { name: 'Remove from favorites', exact: true })
+    const card = panel.getByRole('button', { name: /^Apply preset Provia Portrait(?:, selected)?$/ })
+    await card.click()
+    await expect(panel.getByRole('button', { name: /favorites/i })).toHaveCount(0)
     const cardNode = await card.elementHandle()
     if (!cardNode) throw new Error('Recipe card unavailable')
-    await favorite.focus()
+    await card.focus()
     await expect.poll(() => previewPixels(page, media)).not.toBe(appliedPixels)
     const draftPixels = await previewPixels(page, media)
 
@@ -72,8 +72,8 @@ for (const media of ['photo', 'video'] as const satisfies readonly AdvancedMedia
       await page.setViewportSize(viewport)
       await expectOneControlHost(page)
       expect(await card.evaluate((element, previous) => element === previous, cardNode)).toBe(true)
-      await expect(favorite).toBeFocused()
-      await expect(favorite).toHaveAttribute('aria-pressed', 'true')
+      await expect(card).toBeFocused()
+      await expect(card).toHaveAttribute('aria-pressed', 'true')
       await expect(recipes).toHaveAttribute('aria-selected', 'true')
       await expect(panel.getByRole('button', { name: 'Apply preset Provia Portrait, selected', exact: true })).toHaveAttribute('aria-pressed', 'true')
       await expect(panel.getByRole('button', { name: /^Apply preset/ })).toHaveCount(8)
@@ -86,7 +86,7 @@ for (const media of ['photo', 'video'] as const satisfies readonly AdvancedMedia
     await expect(appliedColor(page)).not.toContainText('Provia Portrait')
     await expect(advancedTrigger(page)).toBeFocused()
     await openAdvanced(page)
-    await expect(favorite).toHaveAttribute('aria-pressed', 'true')
+    await expect(panel.getByRole('button', { name: /favorites/i })).toHaveCount(0)
     await expect(panel.getByRole('button', { name: 'Apply preset Provia Portrait', exact: true })).toHaveAttribute('aria-pressed', 'false')
   })
 }

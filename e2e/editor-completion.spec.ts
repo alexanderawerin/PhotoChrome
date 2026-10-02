@@ -1,3 +1,4 @@
+import { clickEditorAction, navigateImage } from './helpers/editor-controls'
 import { readFile } from 'node:fs/promises'
 import sharp from 'sharp'
 import { unzipSync } from 'fflate'
@@ -159,9 +160,7 @@ test.describe('Editor — Export completion', () => {
     await uploadMultipleImages(page)
     await waitForEditor(page)
 
-    const photo = page.getByRole('tab', { name: 'Image 2 of 2: test-image-2.jpg', exact: true })
-    await photo.click()
-    await expect(photo).toHaveAttribute('aria-selected', 'true')
+    await navigateImage(page, 'next')
     await selectBaseFilm(page)
 
     const downloadPromise = page.waitForEvent('download')
@@ -190,13 +189,13 @@ test.describe('Editor — Export completion', () => {
     await waitForEditor(page)
     await selectBaseFilm(page)
 
-    await page.getByRole('tab', { name: 'Image 2 of 3: failed.jpg', exact: true }).click()
+    await navigateImage(page, 'next')
     await selectBaseFilm(page)
     await installProcessorMock(page, 'fail-second-call')
 
     try {
       const downloadPromise = page.waitForEvent('download')
-      await page.getByRole('button', { name: 'Export all photos' }).click()
+      await clickEditorAction(page, 'Export all photos')
       const download = await downloadPromise
       const archivePath = await download.path()
       if (!archivePath) throw new Error('Batch download path unavailable')
@@ -231,7 +230,7 @@ test.describe('Editor — Export completion', () => {
     let downloads = 0
     page.on('download', () => { downloads++ })
     try {
-      await page.getByRole('button', { name: 'Export all photos', exact: true }).click()
+      await clickEditorAction(page, 'Export all photos')
       await expect(page.getByRole('alert')).toContainText('No photos were exported')
       await expect(completionDialog(page)).toHaveCount(0)
       await expect(page.getByRole('group', { name: 'Exported photos', exact: true })).toHaveCount(0)

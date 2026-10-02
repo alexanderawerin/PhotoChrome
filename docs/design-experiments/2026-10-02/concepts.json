@@ -1,0 +1,83 @@
+{
+  "date": "2026-10-02",
+  "generation_tool": "image_gen.imagegen",
+  "state": "full photo editor after user media import, Provia applied, Films active",
+  "status": "first set rejected by user; latest feedback: visual style does not fit; revised set in preparation",
+  "concepts": [
+    {
+      "displayed_order": 1,
+      "direction": "Тёмная плёночная лаборатория",
+      "image": "assets/concepts/dark-film-laboratory.png",
+      "prompt": "prompts/dark-film-laboratory.txt",
+      "target_dimensions": [
+        1440,
+        1024
+      ],
+      "actual_dimensions": [
+        1487,
+        1058
+      ],
+      "sha256": "b56016c81bfb219d6faadae4dbf38709d917eb1bc748c366ab50d8f6914acff3",
+      "attached_images": [
+        "assets/current/desktop-demo-1200x900.png",
+        "images/01-vsco-films.jpg",
+        "images/06-halide-quick-edit.jpg",
+        "../../../img/alexander-awerin-3yqVPhHHsdI-unsplash.webp"
+      ]
+    },
+    {
+      "displayed_order": 2,
+      "direction": "Светлый фотостол",
+      "image": "assets/concepts/light-photo-desk.png",
+      "prompt": "prompts/light-photo-desk.txt",
+      "target_dimensions": [
+        1440,
+        1024
+      ],
+      "actual_dimensions": [
+        1487,
+        1058
+      ],
+      "sha256": "503f6fcee7dc7bc6c409923446d5a70cf0bd94b4f9bb7a15f9f7e5070b79c85c",
+      "attached_images": [
+        "assets/current/desktop-demo-1200x900.png",
+        "images/04-apple-photos-filters.jpg",
+        "images/08-wix-desktop-adjust.jpg",
+        "images/09-visual-electric-inspector.jpg",
+        "../../../img/alexander-awerin-3yqVPhHHsdI-unsplash.webp"
+      ]
+    },
+    {
+      "displayed_order": 3,
+      "direction": "Почти полноэкранный просмотрщик",
+      "image": "assets/concepts/immersive-contextual-viewer.png",
+      "prompt": "prompts/immersive-contextual-viewer.txt",
+      "target_dimensions": [
+        1440,
+        1024
+      ],
+      "actual_dimensions": [
+        1487,
+        1058
+      ],
+      "sha256": "82aa1976bbf787aff8813b11a5667a53958ce9c8a2606a4042cc487320f9e70d",
+      "attached_images": [
+        "assets/current/desktop-demo-1200x900.png",
+        "images/10-krea-comparison.jpg",
+        "images/11-pool-crop.jpg",
+        "images/01-vsco-films.jpg",
+        "../../../img/alexander-awerin-3yqVPhHHsdI-unsplash.webp"
+      ]
+    }
+  ],
+  "user_feedback": [
+    {
+      "text": "Слишком похоже на прежний UI",
+      "scope": "first answer"
+    },
+    {
+      "text": "Не нравится визуальный стиль",
+      "scope": "latest answer after repeating the question"
+    }
+  ]
+}

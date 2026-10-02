@@ -1,8 +1,9 @@
+import { clickEditorAction } from './helpers/editor-controls'
 import { test, expect } from './helpers/fixtures'
 import AxeBuilder from '@axe-core/playwright'
 import type { Locator, Page } from '@playwright/test'
 import { uploadVideo } from './helpers/upload'
-import { advancedPanel, openAdvanced } from './helpers/advanced'
+import { advancedPanel, openAdvanced, previewPixels } from './helpers/advanced'
 
 test.use({ viewport: { width: 393, height: 852 } })
 
@@ -30,7 +31,7 @@ async function visibleInSelection(locator: Locator) {
 test.describe('Editor — mobile films', () => {
   test('offers Original and exactly ten films with touch-sized main choices', async ({ page, editorPage }) => {
     await expect(selection(page)).toBeVisible()
-    await expect(selection(page).getByRole('button')).toHaveCount(11)
+    await expect(selection(page).getByRole('button', { name: /^Select / })).toHaveCount(11)
     const original = selection(page).getByRole('button', { name: 'Select Original', exact: true })
     await expect(original).toHaveAttribute('aria-pressed', 'true')
     await expectTouchTarget(original)
@@ -59,27 +60,31 @@ test.describe('Editor — mobile films', () => {
 
   test('keeps film-row scroll position and selected film after Help rerenders', async ({ page, editorPage }) => {
     await film(page, 'Classic Neg').click()
-    const scroll = await selection(page).evaluate(element => element.scrollLeft)
-    const help = page.locator('header:visible').getByRole('button', { name: 'Help', exact: true })
-    await help.click()
+    const scroll = await selection(page).locator('.film-selector-scroll').evaluate(element => element.scrollLeft)
+    await clickEditorAction(page, 'Help')
     const dialog = page.getByRole('dialog', { name: 'Photochrome help', exact: true })
     await expect(dialog).toBeVisible()
     await dialog.getByRole('button', { name: 'Close', exact: true }).click()
     await expect(film(page, 'Classic Neg')).toHaveAttribute('aria-pressed', 'true')
-    await expect.poll(() => selection(page).evaluate(element => element.scrollLeft)).toBe(scroll)
+    await expect.poll(() => selection(page).locator('.film-selector-scroll').evaluate(element => element.scrollLeft)).toBe(scroll)
   })
 
-  test('favorites belong to film-scoped Advanced recipes and persist after Cancel', async ({ page, editorPage }) => {
+  test('touch-sized recipe selection stays a draft and Cancel restores the applied film', async ({ page, editorPage }) => {
     await film(page, 'Provia').click()
+    await expect(page.getByRole('button', { name: 'Open Advanced settings', exact: true })).toBeEnabled()
+    const appliedPixels = await previewPixels(page, 'photo')
     await openAdvanced(page)
     const panel = advancedPanel(page)
-    const card = panel.locator('[data-recipe-card]').filter({ has: page.getByRole('button', { name: 'Apply preset Provia Portrait', exact: true }) })
-    const favorite = card.getByRole('button', { name: 'Add to favorites', exact: true })
-    await expectTouchTarget(favorite)
-    await favorite.click()
+    const recipe = panel.getByRole('button', { name: /^Apply preset Provia Portrait(?:, selected)?$/ })
+    await expectTouchTarget(recipe)
+    await expect(panel.getByRole('button', { name: /favorites/i })).toHaveCount(0)
+    await recipe.click()
+    await expect(recipe).toHaveAttribute('aria-pressed', 'true')
+    await expect.poll(() => previewPixels(page, 'photo')).not.toBe(appliedPixels)
     await panel.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await expect.poll(() => previewPixels(page, 'photo')).toBe(appliedPixels)
     await openAdvanced(page)
-    await expect(card.getByRole('button', { name: 'Remove from favorites', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(recipe).toHaveAttribute('aria-pressed', 'false')
     await expect(panel.getByRole('button', { name: /^Apply preset/ })).toHaveCount(8)
   })
 
@@ -118,9 +123,9 @@ test.describe('Editor — mobile films', () => {
 
   test('video uses the same eleven neutral color choices', async ({ page, landingPage }) => {
     await uploadVideo(page)
-    await expect(page.getByText('test-video.mp4', { exact: true })).toBeVisible()
+    await expect(page.getByLabel('Video preview', { exact: true })).toBeVisible()
     await expect(selection(page)).toBeVisible()
-    await expect(selection(page).getByRole('button')).toHaveCount(11)
+    await expect(selection(page).getByRole('button', { name: /^Select / })).toHaveCount(11)
     await expect(selection(page).getByRole('button', { name: 'Select Original', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await film(page, 'Provia').click()
     await expect(film(page, 'Provia')).toHaveAttribute('aria-pressed', 'true')

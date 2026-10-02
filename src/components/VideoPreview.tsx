@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react'
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react'
 import { ProcessingPlan } from '../engine/types'
 import { WebGLProcessor } from '../engine/webgl/processor'
@@ -18,6 +18,9 @@ interface VideoPreviewProps {
   cropGridActive?: boolean
   onProcessingError?: (message: string | null) => void
   retryKey?: number
+  overlay?: ReactNode
+  statusOverlay?: ReactNode
+  colorOverlay?: ReactNode
   /** Pause playback rendering while another process owns the video element. */
   isSuspended?: boolean
   /** Alt text for accessibility */
@@ -43,6 +46,9 @@ export function VideoPreview({
   cropGridActive = false,
   onProcessingError,
   retryKey = 0,
+  overlay,
+  statusOverlay,
+  colorOverlay,
   isSuspended = false,
   alt = 'Video preview',
   onMouseDown,
@@ -407,7 +413,7 @@ export function VideoPreview({
       onTouchEnd={() => { pinchRef.current = null; if (!cropMode) onMouseUp?.() }}
     >
       <div
-        className="relative group"
+        className="editor-preview-canvas relative group"
         style={{
           width: canvasSize.width || 'auto',
           height: canvasSize.height || 'auto',
@@ -420,6 +426,12 @@ export function VideoPreview({
           className="block w-full h-full rounded-lg shadow-2xl bg-black"
           aria-label={alt}
         />
+
+        {overlay && <div className="editor-preview-overlay"
+          onMouseDown={event => event.stopPropagation()} onTouchStart={event => event.stopPropagation()}
+          onTouchEnd={event => event.stopPropagation()}>{overlay}</div>}
+        {statusOverlay && <div className="editor-processing-overlay">{statusOverlay}</div>}
+        {colorOverlay && <div className="editor-color-overlay">{colorOverlay}</div>}
 
         {processingError && <div className="absolute inset-0 flex items-center justify-center bg-black/75 p-4 text-sm text-white">{processingError}</div>}
         {cropMode && <div className="absolute inset-0 rounded-lg overflow-hidden">
