@@ -137,9 +137,8 @@ test.describe('Editor — mobile Crop session', () => {
 
     await trigger.click()
     await expect(ratios).toBeVisible()
-    // The crop overlay intentionally sits above the canvas.  Click the inert
-    // filename in the header as a real outside target for the chooser.
-    await page.locator('header:visible p:visible').filter({ hasText: 'test-image.jpg' }).click()
+    // The brand is an inert outside target that preserves the Crop session.
+    await page.locator('header').getByText('PhotoChrome', { exact: true }).click()
     await expect(ratios).toBeHidden()
     await expect(region).toBeVisible()
 

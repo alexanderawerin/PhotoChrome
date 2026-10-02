@@ -7,10 +7,9 @@ import { Preview } from './Preview'
 import { FilmSelector } from './FilmSelector'
 import { getBaseFilm, hasModifiedSettings, isBaseProfile } from '../engine/film-profiles'
 import { AdvancedPanel } from './AdvancedPanel'
-import { EditorHeader, EditorModes, EditorActions, EditorControlDock, EditorCompare, CropTools, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
+import { EditorHeader, EditorModes, EditorActions, EditorControlDock, EditorCompare, EditorPhotoNavigation, CropTools, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
 import { HelpDialog } from './HelpDialog'
 import { ExportCompletion, type ExportCompletionState } from './ExportCompletion'
-import { ThumbnailStrip } from './ThumbnailStrip'
 import { Recipe, ImageItem } from '../engine/types'
 import { ImageProcessor } from '../engine/processor'
 import { materializePhotoPixels } from '../engine/photo-source'
@@ -32,7 +31,6 @@ import {
 interface EditorProps {
   images: ImageItem[]
   currentIndex: number
-  onIndexChange: (index: number) => void
   onImageUpdate: (id: string, updates: Partial<ImageItem>) => void
   onNextImage?: () => void
   onPreviousImage?: () => void
@@ -53,7 +51,6 @@ interface EditorProps {
 export function Editor({
   images,
   currentIndex,
-  onIndexChange,
   onImageUpdate,
   onNextImage,
   onPreviousImage,
@@ -494,11 +491,8 @@ export function Editor({
         />
         <EditorHeader
           compact={isTuning}
-          fileName={currentImage.fileName}
-          details={totalImages > 1 ? `${currentIndex + 1} of ${totalImages}` : undefined}
-          navigation={totalImages > 1 ? { previous: onPreviousImage, next: onNextImage, disabled: !commands.navigate } : undefined}
-          files={isMdUp && totalImages > 1 && !demoMode ? <ThumbnailStrip images={images} currentIndex={currentIndex}
-            onSelectImage={index => { if (commands.navigate) onIndexChange(index) }} /> : undefined}
+          modes={<EditorModes mode={mode} onChange={changeMode} demoMode={demoMode} advancedOpen={isTuning}
+            disabled={{ films: !commands.selectColor, advanced: isTuning ? !commands.cancelDraft : !commands.advanced, crop: !commands.selectColor }} />}
           leading={!demoMode && (
             <Button variant="ghost" size="sm" onClick={() => demoUploadRef.current?.click()} disabled={!commands.add}
               className="editor-control h-11 min-w-11 gap-1 rounded-lg px-2 text-zinc-300" aria-label="Add photos">
@@ -552,7 +546,7 @@ export function Editor({
 
         </div>
 
-        <div className="mobile-photo-stage flex min-h-0 flex-col overflow-hidden" data-preview-fit="contain">
+        <div className="mobile-photo-stage relative flex min-h-0 flex-col overflow-hidden" role="region" aria-label="Photo workspace" data-preview-fit="contain">
           <div className="relative min-h-0 flex-1">
           {isProcessing && (
             <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
@@ -581,15 +575,11 @@ export function Editor({
             onSwipeRight={onPreviousImage}
           />
           </div>
-
+          {totalImages > 1 && <EditorPhotoNavigation previous={onPreviousImage} next={onNextImage} disabled={!commands.navigate} />}
         </div>
 
         <EditorControlDock
           mode={mode}
-          navigation={(
-            <EditorModes mode={mode} onChange={changeMode} demoMode={demoMode} advancedOpen={isTuning}
-              disabled={{ films: !commands.selectColor, advanced: isTuning ? !commands.cancelDraft : !commands.advanced, crop: !commands.selectColor }} />
-          )}
           actions={<EditorActions actions={isCropping ? actions : []} />}
         >
           {mode === 'films' && (

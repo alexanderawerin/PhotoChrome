@@ -10,13 +10,17 @@ test.describe('Editor — mobile header', () => {
     await page.addInitScript(() => localStorage.removeItem('photochrome-help-version'))
   })
 
-  test('shows the current file, batch position, and appends through Add', async ({ page, multiImageEditorPage }) => {
+  test('keeps modes in the header, omits filename navigation, and appends through Add', async ({ page, multiImageEditorPage }) => {
     await expect(page.getByRole('button', { name: 'Add photos', exact: true })).toBeVisible()
-    await expect(page.getByText('1 of 2', { exact: true })).toBeVisible()
+    await expect(page.locator('header').getByRole('navigation', { name: 'Editor modes', exact: true })).toBeVisible()
+    await expect(page.locator('header').getByText(/test-image|of 2/)).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Previous image', exact: true })).toBeHidden()
+    await expect(page.getByRole('button', { name: 'Next image', exact: true })).toBeHidden()
+    await expect(page.getByRole('button', { name: 'Apply current color to all 2 images', exact: true, includeHidden: true })).toHaveCount(1)
     await expect(page.getByRole('button', { name: 'Back' })).toBeHidden()
 
     await page.getByLabel('Add photos to current batch').setInputFiles(fixturePath('test-image.jpg'))
-    await expect(page.getByText('1 of 3', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Apply current color to all 3 images', exact: true, includeHidden: true })).toHaveCount(1)
   })
 
   test('opens unread updates first, then remembers them and opens Quick Guide', async ({ page, editorPage }) => {

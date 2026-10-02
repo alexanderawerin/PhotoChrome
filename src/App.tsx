@@ -118,7 +118,6 @@ function AppContent() {
       <Editor
         images={media.images}
         currentIndex={media.currentIndex}
-        onIndexChange={session.goToImage}
         onImageUpdate={session.updateImage}
         onNextImage={() => session.goToImage(media.currentIndex + 1)}
         onPreviousImage={() => session.goToImage(media.currentIndex - 1)}

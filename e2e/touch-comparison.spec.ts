@@ -1,6 +1,7 @@
 import type { CDPSession, Page } from '@playwright/test'
 import { test, expect } from './helpers/fixtures'
 import { uploadMultipleImages, waitForEditor, selectBaseFilm } from './helpers/upload'
+import { openCropSession } from './helpers/editor-controls'
 import { editorCanvas, previewPixels } from './helpers/advanced'
 
 test.use({ viewport: { width: 393, height: 852 }, hasTouch: true })
@@ -32,7 +33,6 @@ for (const mode of ['demo', 'batch'] as const) {
     let original: string
     let processed: string
     let secondProcessed: string
-    const total = mode === 'demo' ? 3 : 2
 
     test.beforeEach(async ({ page, browserName }) => {
       test.skip(browserName !== 'chromium', 'Trusted touch input uses Chromium CDP; other browser/device verification remains separate.')
@@ -47,11 +47,10 @@ for (const mode of ['demo', 'batch'] as const) {
       await expect.poll(() => previewPixels(page, 'photo')).not.toBe(original)
       processed = await previewPixels(page, 'photo')
       await page.keyboard.press('ArrowRight')
-      await expect(page.locator('header:visible').getByText(`2 of ${total}`, { exact: true })).toBeVisible()
+      await expect.poll(() => previewPixels(page, 'photo')).not.toBe(processed)
       await selectBaseFilm(page)
       secondProcessed = await previewPixels(page, 'photo')
       await page.keyboard.press('ArrowLeft')
-      await expect(page.locator('header:visible').getByText(`1 of ${total}`, { exact: true })).toBeVisible()
       await expect.poll(() => previewPixels(page, 'photo')).toBe(processed)
     })
 
@@ -66,10 +65,8 @@ for (const mode of ['demo', 'batch'] as const) {
       const point = await previewPoint(page)
       await touch(cdp, 'touchStart', point)
       await expect.poll(() => previewPixels(page, 'photo')).toBe(original)
-      await expect(page.locator('header:visible').getByText(`1 of ${total}`, { exact: true })).toBeVisible()
       await touch(cdp, 'touchEnd')
       await expect.poll(() => previewPixels(page, 'photo')).toBe(processed)
-      await expect(page.locator('header:visible').getByText(`1 of ${total}`, { exact: true })).toBeVisible()
     })
 
     test('touch cancellation and window blur release comparison without changing photos', async ({ page }) => {
@@ -87,7 +84,6 @@ for (const mode of ['demo', 'batch'] as const) {
           await touch(cdp, 'touchEnd')
         }
         await expect.poll(() => previewPixels(page, 'photo')).toBe(processed)
-        await expect(page.locator('header:visible').getByText(`1 of ${total}`, { exact: true })).toBeVisible()
       }
     })
 
@@ -97,10 +93,45 @@ for (const mode of ['demo', 'batch'] as const) {
       await expect.poll(() => previewPixels(page, 'photo')).toBe(original)
       await touch(cdp, 'touchMove', { x: point.moveX, y: point.y })
       await expect.poll(() => previewPixels(page, 'photo')).toBe(processed)
-      await expect(page.locator('header:visible').getByText(`1 of ${total}`, { exact: true })).toBeVisible()
       await touch(cdp, 'touchEnd')
-      await expect(page.locator('header:visible').getByText(`2 of ${total}`, { exact: true })).toBeVisible()
       await expect.poll(() => previewPixels(page, 'photo')).toBe(secondProcessed)
+    })
+
+    test('wide touch layouts keep arrows hidden and navigate by swiping the preview', async ({ page }) => {
+      await page.setViewportSize({ width: 1200, height: 900 })
+      await expect(page.getByRole('button', { name: 'Previous image', exact: true })).toBeHidden()
+      await expect(page.getByRole('button', { name: 'Next image', exact: true })).toBeHidden()
+      const point = await previewPoint(page)
+      await touch(cdp, 'touchStart', point)
+      await touch(cdp, 'touchMove', { x: point.moveX, y: point.y })
+      await touch(cdp, 'touchEnd')
+      await expect.poll(() => previewPixels(page, 'photo')).toBe(secondProcessed)
+    })
+
+    test('a swipe starting on the Original button compares without changing photos', async ({ page }) => {
+      const compare = page.getByRole('button', { name: 'Hold to compare original', exact: true })
+      const box = await compare.boundingBox()
+      if (!box) throw new Error('Original comparison button unavailable')
+      const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+      await touch(cdp, 'touchStart', point)
+      await expect.poll(() => previewPixels(page, 'photo')).toBe(original)
+      await touch(cdp, 'touchMove', { x: Math.max(10, point.x - 160), y: point.y })
+      await touch(cdp, 'touchEnd')
+      await expect.poll(() => previewPixels(page, 'photo')).toBe(processed)
+      await expect(page.getByRole('button', { name: 'Previous image', exact: true })).toBeHidden()
+      await expect(page.getByRole('button', { name: 'Next image', exact: true })).toBeHidden()
+    })
+
+    test('a Crop drag does not navigate and cancel restores the same photo', async ({ page }) => {
+      test.skip(mode === 'demo', 'The playable demo does not expose Crop')
+      await openCropSession(page)
+      const point = await previewPoint(page)
+      await touch(cdp, 'touchStart', point)
+      await touch(cdp, 'touchMove', { x: point.moveX, y: point.y })
+      await touch(cdp, 'touchEnd')
+      await expect(page.getByRole('region', { name: 'Crop settings', exact: true })).toBeVisible()
+      await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+      await expect.poll(() => previewPixels(page, 'photo')).toBe(processed)
     })
 
     test('photo navigation during a hold invalidates the old gesture', async ({ page }) => {
@@ -108,11 +139,9 @@ for (const mode of ['demo', 'batch'] as const) {
       await touch(cdp, 'touchStart', point)
       await expect.poll(() => previewPixels(page, 'photo')).toBe(original)
       await page.keyboard.press('ArrowRight')
-      await expect(page.locator('header:visible').getByText(`2 of ${total}`, { exact: true })).toBeVisible()
       await expect.poll(() => previewPixels(page, 'photo')).toBe(secondProcessed)
       await touch(cdp, 'touchMove', { x: point.moveX, y: point.y })
       await touch(cdp, 'touchEnd')
-      await expect(page.locator('header:visible').getByText(`2 of ${total}`, { exact: true })).toBeVisible()
       await expect.poll(() => previewPixels(page, 'photo')).toBe(secondProcessed)
     })
   })

@@ -455,7 +455,9 @@ export function VideoEditor({
       {/* The media stage and persistent control dock share one responsive layout. */}
       <div className="editor-stage editor-video-stage flex-1 min-w-0 min-h-0 overflow-hidden">
         <div className="mobile-editor-header mobile-editor-surface">
-          <EditorHeader compact={isTuning} fileName={fileName} details={`${Math.round(metadata.duration * 10) / 10}s • ${metadata.width}×${metadata.height}`}
+          <EditorHeader compact={isTuning}
+            modes={<EditorModes mode={mode} onChange={changeMode} advancedOpen={isTuning}
+              disabled={{ films: !commands.selectColor, advanced: isTuning ? !commands.cancelDraft : !commands.advanced || !processingPlan, crop: !commands.selectColor }} />}
             leading={
               <Button variant="ghost" onClick={() => { if (commands.navigate) onBack() }} disabled={!commands.navigate}
                 className="editor-control min-h-11 min-w-11 rounded-lg p-0 text-zinc-300" aria-label="Back">
@@ -465,11 +467,12 @@ export function VideoEditor({
             trailing={<EditorActions actions={isCropping ? [] : actions} placement="header" extra={<>
               <Button variant="ghost" onClick={() => { if (commands.help) setIsHelpOpen(true) }} disabled={!commands.help}
                 className="editor-control min-h-11 min-w-11 rounded-lg p-0 text-zinc-300" aria-label="Help">
-                <HelpCircle className="size-4" aria-hidden="true" />
+                <HelpCircle className="size-4" aria-hidden="true" /><span>Help</span>
               </Button>
               <Button variant="ghost" onClick={handlePanelToggle} disabled={!commands.panel}
                 className="hidden min-h-11 min-w-11 p-0 text-zinc-300 md:inline-flex" aria-label={isPanelOpen ? 'Hide panel' : 'Show panel'}>
                 {isPanelOpen ? <PanelRightClose className="size-5" aria-hidden="true" /> : <PanelRightOpen className="size-5" aria-hidden="true" />}
+                <span>{isPanelOpen ? 'Hide panel' : 'Show panel'}</span>
               </Button>
             </>} />} />
         <div className="editor-color-status flex items-center gap-2 text-xs text-zinc-400" aria-label="Applied color"
@@ -523,8 +526,6 @@ export function VideoEditor({
           />
         </div>
       <EditorControlDock mode={mode} contentRef={contextualPanelRef} hideDesktop={!isPanelOpen}
-        navigation={<EditorModes mode={mode} onChange={changeMode} advancedOpen={isTuning}
-          disabled={{ films: !commands.selectColor, advanced: isTuning ? !commands.cancelDraft : !commands.advanced || !processingPlan, crop: !commands.selectColor }} />}
         actions={<EditorActions actions={isCropping ? actions : []} />}>
         {mode === 'films' && <FilmSelector sourceImage={transformedThumbnail} activeRecipe={activeRecipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor} retryKey={preparationAttempt} />}
         {mode === 'advanced' && session?.kind === 'tuning' && session.profile && (

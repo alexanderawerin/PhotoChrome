@@ -1,4 +1,4 @@
-import { clickEditorAction, chooseImage } from './helpers/editor-controls'
+import { clickEditorAction, navigateImage } from './helpers/editor-controls'
 import { readFile } from 'node:fs/promises'
 import sharp from 'sharp'
 import { strFromU8, unzipSync } from 'fflate'
@@ -6,7 +6,6 @@ import type { Page } from '@playwright/test'
 import { test, expect } from './helpers/fixtures'
 
 const preview = (page: Page) => page.locator('canvas[aria-label="Preview"]')
-const photoName = (index: number) => `Image ${index} of 2: test-image${index === 1 ? '' : '-2'}.jpg`
 const exportAll = (page: Page) => page.getByRole('button', { name: 'Export all photos', exact: true, includeHidden: true })
 const applyAll = (page: Page) => page.getByRole('button', { name: 'Apply current color to all 2 images', exact: true, includeHidden: true })
 
@@ -47,7 +46,7 @@ test('Export all includes geometry-only Original and a film photo with matching 
   await page.keyboard.press('r')
   await expect.poll(() => preview(page).evaluate((canvas: HTMLCanvasElement) => [canvas.width, canvas.height])).toEqual([150, 200])
   const first = await capturePreview(page)
-  await chooseImage(page, photoName(2))
+  await navigateImage(page, 'next')
   await page.getByRole('button', { name: 'Select film Classic Neg', exact: true }).click()
   const second = await capturePreview(page)
   const entries = await archive(page)
@@ -59,7 +58,7 @@ test('Export all includes geometry-only Original and a film photo with matching 
 test('Apply to all copies committed manual color and preserves each composition', async ({ page, multiImageEditorPage }) => {
   await page.keyboard.press('r')
   await expect.poll(() => preview(page).evaluate((canvas: HTMLCanvasElement) => canvas.width)).toBe(150)
-  await chooseImage(page, photoName(2))
+  await navigateImage(page, 'next')
   await page.getByRole('button', { name: 'Select film Classic Neg', exact: true }).click()
   await page.getByRole('button', { name: 'Open Advanced settings', exact: true }).click()
   const advanced = page.getByRole('region', { name: 'Advanced settings', exact: true })
@@ -75,7 +74,7 @@ test('Apply to all copies committed manual color and preserves each composition'
   await clickEditorAction(page, 'Apply current color to all 2 images')
   await expect(page.getByRole('status', { name: 'Applying preset to all images', exact: true })).toBeHidden()
   const second = await capturePreview(page)
-  await chooseImage(page, photoName(1))
+  await navigateImage(page, 'previous')
   await expect(page.getByLabel('Applied color', { exact: true })).toContainText('Modified')
   const first = await capturePreview(page)
   const entries = await archive(page)
@@ -88,13 +87,13 @@ test('Apply Original to all removes color while retaining separate geometry', as
   await page.keyboard.press('r')
   await page.getByRole('button', { name: 'Select film Classic Neg', exact: true }).click()
   await expect(exportAll(page)).toBeEnabled()
-  await chooseImage(page, photoName(2))
+  await navigateImage(page, 'next')
   await expect(page.getByRole('button', { name: 'Select Original', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(applyAll(page)).toBeEnabled()
   await clickEditorAction(page, 'Apply current color to all 2 images')
   await expect(page.getByRole('status', { name: 'Applying preset to all images', exact: true })).toBeHidden()
   const second = await capturePreview(page)
-  await chooseImage(page, photoName(1))
+  await navigateImage(page, 'previous')
   await expect(page.getByRole('button', { name: 'Select Original', exact: true })).toHaveAttribute('aria-pressed', 'true')
   const first = await capturePreview(page)
   const entries = await archive(page)
@@ -134,7 +133,7 @@ test('zero successful files produce no ZIP and batch Retry saves the original re
   await page.keyboard.press('r')
   await expect.poll(() => preview(page).evaluate((canvas: HTMLCanvasElement) => [canvas.width, canvas.height])).toEqual([150, 200])
   const first = await capturePreview(page)
-  await chooseImage(page, photoName(2))
+  await navigateImage(page, 'next')
   const second = await capturePreview(page)
   await page.evaluate(() => {
     const original = Worker.prototype.postMessage

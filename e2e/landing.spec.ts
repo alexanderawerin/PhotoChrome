@@ -1,4 +1,3 @@
-import { openImageChooser } from './helpers/editor-controls'
 import { test, expect } from './helpers/fixtures'
 import { fixturePath, uploadImage, uploadMultipleImages, waitForEditor } from './helpers/upload'
 
@@ -101,7 +100,7 @@ test.describe('Playable demo', () => {
     })
     await page.getByRole('button', { name: 'Retry' }).click()
     await waitForEditor(page)
-    await expect(page.locator('p:visible').filter({ hasText: 'test-image.jpg' })).toHaveCount(1)
+    await expect(page.getByLabel('Preview', { exact: true })).toBeVisible()
   })
 
   test('retries a failed video load as video and exposes video recovery input', async ({ page, landingPage }) => {
@@ -138,17 +137,12 @@ test.describe('Playable demo', () => {
     await expect(page.locator('[data-slot="empty-title"]')).toHaveCount(0)
   })
 
-  test('uploads multiple images and shows thumbnail strip', async ({ page, landingPage, viewport }) => {
-    // Thumbnail strip is desktop-only (hidden md:block)
-    test.skip(!!viewport && viewport.width < 768, 'Thumbnail strip is desktop-only')
-
+  test('uploads multiple images and exposes batch actions without a filename strip', async ({ page, landingPage }) => {
     await uploadMultipleImages(page)
     await waitForEditor(page)
-
-    await openImageChooser(page)
-    const tablist = page.locator('[role="tablist"][aria-label="Image thumbnails"]')
-    await expect(tablist).toBeVisible()
-    await expect(tablist.locator('[role="tab"]')).toHaveCount(2)
+    await expect(page.getByRole('button', { name: 'Apply current color to all 2 images', exact: true, includeHidden: true })).toHaveCount(1)
+    await expect(page.getByRole('tablist', { name: 'Image thumbnails', exact: true })).toHaveCount(0)
+    await expect(page.locator('header').getByText('test-image.jpg', { exact: true })).toHaveCount(0)
   })
 
 })

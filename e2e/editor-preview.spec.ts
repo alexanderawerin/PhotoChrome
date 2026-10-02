@@ -1,4 +1,3 @@
-import { openImageChooser } from './helpers/editor-controls'
 import { test, expect } from './helpers/fixtures'
 import { selectBaseFilm } from './helpers/upload'
 
@@ -194,45 +193,5 @@ test.describe('Editor — Preview Rendering', () => {
     await expect(panel.getByRole('slider', { name: 'Highlight', exact: true })).toBeVisible()
   })
 
-  test('photo strip processes display-sized previews and preserves visible film thumbnails', async ({ page, multiImageEditorPage }) => {
-    await page.evaluate(async () => {
-      // Use the exact application-loaded URL: a Vite timestamp query creates
-      // a different module identity from importing the bare source path.
-      const processorUrl = performance.getEntriesByType('resource')
-        .map(entry => entry.name)
-        .filter(url => new URL(url).pathname === '/src/engine/processor.ts').at(-1)
-      if (!processorUrl) throw new Error('Application processor module request was not recorded')
-      const { ImageProcessor } = await import(processorUrl)
-      const dimensions: number[][] = []
-      ;(window as unknown as { stripWork: number[][] }).stripWork = dimensions
-      const original = ImageProcessor.process.bind(ImageProcessor)
-      ImageProcessor.process = (image: ImageData, plan: unknown) => {
-        dimensions.push([image.width, image.height])
-        return original(image, plan)
-      }
-    })
-    await selectBaseFilm(page)
-    await openImageChooser(page)
-    const strip = page.getByRole('tablist', { name: 'Image thumbnails', exact: true, includeHidden: true })
-    const first = strip.getByRole('tab', { name: 'Image 1 of 2: test-image.jpg', exact: true, includeHidden: true }).locator('canvas')
-    const second = strip.getByRole('tab', { name: 'Image 2 of 2: test-image-2.jpg', exact: true, includeHidden: true }).locator('canvas')
-    for (const thumbnail of [first, second]) {
-      await expect.poll(() => thumbnail.evaluate((canvas: HTMLCanvasElement) => {
-        const context = canvas.getContext('2d')
-        if (!context || canvas.width <= 1 || canvas.height <= 1) return false
-        const data = context.getImageData(0, 0, canvas.width, canvas.height).data
-        return data.some((value, index) => index % 4 !== 3 && value > 5)
-      })).toBe(true)
-      const size = await thumbnail.evaluate((canvas: HTMLCanvasElement) => ({ width: canvas.width, height: canvas.height }))
-      expect(size.width).toBeLessThanOrEqual(80)
-      expect(size.height).toBeLessThanOrEqual(80)
-    }
-    const processingSizes = await page.evaluate(() => (window as unknown as { stripWork: number[][] }).stripWork)
-    expect(processingSizes.length).toBeGreaterThan(0)
-    // The film dock now also uses this processor, with its own 92px previews.
-    // Photo-strip canvases retain the tighter 80px budget checked above.
-    for (const dimensions of processingSizes) expect(Math.max(...dimensions)).toBeLessThanOrEqual(92)
-    await expect(strip.getByRole('tab', { name: 'Image 1 of 2: test-image.jpg', exact: true, includeHidden: true })).toHaveAttribute('aria-selected', 'true')
-  })
 
 })

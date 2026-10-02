@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ComponentProps, type ReactNode, type Ref } from 'react'
-import { Blend, ChevronLeft, ChevronRight, Columns2, Crop, MoreHorizontal, Plus, SlidersHorizontal, Upload } from 'lucide-react'
+import { Blend, ChevronLeft, ChevronRight, Columns2, CopyCheck, Crop, Download, MoreHorizontal, Plus, SlidersHorizontal, Upload } from 'lucide-react'
 import { Button } from './ui/button'
 import { CropPanel } from './CropPanel'
 import { Spinner } from './ui/spinner'
@@ -19,34 +19,17 @@ export interface EditorAction {
 }
 
 /** One header DOM for both layouts; media owners supply their permitted actions. */
-export function EditorHeader({ fileName, details, leading, trailing, compact = false, navigation, files }: {
-  fileName: string
-  details?: string
+export function EditorHeader({ leading, trailing, compact = false, modes }: {
   leading?: ReactNode
   trailing?: ReactNode
   compact?: boolean
-  navigation?: { previous?: () => void; next?: () => void; disabled: boolean }
-  files?: ReactNode
+  modes: ReactNode
 }) {
   return (
     <header className="editor-header-content mobile-editor-header-content shrink-0 px-3 py-2">
       <div className="editor-header-row" data-compact={compact || undefined}>
         <div className="editor-header-leading"><span className="editor-brand">PhotoChrome</span>{leading}</div>
-        <div className="editor-file-navigation">
-          {navigation && <Button variant="ghost" onClick={navigation.previous} disabled={navigation.disabled || !navigation.previous}
-            className="editor-control editor-file-arrow" aria-label="Previous image"><ChevronLeft className="size-5" aria-hidden="true" /></Button>}
-        <div className="mobile-editor-file min-w-0 text-center">
-          {files ? <EditorOverflow label="Choose image" trigger={<>
-            <p className="truncate text-sm font-medium text-white">{fileName}</p>
-            {details && <p className="mt-1 text-[11px] text-zinc-400">{details}</p>}
-          </>}>{files}</EditorOverflow> : <>
-          <p className="truncate text-sm font-medium text-white">{fileName}</p>
-          {details && <p className="mt-1 text-[11px] text-zinc-400">{details}</p>}
-          </>}
-        </div>
-          {navigation && <Button variant="ghost" onClick={navigation.next} disabled={navigation.disabled || !navigation.next}
-            className="editor-control editor-file-arrow" aria-label="Next image"><ChevronRight className="size-5" aria-hidden="true" /></Button>}
-        </div>
+        <div className="editor-header-modes">{modes}</div>
         <div className="editor-header-trailing">{trailing}</div>
       </div>
     </header>
@@ -62,14 +45,14 @@ export function EditorModes({ mode, onChange, disabled, demoMode = false, advanc
 }) {
   const choices: EditorMode[] = demoMode ? ['films'] : ['films', 'advanced', 'crop']
   return (
-    <nav className={`mobile-editor-modes grid min-h-12 shrink-0 ${demoMode ? 'grid-cols-1' : 'grid-cols-3'}`} aria-label="Editor modes">
+    <nav className={`mobile-editor-modes grid shrink-0 ${demoMode ? 'grid-cols-1' : 'grid-cols-3'}`} aria-label="Editor modes">
       {choices.map(value => (
         <button key={value} type="button" onClick={() => onChange(value)} disabled={disabled[value]}
           aria-current={mode === value ? 'page' : undefined}
           aria-label={value === 'advanced' ? advancedOpen ? 'Close Advanced settings' : 'Open Advanced settings' : undefined}
           aria-expanded={value === 'advanced' ? advancedOpen : undefined}
-          className={`flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-40 ${mode === value ? 'text-white' : 'text-zinc-400'}`}>
-          {value === 'films' ? <Blend className="size-5 shrink-0" aria-hidden="true" /> : value === 'advanced' ? <SlidersHorizontal className="size-5 shrink-0" aria-hidden="true" /> : <Crop className="size-5 shrink-0" aria-hidden="true" />}
+          className={`flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-40 ${mode === value ? 'text-white' : 'text-zinc-400'}`}>
+          {value === 'films' ? <Blend className="size-4 shrink-0" aria-hidden="true" /> : value === 'advanced' ? <SlidersHorizontal className="size-4 shrink-0" aria-hidden="true" /> : <Crop className="size-4 shrink-0" aria-hidden="true" />}
           <span className="min-w-0 break-words">{value === 'films' ? 'Films' : value === 'advanced' ? 'Advanced' : 'Crop'}</span>
         </button>
       ))}
@@ -77,7 +60,7 @@ export function EditorModes({ mode, onChange, disabled, demoMode = false, advanc
   )
 }
 
-function EditorOverflow({ children, label = 'More editor actions', trigger }: { children: ReactNode; label?: string; trigger?: ReactNode }) {
+function EditorOverflow({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDetailsElement>(null)
   useEffect(() => {
     const closeOutside = (event: PointerEvent) => {
@@ -94,8 +77,8 @@ function EditorOverflow({ children, label = 'More editor actions', trigger }: { 
         ref.current.querySelector('summary')?.focus()
       }
     }}>
-      <summary className="editor-control" role="button" aria-label={label}>{trigger ?? <MoreHorizontal className="size-5" aria-hidden="true" />}</summary>
-      <div className="editor-overflow-panel" role="group" aria-label={label} onClickCapture={event => {
+      <summary className="editor-control" role="button" aria-label="More editor actions"><MoreHorizontal className="size-5" aria-hidden="true" /></summary>
+      <div className="editor-overflow-panel" role="group" aria-label="More editor actions" onClickCapture={event => {
         const button = event.target instanceof Element ? event.target.closest('button') : null
         if (button && !button.disabled && ref.current) {
           ref.current.open = false
@@ -116,7 +99,8 @@ export function EditorActions({ actions, placement = 'dock', primaryId = 'export
     <Button key={action.id} ref={action.buttonRef} variant={primary ? 'default' : action.variant ?? 'default'} onClick={action.onClick}
       disabled={action.disabled} aria-label={action.ariaLabel} aria-busy={action.busy}
       className={`${primary ? 'editor-primary-action' : 'editor-secondary-action'} min-h-11 min-w-0 whitespace-normal ${action.desktopOnly ? 'hidden md:inline-flex' : ''}`}>
-      {action.busy ? <Spinner className="size-4" /> : primary && (action.id === 'upload' ? <Plus className="size-4" aria-hidden="true" /> : <Upload className="size-4" aria-hidden="true" />)}
+      {action.busy ? <Spinner className="size-4" /> : primary ? (action.id === 'upload' ? <Plus className="size-4" aria-hidden="true" /> : <Upload className="size-4" aria-hidden="true" />)
+        : placement === 'header' && (action.id === 'apply-all' ? <CopyCheck className="size-4" aria-hidden="true" /> : <Download className="size-4" aria-hidden="true" />)}
       <span>{action.label}</span>
     </Button>
   )
@@ -127,7 +111,7 @@ export function EditorActions({ actions, placement = 'dock', primaryId = 'export
     if (!actions.length) return overflow || null
     return <div className="editor-header-actions" role="toolbar" aria-label="Editor actions"
       onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') event.stopPropagation() }}>
-      {overflow}{primary && renderAction(primary, true)}
+      {primary && renderAction(primary, true)}{overflow}
     </div>
   }
   if (!actions.length) return null
@@ -140,22 +124,18 @@ export function EditorActions({ actions, placement = 'dock', primaryId = 'export
 }
 
 /** A persistent host keeps an open Advanced tab/crop control mounted across resize. */
-export function EditorControlDock({ children, mode, navigation, actions, contentRef, hideDesktop = false }: {
+export function EditorControlDock({ children, mode, actions, contentRef, hideDesktop = false }: {
   children: ReactNode
   mode: EditorMode
-  navigation: ReactNode
   actions: ReactNode
   contentRef?: Ref<HTMLDivElement>
   hideDesktop?: boolean
 }) {
   return (
-    <>
-      <div className="editor-mode-row" data-desktop-hidden={hideDesktop || undefined}>{navigation}</div>
     <aside className="editor-control-dock mobile-editor-dock mobile-editor-surface relative z-20 min-w-0" aria-label="Editor controls" data-editor-mode={mode} data-desktop-hidden={hideDesktop || undefined}>
       <div ref={contentRef} className="editor-context-panel min-h-0" data-editor-mode={mode}>{children}</div>
       {actions}
     </aside>
-    </>
   )
 }
 
@@ -179,8 +159,26 @@ export function EditorCompare({ active, disabled, onStart, onEnd }: {
     onKeyUp={event => {
       if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); event.stopPropagation(); onEnd() }
     }}>
-    <Columns2 className="size-4" aria-hidden="true" /><span>Original</span>
+    <span className="editor-compare-content"><Columns2 className="size-4" aria-hidden="true" /><span>Original</span></span>
   </Button>
+}
+
+/** Outside the preview gesture surface so clicking arrows never starts comparison. */
+export function EditorPhotoNavigation({ previous, next, disabled }: {
+  previous?: () => void
+  next?: () => void
+  disabled: boolean
+}) {
+  return <>
+    <Button variant="ghost" onClick={previous} disabled={disabled || !previous}
+      className="editor-photo-arrow editor-photo-previous editor-control" aria-label="Previous image">
+      <ChevronLeft className="size-5" aria-hidden="true" />
+    </Button>
+    <Button variant="ghost" onClick={next} disabled={disabled || !next}
+      className="editor-photo-arrow editor-photo-next editor-control" aria-label="Next image">
+      <ChevronRight className="size-5" aria-hidden="true" />
+    </Button>
+  </>
 }
 
 export function CropTools({ onOpen, onRotate, onFlip, disabled = false }: {

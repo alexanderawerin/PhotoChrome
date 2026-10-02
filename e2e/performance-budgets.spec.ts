@@ -42,7 +42,7 @@ test.describe('Chromium performance budgets', () => {
       fixturePath('test-image-2.jpg'),
     ])
     await waitForEditor(page)
-    await expect(page.locator('[role="tablist"][aria-label="Image thumbnails"] [role="tab"]')).toHaveCount(2)
+    await expect(page.getByRole('button', { name: 'Apply current color to all 2 images', exact: true, includeHidden: true })).toHaveCount(1)
     const editorReadyMs = performance.now() - startedAt
 
     await expect(page.getByRole('group', { name: 'Film selection', exact: true }).getByRole('button', { name: /^Select film / })).toHaveCount(10, { timeout: BUDGETS_MS.tenFilmChoices })
@@ -93,7 +93,7 @@ test.describe('Chromium performance budgets', () => {
     await input.waitFor({ state: 'attached', timeout: 15_000 })
     await input.setInputFiles(photos)
     await waitForEditor(page)
-    await expect(page.locator('[role="tablist"][aria-label="Image thumbnails"] [role="tab"]')).toHaveCount(20)
+    await expect(page.getByRole('button', { name: 'Apply current color to all 20 images', exact: true, includeHidden: true })).toHaveCount(1)
     await selectBaseFilm(page)
     await clickEditorAction(page, 'Apply current color to all 20 images')
     await expect(page.getByRole('status', { name: 'Applying preset to all images', exact: true })).toBeHidden()

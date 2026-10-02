@@ -77,7 +77,7 @@ test.describe('Video import and export', () => {
     test.skip(browserName !== 'chromium', 'WebCodecs export is verified in Chromium')
     test.setTimeout(90_000)
     await uploadVideo(page)
-    await expect(page.getByText('test-video.mp4')).toBeVisible()
+    await expect(page.getByLabel('Video preview', { exact: true })).toBeVisible()
     await selectBaseFilm(page)
     await expect(page.getByRole('button', { name: 'Export video' })).toBeEnabled()
 

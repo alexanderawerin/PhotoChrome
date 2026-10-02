@@ -118,7 +118,7 @@ test.describe('Editor — mobile films', () => {
 
   test('video uses the same eleven neutral color choices', async ({ page, landingPage }) => {
     await uploadVideo(page)
-    await expect(page.getByText('test-video.mp4', { exact: true })).toBeVisible()
+    await expect(page.getByLabel('Video preview', { exact: true })).toBeVisible()
     await expect(selection(page)).toBeVisible()
     await expect(selection(page).getByRole('button', { name: /^Select / })).toHaveCount(11)
     await expect(selection(page).getByRole('button', { name: 'Select Original', exact: true })).toHaveAttribute('aria-pressed', 'true')

@@ -19,12 +19,12 @@ export async function clickEditorAction(page: Page, name: string | RegExp): Prom
   await action.click()
 }
 
-export async function openImageChooser(page: Page): Promise<void> {
-  const chooser = page.getByRole('button', { name: 'Choose image', exact: true })
-  if (await chooser.count() && !await page.getByRole('tablist', { name: 'Image thumbnails', exact: true }).isVisible()) await chooser.click()
-}
-
-export async function chooseImage(page: Page, name: string): Promise<void> {
-  await openImageChooser(page)
-  await page.getByRole('tab', { name, exact: true }).click()
+/** Use the stage arrows where present; keyboard navigation remains available on touch. */
+export async function navigateImage(page: Page, direction: 'next' | 'previous'): Promise<void> {
+  const button = page.getByRole('button', { name: direction === 'next' ? 'Next image' : 'Previous image', exact: true })
+  if (await button.isVisible()) await button.click()
+  else {
+    await editorModes(page).getByRole('button', { name: 'Films', exact: true }).focus()
+    await page.keyboard.press(direction === 'next' ? 'ArrowRight' : 'ArrowLeft')
+  }
 }

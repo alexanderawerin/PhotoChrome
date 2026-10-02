@@ -1,4 +1,4 @@
-import { clickEditorAction, chooseImage } from './helpers/editor-controls'
+import { clickEditorAction, navigateImage } from './helpers/editor-controls'
 import { readFile } from 'node:fs/promises'
 import sharp from 'sharp'
 import { unzipSync } from 'fflate'
@@ -160,9 +160,7 @@ test.describe('Editor — Export completion', () => {
     await uploadMultipleImages(page)
     await waitForEditor(page)
 
-    const photo = page.getByRole('tab', { name: 'Image 2 of 2: test-image-2.jpg', exact: true, includeHidden: true })
-    await chooseImage(page, 'Image 2 of 2: test-image-2.jpg')
-    await expect(photo).toHaveAttribute('aria-selected', 'true')
+    await navigateImage(page, 'next')
     await selectBaseFilm(page)
 
     const downloadPromise = page.waitForEvent('download')
@@ -191,7 +189,7 @@ test.describe('Editor — Export completion', () => {
     await waitForEditor(page)
     await selectBaseFilm(page)
 
-    await chooseImage(page, 'Image 2 of 3: failed.jpg')
+    await navigateImage(page, 'next')
     await selectBaseFilm(page)
     await installProcessorMock(page, 'fail-second-call')
 

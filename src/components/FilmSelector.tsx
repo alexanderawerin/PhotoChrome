@@ -74,7 +74,7 @@ export function FilmSelector({ sourceImage, activeRecipe, onSelect, disabled, re
               className="film-option">
               {active && <Circle className="film-selected-marker" aria-hidden="true" fill="currentColor" />}
               <FilmThumbnail sourceImage={sourceImage} recipe={profile} retryKey={retryKey} />
-              <span className="film-label">{profile?.name ?? 'Original'}</span>
+              <span className="film-label" title={profile?.name ?? 'Original'}>{profile?.name ?? 'Original'}</span>
             </button>
           )
         })}
