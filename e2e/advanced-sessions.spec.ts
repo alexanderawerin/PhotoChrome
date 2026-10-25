@@ -186,11 +186,13 @@ test('changing photos discards an unfinished draft and preserves each applied pr
 })
 
 for (const media of ['photo', 'video'] as const) {
-  test(`${media} changing the main film discards an unfinished recipe and manual draft`, async ({ page }) => {
+  test(`${media} canceling the draft before changing the main film clears recipe and manual overrides`, async ({ page }) => {
     await startAdvancedMedia(page, media, 1600)
     await openAdvanced(page)
     await selectPortraitDraft(page)
     await changeHighlight(page)
+    await expect(editorModes(page)).toBeHidden()
+    await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
     await editorModes(page).getByRole('button', { name: 'Films', exact: true }).click()
     await page.getByRole('button', { name: 'Select film Velvia', exact: true }).click()
     await expect(advancedPanel(page)).toHaveCount(0)

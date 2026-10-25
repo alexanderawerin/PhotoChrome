@@ -1,0 +1,77 @@
+{
+  "film": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Multimedia/film-film_roll-movie-movies-cinema-strip-reel-animation-r-s.svg"
+  },
+  "sliders": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Interface/sliders-slider-adjustments-button_group-content_preferences-preferences-r-s.svg"
+  },
+  "crop_tool": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Interface/crop_tool-crop-frame-resize-r-s.svg"
+  },
+  "cross": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Interface/cross-close-cross_mark-multiply-remove-wrong-no-dismiss-r-s.svg"
+  },
+  "more": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Interface/more-others-other-additional-extra-options-ellipsis-overflow-r-s.svg"
+  },
+  "download": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Arrows/download-get_app-bottom-get-fetch-bar-r-s.svg"
+  },
+  "publish": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Arrows/publish-upload-top-jump-bar-r-s.svg"
+  },
+  "copy": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Interface/copy-duplicate-clone-replicate-paste-ctrl-r-s.svg"
+  },
+  "plus": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Interface/plus-add-create-increase-new_thread-new_post-r-s.svg"
+  },
+  "rotate_cw": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Arrows/rotate_cw-clockwise-cw-rotate-turn-circular-r-s.svg"
+  },
+  "flip_horizontal": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Interface/flip_horizontal-flip_horizontally-flip_h-reverse_horizontal-turn_over_horizontal-flip_left_right-mirror_image_horizontal-r-s.svg"
+  },
+  "rotate_ccw": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Arrows/rotate_ccw-anticlockwise-rotate_anti_clockwise-counterclockwise-counter_clockwise-ccw-rotate-turn-circular-r-s.svg"
+  },
+  "sun": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Weather/sun-brightness-brightness_high-sunny-bright-warmth-day-solar-r-s.svg"
+  },
+  "crescent": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Weather/crescent-sleep-moon-night-dark-lunar-nighttime-bedtime-r-s.svg"
+  },
+  "palette": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Objects/palette-artist_palette-color-colour-colors-colours-design-art-paint-creative-theme-gradient-r-s.svg"
+  },
+  "target": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Interface/target-bullseye-aim-goal-objective-focus-r-s.svg"
+  },
+  "sparkles": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Interface/sparkles-sparkle-ai_sparkles-magic-shine-glitter-enhance-auto_awesome-r-s.svg"
+  },
+  "temperature": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Weather/temperature-degree-unit-symbol-angular-measurement-rotate-r-s.svg"
+  },
+  "grid_3x3": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Interface/grid_3x3-grid_3-table_grid-grid_view-cells-matrix-tiles-r-s.svg"
+  },
+  "circle_half_left": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Interface/circle_half_left-left_half_black_circle-contrast-dark_mode-light_mode-theme-r-s.svg"
+  },
+  "droplet": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Weather/droplet-drop-liquid-chemistry-ink-blood-drip-r-s.svg"
+  },
+  "columns": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Interface/columns-view_columns-side-parallel-multi-column-layout-kanban-board-r-s.svg"
+  },
+  "chevron_left": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Arrows/chevron_left-back-previous-return-r-s.svg"
+  },
+  "chevron_right": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Arrows/chevron_right-next-forward-submenu-disclosure-chevron-r-s.svg"
+  },
+  "checkmark": {
+    "source": "https://github.com/iconoteka/iconoteka/blob/02.01.00/Icons/Interface/checkmark-checked-check-done-complete-tick-yes-success-correct-ok-accept-r-s.svg"
+  }
+}

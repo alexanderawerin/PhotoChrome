@@ -230,7 +230,7 @@ function QuickGuideContent() {
     ['Try the demo', 'Switch between three photos, choose a film and hold the preview to compare. Add your own media to unlock editing and export.'],
     ['Add photos or video', 'New media starts as Original. Add a photo batch or one video up to 30 seconds. Tap the filename and count to open your photo collection.'],
     ['Choose a film', 'Select Original or one of ten base films. Changing film resets color settings and keeps your composition.'],
-    ['Advanced settings', 'For a selected film, Recipes and Manual share one temporary preview. Apply saves both; Cancel or Escape restores the applied result. On phones, choose a Manual tool to focus its controls.'],
+    ['Advanced settings', 'For a selected film, Recipes and Manual share one temporary preview. Apply saves both; Cancel or Escape restores the applied result. Finish the draft before choosing another mode. On phones, choose a Manual tool to focus its controls.'],
     ['Compose', 'Crop, position, zoom, rotate, fine-tune the angle or reflect photos and video. Apply or Cancel the crop draft; comparison keeps the same geometry.'],
     ['Apply color to all', 'Copy the applied color to every photo, including Original. Each photo keeps its own crop, rotation and reflection.'],
     ['Export', 'Save the applied photo as JPEG, every loaded photo as a ZIP, or the composed video as MP4. Original and geometry-only edits are exportable. Apply or Cancel a draft first.'],

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { RotateCcw, Sun, Moon, Palette, Focus, Sparkles, Thermometer, CircleDot, Contrast, Droplets } from 'lucide-react'
+import { Iconoteka, type IconotekaName } from './icons/Iconoteka'
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group'
 import { Slider } from './ui/slider'
 import { Recipe, RecipeSettings } from '../engine/types'
@@ -82,7 +82,7 @@ export function TuningPanel({
 }: TuningPanelProps) {
   const [focusedTool, setFocusedTool] = useState<keyof RecipeSettings>('highlight')
   const tools = [...SLIDER_PARAMS, ...TOGGLE_PARAMS, { key: 'dynamicRange' as const, label: 'Dynamic Range' }, { key: 'whiteBalance' as const, label: 'White Balance' }]
-  const toolIcons = { highlight: Sun, shadow: Moon, color: Palette, sharpness: Focus, clarity: Sparkles, wbShiftRed: Thermometer, wbShiftBlue: Thermometer, grainEffect: CircleDot, colorChromeEffect: Droplets, colorChromeFXBlue: Droplets, dynamicRange: Contrast, whiteBalance: Thermometer }
+  const toolIcons = { highlight: 'sun', shadow: 'crescent', color: 'palette', sharpness: 'target', clarity: 'sparkles', wbShiftRed: 'temperature', wbShiftBlue: 'temperature', grainEffect: 'grid_3x3', colorChromeEffect: 'droplet', colorChromeFXBlue: 'droplet', dynamicRange: 'circle_half_left', whiteBalance: 'temperature' } satisfies Record<string, IconotekaName>
   const dynamicRange = customSettings.dynamicRange ?? recipe.settings.dynamicRange ?? 'DR100'
   const wbPreset = customSettings.whiteBalance ?? recipe.settings.whiteBalance ?? 'auto'
   const kelvin = customSettings.whiteBalanceKelvin ?? recipe.settings.whiteBalanceKelvin ?? 5500
@@ -146,7 +146,7 @@ export function TuningPanel({
 
   const resetButton = (key: keyof RecipeSettings, label: string) => (
     <button type="button" onClick={() => resetSetting(key)} className="grid size-11 place-items-center md:size-7 rounded text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200" aria-label={`Reset ${label} to profile`}>
-      <RotateCcw className="size-3" aria-hidden="true" /><span className="editor-reset-label">Reset</span>
+      <Iconoteka name="rotate_ccw" className="size-4" /><span className="editor-reset-label">Reset</span>
     </button>
   )
 
@@ -157,7 +157,7 @@ export function TuningPanel({
     }}>
       <div className="editor-tool-picker" role="group" aria-label="Manual tools">
         {tools.map(tool => {
-          const Icon = toolIcons[tool.key as keyof typeof toolIcons]
+          const icon = toolIcons[tool.key as keyof typeof toolIcons]
           return <button key={tool.key} type="button" aria-label={`Adjust ${tool.label}`} aria-pressed={focusedTool === tool.key}
             onClick={event => {
               setFocusedTool(tool.key)
@@ -165,7 +165,7 @@ export function TuningPanel({
               const strip = button.parentElement!
               strip.scrollTo({ left: button.offsetLeft - strip.offsetLeft - (strip.clientWidth - button.offsetWidth) / 2, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
             }}>
-            <Icon aria-hidden="true" /><span>{tool.label.replace('WB Shift ', '').replace(' Effect', '').replace('White Balance', 'Balance').replace('Dynamic Range', 'Range')}</span>
+            <Iconoteka name={icon} /><span>{tool.label.replace('WB Shift ', '').replace(' Effect', '').replace('White Balance', 'Balance').replace('Dynamic Range', 'Range')}</span>
           </button>
         })}
       </div>
@@ -182,7 +182,7 @@ export function TuningPanel({
               <div className="flex items-center gap-1">
                 <span className="w-8 text-right text-sm tabular-nums text-zinc-500" aria-hidden="true">{value > 0 ? `+${value}` : value}</span>
                 <button type="button" onClick={() => resetSetting(param.key)} className="grid size-11 place-items-center md:size-7 rounded text-zinc-600 hover:bg-zinc-800 hover:text-zinc-200" aria-label={`Reset ${param.label} to profile`}>
-                  <RotateCcw className="size-3" aria-hidden="true" /><span className="editor-reset-label">Reset</span>
+                  <Iconoteka name="rotate_ccw" className="size-4" /><span className="editor-reset-label">Reset</span>
                 </button>
               </div>
             </div>

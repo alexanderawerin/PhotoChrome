@@ -6,7 +6,7 @@ export const editorActions = (page: Page) => page.getByRole('toolbar', { name: '
 const cropSettings = (page: Page) => editorControls(page).getByRole('region', { name: 'Crop settings', exact: true })
 
 export async function openCropSession(page: Page): Promise<void> {
-  await editorModes(page).getByRole('button', { name: 'Crop', exact: true }).click()
+  if (!await cropSettings(page).isVisible()) await editorModes(page).getByRole('button', { name: 'Crop', exact: true }).click()
   await expect(cropSettings(page)).toBeVisible()
 }
 
@@ -22,7 +22,9 @@ export async function navigateImage(page: Page, direction: 'next' | 'previous'):
   const button = page.getByRole('button', { name: direction === 'next' ? 'Next image' : 'Previous image', exact: true })
   if (await button.isVisible()) await button.click()
   else {
-    await editorModes(page).getByRole('button', { name: 'Films', exact: true }).focus()
+    const modes = editorModes(page)
+    if (await modes.isVisible()) await modes.getByRole('button', { name: 'Films', exact: true }).focus()
+    else await editorActions(page).getByRole('button', { name: 'Cancel', exact: true }).focus()
     await page.keyboard.press(direction === 'next' ? 'ArrowRight' : 'ArrowLeft')
   }
 }

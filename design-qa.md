@@ -42,3 +42,38 @@ Fresh browser captures exercised import, film selection, Advanced tabs, tool swi
 No actionable P0/P1/P2 visual findings remain in the inspected states. Physical Android, iPhone, Safari and device-specific AAC acceptance remain unperformed; browser mobile emulation is not a physical-device check.
 
 final result: passed
+
+## Bottom-panel refinement — 25 October 2026
+
+This section supersedes the v2 icon and always-visible mode-row details above. The owner accepted v2 and requested a focused bottom-panel refinement with actual Iconoteka icons; the overall canvas, palette, typography, filmstrip, persistent media state and export engine remain the accepted target.
+
+### Current audit and decision
+
+Fresh Playwright screenshots were captured before changing code at 393×852 and 320×740. The existing Browser/IAB tool is unavailable, so system Chromium is the capture fallback. Screenshots are actual rendered UI, inspected with `view_image`.
+
+1. **Films:** working labeled modes and one export CTA; selected mode was only distinguished by color and a short underline. Keep labels; add a subtle selected surface and precise icons.
+2. **Recipes:** working draft, but full mode navigation remained immediately above Cancel/Apply. Some modes were disabled; another could discard the draft. Hide mode navigation until the temporary edit is resolved explicitly.
+3. **Manual:** useful focused adjustment, crowded by the repeated navigation row below it. Retain its tool chooser and slider; use the compact transaction footer to return 40 px to the image.
+4. **Crop:** working geometry and reversible state; mode row added competing destinations beside confirmation. Use the same transaction footer, with Crop identified centrally and Cancel/Done at thumb corners.
+5. **Cancel/confirmation:** preserve the existing owner-bound draft model. Move focus into Recipes on entry; after Cancel/Apply restore the original mode trigger. Navigation remains mounted for stable focus identity.
+6. **Narrow/safe area:** inspect 320 px with a 34 px bottom, 12 px side and 24 px top inset through Chromium CDP. Actions remain inside safe bounds, with 44 px minimum targets and no page overflow. This is emulation, not physical-device verification.
+
+References inspected again: [Halide Quick Edit](https://mobbin.com/screens/298d9809-7e34-4cb6-9c07-4a0fa712c8ba) for separated confirmation corners; [Apple Photos Crop](https://mobbin.com/screens/5bcf365a-c53b-471d-95e5-08dc4d9fa79d) for labeled tool choices and consistent selected-state emphasis. Their actual reference pixels remain in `docs/research/photochrome-ui-references/images/`. This refinement adapts those patterns to PhotoChrome; it does not copy their full UI.
+
+### Icon provenance and fidelity
+
+Read the official [about page](https://iconoteka.com/about.html), [developer documentation](https://iconoteka.com/dev.html) and [repository](https://github.com/iconoteka/iconoteka). Integrated only 25 Regular / Stroke geometries from release `02.01.00`, with no runtime network dependency or MCP configuration. Each path was independently compared with its version-pinned official SVG and matched exactly. The MIT notice is shipped in `public/licenses/iconoteka.txt`. Source mapping and component notes are in `src/components/icons/`.
+
+Visual inspection caught a naming trap: Iconoteka's `check` is a bank cheque. Replaced it with the actual `checkmark` glyph before final capture. No approximated icon geometry is shipped.
+
+### Final visual comparison
+
+- **Composition:** same contained photograph; no cover crop or canvas trick. Draft footer is 68 px including the default bottom padding, replacing the prior 108 px combination of navigation/actions.
+- **Hierarchy:** one amber primary confirmation, quieter labeled cancel, centered current task; mode controls reappear when the draft ends. Idle mode order and batch/export availability stay intact.
+- **Typography/copy:** existing system font and visible labels preserved. Only the centered current-task label is added. Guide explains resolving a draft before choosing another mode. No new decorative text.
+- **Icons:** genuine Regular Stroke, 20 px for mode/action/crop controls and 24 px in the tool picker; inherited currentColor, decorative SVGs hidden from accessibility names. The non-editor utility/dialog icons remain out of scope.
+- **Selection:** mode and manual tool selections use the same amber foreground, restrained fill and thin inset border; selection is also exposed through existing ARIA state.
+- **Responsive/safe area:** 393/320 captures inspected, including enlarged text and emulated inset coverage. No clipped primary controls or horizontal page overflow in inspected states.
+- **Behavior:** choosing another mode now follows explicit Apply/Done or Cancel. This intentional interaction change prevents an implicit mode click from discarding a draft. Existing shortcuts, media-owned drafts, recipe/manual sharing, composition and real exports are retained.
+
+Before/after screenshots, fresh walkthrough and exact verification results are in `docs/review/2026-10-25-bottom-panel/`. No material visual mismatches remain against the accepted v2 design and the scoped refinement. Physical Android, iPhone, Safari and optional device AAC acceptance are not claimed.

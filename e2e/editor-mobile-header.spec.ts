@@ -33,7 +33,7 @@ test.describe('Editor — mobile header', () => {
     await expect(page.getByRole('tab', { name: 'Shortcuts' })).toHaveCount(0)
   })
 
-  test('keeps primary tabs visible and cancels unfinished Advanced color on tab change', async ({ page, editorPage }) => {
+  test('resolves an Advanced draft explicitly before choosing another mode', async ({ page, editorPage }) => {
     const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
     await expect(modes.getByRole('button', { name: 'Films', exact: true })).toHaveAttribute('aria-current', 'page')
     await selectBaseFilm(page)
@@ -47,7 +47,8 @@ test.describe('Editor — mobile header', () => {
     await expect(slider).not.toHaveAttribute('aria-valuenow', initialValue!)
     await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true })).toBeVisible()
     await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true })).toBeVisible()
-    await expect(modes).toBeVisible()
+    await expect(modes).toBeHidden()
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click()
     await modes.getByRole('button', { name: 'Crop', exact: true }).click()
     await expect(panel).toHaveCount(0)
     await page.getByRole('button', { name: 'Cancel', exact: true }).click()
@@ -66,7 +67,7 @@ test.describe('Editor — mobile header', () => {
     await expect(cropRegion).toBeVisible()
     await expect(cropRegion).not.toHaveAttribute('aria-modal', 'true')
     await expect(page.getByRole('dialog', { name: /Crop/ })).toHaveCount(0)
-    await expect(modes).toBeVisible()
+    await expect(modes).toBeHidden()
 
     const ratioTrigger = cropRegion.getByRole('button', { name: 'Choose crop ratio', exact: true })
     await ratioTrigger.click()

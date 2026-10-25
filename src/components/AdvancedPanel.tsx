@@ -24,6 +24,11 @@ export function AdvancedPanel({ profile, settings, sourceImage, onProfileSelect,
   const baseName = getBaseFilm(profile.filmSimulation)?.name ?? profile.filmSimulation
 
   useEffect(() => {
+    // Mode navigation is hidden during a draft; move keyboard focus into its controls.
+    document.getElementById(`${id}-recipes`)?.focus({ preventScroll: true })
+  }, [id])
+
+  useEffect(() => {
     const strip = recipesRef.current
     const selected = strip?.querySelector<HTMLButtonElement>('.film-option[aria-pressed="true"]')
     if (!strip || !selected) return

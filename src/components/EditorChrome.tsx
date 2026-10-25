@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ComponentProps, type ReactNode, type Ref } from 'react'
-import { Blend, Check, ChevronLeft, ChevronRight, Columns2, CopyCheck, Crop, Download, FlipHorizontal, MoreHorizontal, Plus, RotateCw, SlidersHorizontal, Upload } from 'lucide-react'
+import { Iconoteka } from './icons/Iconoteka'
 import { Button } from './ui/button'
 import { CropPanel } from './CropPanel'
 import { Spinner } from './ui/spinner'
@@ -53,7 +53,7 @@ export function EditorModes({ mode, onChange, disabled, demoMode = false, advanc
           aria-label={value === 'advanced' ? advancedOpen ? 'Close Advanced settings' : 'Open Advanced settings' : undefined}
           aria-expanded={value === 'advanced' ? advancedOpen : undefined}
           className={`flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-40 ${mode === value ? 'text-white' : 'text-zinc-400'}`}>
-          {value === 'films' ? <Blend className="size-4 shrink-0" aria-hidden="true" /> : value === 'advanced' ? <SlidersHorizontal className="size-4 shrink-0" aria-hidden="true" /> : <Crop className="size-4 shrink-0" aria-hidden="true" />}
+          {value === 'films' ? <Iconoteka name="film" className="size-4 shrink-0" aria-hidden="true" /> : value === 'advanced' ? <Iconoteka name="sliders" className="size-4 shrink-0" aria-hidden="true" /> : <Iconoteka name="crop_tool" className="size-4 shrink-0" aria-hidden="true" />}
           <span className="min-w-0 break-words">{value === 'films' ? 'Films' : value === 'advanced' ? 'Advanced' : 'Crop'}</span>
         </button>
       ))}
@@ -78,7 +78,7 @@ function EditorOverflow({ children }: { children: ReactNode }) {
         ref.current.querySelector('summary')?.focus()
       }
     }}>
-      <summary className="editor-control" role="button" aria-label="More editor actions"><MoreHorizontal className="size-5" aria-hidden="true" /></summary>
+      <summary className="editor-control" role="button" aria-label="More editor actions"><Iconoteka name="more" className="size-5" aria-hidden="true" /></summary>
       <div className="editor-overflow-panel" role="group" aria-label="More editor actions" onClickCapture={event => {
         const button = event.target instanceof Element ? event.target.closest('button') : null
         if (button && !button.disabled && ref.current) {
@@ -97,13 +97,14 @@ export function EditorActions({ actions, placement = 'dock', primaryId = 'export
   extraActions?: EditorAction[]
 }) {
   const isMdUp = useIsMdUp()
+  const sessionLabel = primaryId === 'apply-advanced' ? 'Advanced' : primaryId === 'apply-crop' ? 'Crop' : undefined
   const visible = [...actions, ...extraActions].filter(action => !action.desktopOnly || isMdUp)
   const renderAction = (action: EditorAction, primary = false, direct = false) => (
     <Button key={action.id} ref={action.buttonRef} variant={primary ? 'default' : action.variant ?? 'ghost'} onClick={action.onClick}
       disabled={action.disabled} aria-label={action.ariaLabel ?? (direct ? action.label : undefined)} aria-busy={action.busy} title={direct ? action.label : undefined}
       className={`${direct ? 'editor-direct-action editor-control' : primary ? 'editor-primary-action' : 'editor-secondary-action'} min-h-11 min-w-0 whitespace-normal`}>
-      {action.busy ? <Spinner className="size-4" /> : action.icon ?? (primary ? (action.id === 'upload' ? <Plus className="size-4" aria-hidden="true" /> : action.id.startsWith('export') ? <Upload className="size-4" aria-hidden="true" /> : <Check className="size-4" aria-hidden="true" />)
-        : placement === 'header' && (action.id === 'apply-all' ? <CopyCheck className="size-4" aria-hidden="true" /> : <Download className="size-4" aria-hidden="true" />))}
+      {action.busy ? <Spinner className="size-5" /> : action.icon ?? <Iconoteka className="size-5 shrink-0"
+        name={action.id.startsWith('cancel') ? 'cross' : action.id === 'upload' ? 'plus' : action.id === 'apply-all' ? 'copy' : action.id === 'export-all' ? 'download' : action.id.startsWith('export') ? 'publish' : 'checkmark'} />}
       <span className={direct ? 'sr-only' : undefined}>{action.label}</span>
     </Button>
   )
@@ -123,12 +124,13 @@ export function EditorActions({ actions, placement = 'dock', primaryId = 'export
   const secondary = visible.filter(action => action !== primary)
   const overflow = secondary.length > 1 ? secondary.filter(action => action.id !== 'apply-all') : []
   return (
-    <div className="mobile-editor-actions" role="toolbar" aria-label="Editor actions"
+    <div className="mobile-editor-actions" data-edit-session={sessionLabel ? true : undefined} role="toolbar" aria-label="Editor actions"
       onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') event.stopPropagation() }}>
       <div className="editor-action-secondary">
         {secondary.filter(action => !overflow.includes(action)).map(action => renderAction(action))}
         {overflow.length > 0 && <EditorOverflow>{overflow.map(action => renderAction(action))}</EditorOverflow>}
       </div>
+      {sessionLabel && <span className="editor-session-title" aria-label="Current edit">{sessionLabel}</span>}
       {primary && renderAction(primary, true)}
     </div>
   )
@@ -162,7 +164,11 @@ export function EditorControlDock({ children, mode, modes, actions, contentRef, 
   return (
     <aside className="editor-control-dock mobile-editor-dock mobile-editor-surface relative z-20 min-w-0" aria-label="Editor controls" data-editor-mode={mode} data-desktop-hidden={hideDesktop || undefined}>
       <div ref={contentRef} className="editor-context-panel min-h-0" data-editor-mode={mode}>{children}</div>
-      <div className="editor-dock-footer">{modes}{actions}</div>
+      <div className="editor-dock-footer" data-edit-session={mode !== 'films' || undefined}>
+        {/* Keep navigation mounted for focus restoration, but resolve a draft explicitly. */}
+        <div className="editor-mode-navigation" hidden={mode !== 'films'}>{modes}</div>
+        {actions}
+      </div>
     </aside>
   )
 }
@@ -187,7 +193,7 @@ export function EditorCompare({ active, disabled, onStart, onEnd }: {
     onKeyUp={event => {
       if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); event.stopPropagation(); onEnd() }
     }}>
-    <span className="editor-compare-content"><Columns2 className="size-4" aria-hidden="true" /><span>Original</span></span>
+    <span className="editor-compare-content"><Iconoteka name="columns" className="size-4" aria-hidden="true" /><span>Original</span></span>
   </Button>
 }
 
@@ -200,11 +206,11 @@ export function EditorPhotoNavigation({ previous, next, disabled }: {
   return <>
     <Button variant="ghost" onClick={previous} disabled={disabled || !previous}
       className="editor-photo-arrow editor-photo-previous editor-control" aria-label="Previous image">
-      <ChevronLeft className="size-5" aria-hidden="true" />
+      <Iconoteka name="chevron_left" className="size-5" aria-hidden="true" />
     </Button>
     <Button variant="ghost" onClick={next} disabled={disabled || !next}
       className="editor-photo-arrow editor-photo-next editor-control" aria-label="Next image">
-      <ChevronRight className="size-5" aria-hidden="true" />
+      <Iconoteka name="chevron_right" className="size-5" aria-hidden="true" />
     </Button>
   </>
 }
@@ -216,8 +222,8 @@ function CropTools({ onRotate, onFlip, disabled = false }: {
 }) {
   return (
     <div className="editor-crop-tools" role="group" aria-label="Crop tools">
-      <Button variant="ghost" onClick={onRotate} disabled={disabled} className="editor-crop-tool" aria-label="Rotate clockwise" title="Rotate clockwise"><RotateCw aria-hidden="true" /><span>Rotate</span></Button>
-      <Button variant="ghost" onClick={onFlip} disabled={disabled} className="editor-crop-tool" aria-label="Flip horizontal" title="Flip horizontal"><FlipHorizontal aria-hidden="true" /><span>Flip</span></Button>
+      <Button variant="ghost" onClick={onRotate} disabled={disabled} className="editor-crop-tool" aria-label="Rotate clockwise" title="Rotate clockwise"><Iconoteka name="rotate_cw" aria-hidden="true" /><span>Rotate</span></Button>
+      <Button variant="ghost" onClick={onFlip} disabled={disabled} className="editor-crop-tool" aria-label="Flip horizontal" title="Flip horizontal"><Iconoteka name="flip_horizontal" aria-hidden="true" /><span>Flip</span></Button>
     </div>
   )
 }

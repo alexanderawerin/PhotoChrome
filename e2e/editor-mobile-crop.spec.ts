@@ -96,8 +96,8 @@ test.describe('Editor — mobile Crop session', () => {
     const region = await openCropSession(page)
     await expect(region).not.toHaveAttribute('aria-modal', 'true')
     await expect(page.getByRole('dialog', { name: /Crop/ })).toHaveCount(0)
-    await expect(modes(page)).toBeVisible()
-    await expect(modes(page).getByRole('button', { name: /^crop$/i })).toHaveAttribute('aria-current', 'page')
+    await expect(modes(page)).toBeHidden()
+    await expect(page.getByLabel('Current edit', { exact: true })).toHaveText('Crop')
 
     await expect(page.locator('header').getByRole('toolbar', { name: 'Editor actions', exact: true })).toHaveCount(0)
 
@@ -198,7 +198,7 @@ test.describe('Editor — mobile Crop session', () => {
     await expect(region.getByRole('slider', { name: 'Crop angle', exact: true })).toHaveAttribute('aria-valuenow', committedAngle ?? '0')
   })
 
-  test('cancels an unfinished crop when switching the primary tab', async ({ page, editorPage }) => {
+  test('cancels an unfinished crop explicitly before returning to mode navigation', async ({ page, editorPage }) => {
     let region = await openCropSession(page)
     const baselineRatio = await selectedRatio(region)
     const baselineAngle = await region.getByRole('slider', { name: 'Crop angle', exact: true }).getAttribute('aria-valuenow')
@@ -208,7 +208,8 @@ test.describe('Editor — mobile Crop session', () => {
     await angle.focus()
     await page.keyboard.press('ArrowRight')
 
-    await modes(page).getByRole('button', { name: /^films$/i }).click()
+    await expect(modes(page)).toBeHidden()
+    await actionZone(page).getByRole('button', { name: 'Cancel', exact: true }).click()
     await expect(region).toBeHidden()
     await expect(modes(page).getByRole('button', { name: /^films$/i })).toHaveAttribute('aria-current', 'page')
 
@@ -219,7 +220,7 @@ test.describe('Editor — mobile Crop session', () => {
     await expect(region.getByRole('slider', { name: 'Crop angle', exact: true })).toHaveAttribute('aria-valuenow', baselineAngle ?? '0')
   })
 
-  test('keeps C restricted during an Advanced draft and restores color after switching to Crop', async ({ page, editorPage }) => {
+  test('keeps C restricted during an Advanced draft and restores color after Cancel then Crop', async ({ page, editorPage }) => {
     await selectBaseFilm(page)
     await openAdvanced(page)
     const panel = advancedPanel(page)
@@ -234,6 +235,8 @@ test.describe('Editor — mobile Crop session', () => {
     await expect(panel).toBeVisible()
     await expect(cropRegion(page)).toHaveCount(0)
 
+    await expect(modes(page)).toBeHidden()
+    await actionZone(page).getByRole('button', { name: 'Cancel', exact: true }).click()
     await modes(page).getByRole('button', { name: 'Crop', exact: true }).click()
     await expect(panel).toHaveCount(0)
     await expect(cropRegion(page)).toBeVisible()

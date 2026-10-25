@@ -13,15 +13,15 @@ for (const width of [1200, 1600]) {
       await expect(page.getByRole('button', { name: 'Export processed image (Ctrl+S)', exact: true })).toBeEnabled()
     })
 
-    test('opens and cancels Advanced while keeping the shared mode navigation', async ({ page, editorPage }) => {
+    test('opens and cancels Advanced with explicit completion and restored mode focus', async ({ page, editorPage }) => {
       await selectBaseFilm(page)
       const open = page.getByRole('button', { name: 'Open Advanced settings', exact: true })
       await open.click()
       const advanced = page.getByRole('region', { name: 'Advanced settings', exact: true })
       await expect(advanced).toBeVisible()
-      await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true }).getByRole('button', { name: 'Films', exact: true })).toBeVisible()
+      await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true })).toBeHidden()
       await expect(page.getByRole('group', { name: 'Film selection', exact: true })).toHaveCount(0)
-      await page.getByRole('button', { name: 'Close Advanced settings', exact: true }).click()
+      await page.getByRole('button', { name: 'Cancel', exact: true }).click()
       await expect(advanced).toHaveCount(0)
       await expect(open).toBeFocused()
       await open.click()

@@ -220,7 +220,8 @@ test.describe('Editor — mobile preview layout', () => {
 
       const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
       await modes.getByRole('button', { name: /^(Open|Close) Advanced settings$/ }).click()
-      await expect(modes.getByRole('button', { name: /^(Open|Close) Advanced settings$/ })).toHaveAttribute('aria-current', 'page')
+      await expect(modes).toBeHidden()
+      await expect(page.getByLabel('Current edit', { exact: true })).toHaveText('Advanced')
       await expect(advancedPanel(page)).toBeVisible()
       await expectContainedInWorkspace(page)
       await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
@@ -380,7 +381,7 @@ test.describe('Editor — mobile preview layout', () => {
 
     const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
     await modes.getByRole('button', { name: /^crop$/i }).click()
-    await expect(modes.getByRole('button', { name: /^crop$/i })).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByLabel('Current edit', { exact: true })).toHaveText('Crop')
     await expect(page.getByLabel('Crop tools', { exact: true })).toBeVisible()
     await expectContainedInWorkspace(page)
 
@@ -389,8 +390,8 @@ test.describe('Editor — mobile preview layout', () => {
     await expect(cropRegion).toBeVisible()
     await expect(cropRegion).not.toHaveAttribute('aria-modal', 'true')
     await expect(page.getByRole('dialog', { name: /Crop/ })).toHaveCount(0)
-    await expect(modes).toBeVisible()
-    await expect(modes.getByRole('button', { name: /^crop$/i })).toHaveAttribute('aria-current', 'page')
+    await expect(modes).toBeHidden()
+    await expect(page.getByLabel('Current edit', { exact: true })).toHaveText('Crop')
     await expectContainedInWorkspace(page)
 
     await page.getByRole('button', { name: 'Cancel', exact: true }).click()
