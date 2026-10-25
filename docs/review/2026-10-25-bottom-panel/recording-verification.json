@@ -1,0 +1,36 @@
+{
+  "passed": true,
+  "sourceCommit": "58db71659202b73f77ec3af7fd89ba892636696f",
+  "viewport": {
+    "width": 393,
+    "height": 852
+  },
+  "browser": "151.0.7922.173",
+  "mobileEmulation": true,
+  "errors": [],
+  "checks": [
+    {
+      "action": "Cancel restores exact pre-draft pixels",
+      "passed": true
+    },
+    {
+      "action": "Apply commits the shared recipe/manual draft",
+      "passed": true
+    },
+    {
+      "action": "Crop Cancel restores committed color and composition",
+      "passed": true
+    },
+    {
+      "action": "Export processed image (Ctrl+S)",
+      "output": "PhotoChrome-panel-edited.jpg",
+      "passed": true
+    },
+    {
+      "action": "Export all photos",
+      "output": "PhotoChrome-panel-series.zip",
+      "passed": true
+    }
+  ],
+  "duration": 49.474
+}

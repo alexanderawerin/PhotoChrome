@@ -1,0 +1,94 @@
+
+[WebServer] (node:88220) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 78 tests using 2 workers
+
+
+(node:88241) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:88240) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:8:5 › photo Escape cancels a failed preview and restores focus at 393px
+[2/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:8:5 › photo Escape cancels a pending preview and restores focus at 393px
+[3/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:53:7 › photo Advanced at 393px › Recipes and Manual preview one draft and Apply commits both together
+[4/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:87:7 › photo Advanced at 393px › Cancel and Escape restore pixels and focus without applying a recipe
+[5/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:105:7 › photo Advanced at 393px › choosing another draft recipe clears manual overrides and reselecting the base film clears the applied recipe
+[6/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:53:7 › video Advanced at 393px › Recipes and Manual preview one draft and Apply commits both together
+[7/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:87:7 › video Advanced at 393px › Cancel and Escape restore pixels and focus without applying a recipe
+[8/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:105:7 › video Advanced at 393px › choosing another draft recipe clears manual overrides and reselecting the base film clears the applied recipe
+[9/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:127:3 › photo recipe order survives draft Cancel without favorite controls at 393px
+[10/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:146:3 › Base film reselection and film changes preserve approved photo geometry at 393px
+[11/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:8:5 › photo Escape cancels a pending preview and restores focus at 1600px
+[12/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:8:5 › photo Escape cancels a failed preview and restores focus at 1600px
+[13/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:53:7 › photo Advanced at 1600px › Recipes and Manual preview one draft and Apply commits both together
+[14/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:87:7 › photo Advanced at 1600px › Cancel and Escape restore pixels and focus without applying a recipe
+[15/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:105:7 › photo Advanced at 1600px › choosing another draft recipe clears manual overrides and reselecting the base film clears the applied recipe
+[16/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:53:7 › video Advanced at 1600px › Recipes and Manual preview one draft and Apply commits both together
+[17/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:87:7 › video Advanced at 1600px › Cancel and Escape restore pixels and focus without applying a recipe
+[18/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:105:7 › video Advanced at 1600px › choosing another draft recipe clears manual overrides and reselecting the base film clears the applied recipe
+[19/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:127:3 › photo recipe order survives draft Cancel without favorite controls at 1600px
+[20/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:146:3 › Base film reselection and film changes preserve approved photo geometry at 1600px
+[21/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:167:1 › changing photos discards an unfinished draft and preserves each applied profile
+[22/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:189:3 › photo canceling the draft before changing the main film clears recipe and manual overrides
+[23/78] [mobile-chrome] › e2e/advanced-sessions.spec.ts:189:3 › video canceling the draft before changing the main film clears recipe and manual overrides
+[24/78] [mobile-chrome] › e2e/editor-bottom-panel.spec.ts:8:5 › explicit draft actions remain reachable at 320px with 0px safe area
+[25/78] [mobile-chrome] › e2e/editor-bottom-panel.spec.ts:8:5 › explicit draft actions remain reachable at 320px with 34px safe area
+[26/78] [mobile-chrome] › e2e/editor-bottom-panel.spec.ts:8:5 › explicit draft actions remain reachable at 393px with 0px safe area
+[27/78] [mobile-chrome] › e2e/editor-bottom-panel.spec.ts:8:5 › explicit draft actions remain reachable at 393px with 34px safe area
+[28/78] [mobile-chrome] › e2e/editor-completion.spec.ts:159:3 › Editor — Export completion › single export shows only the current photo and its downloaded pixels
+[29/78] [mobile-chrome] › e2e/editor-completion.spec.ts:187:3 › Editor — Export completion › batch completion includes only successful archive entries and accurate error counts
+[30/78] [mobile-chrome] › e2e/editor-completion.spec.ts:226:3 › Editor — Export completion › zero-success batch reports failure without a download or success completion
+[31/78] [mobile-chrome] › e2e/editor-completion.spec.ts:243:3 › Editor — Export completion › traps focus, blocks editor shortcuts, and restores export focus on Escape
+[32/78] [mobile-chrome] › e2e/editor-completion.spec.ts:291:3 › Editor — Export completion › preserves editing on Back to editor and returns to the demo on New edit
+[33/78] [mobile-chrome] › e2e/editor-completion.spec.ts:338:5 › Editor — mobile completion at 320px › keeps actions touch-sized, traps focus, and has no detected WCAG A/AA violations
+[34/78] [mobile-chrome] › e2e/editor-completion.spec.ts:338:5 › Editor — mobile completion at 393px › keeps actions touch-sized, traps focus, and has no detected WCAG A/AA violations
+[35/78] [mobile-chrome] › e2e/editor-mobile-crop.spec.ts:92:3 › Editor — mobile Crop session › moves completion actions into the Crop dock and exposes a non-modal region
+[36/78] [mobile-chrome] › e2e/editor-mobile-crop.spec.ts:115:3 › Editor — mobile Crop session › dismisses and selects crop ratios with the keyboard while preserving focus
+[37/78] [mobile-chrome] › e2e/editor-mobile-crop.spec.ts:149:3 › Editor — mobile Crop session › shows the fine angle only while the angle control is held and keeps sliders touch-sized
+[38/78] [mobile-chrome] › e2e/editor-mobile-crop.spec.ts:160:3 › Editor — mobile Crop session › reverts a canceled crop draft and persists a completed one
+[39/78] [mobile-chrome] › e2e/editor-mobile-crop.spec.ts:201:3 › Editor — mobile Crop session › cancels an unfinished crop explicitly before returning to mode navigation
+[40/78] [mobile-chrome] › e2e/editor-mobile-crop.spec.ts:223:3 › Editor — mobile Crop session › keeps C restricted during an Advanced draft and restores color after Cancel then Crop
+[41/78] [mobile-chrome] › e2e/editor-mobile-crop.spec.ts:249:3 › Editor — mobile Crop session › does not expose Crop when C is pressed in the playable demo
+[42/78] [mobile-chrome] › e2e/editor-mobile-header.spec.ts:13:3 › Editor — mobile header › keeps a compact filename header, bottom modes, and appends through Add
+[43/78] [mobile-chrome] › e2e/editor-mobile-header.spec.ts:26:3 › Editor — mobile header › opens unread updates first, then remembers them and opens Quick Guide
+[44/78] [mobile-chrome] › e2e/editor-mobile-header.spec.ts:36:3 › Editor — mobile header › resolves an Advanced draft explicitly before choosing another mode
+[45/78] [mobile-chrome] › e2e/editor-mobile-header.spec.ts:60:3 › Editor — mobile header › opens a reversible Crop session with all ratios, angle, zoom, rotate, and flip
+[46/78] [mobile-chrome] › e2e/editor-mobile-layout.spec.ts:200:3 › Editor — mobile preview layout › contains the demo preview while preserving demo restrictions
+[47/78] [mobile-chrome] › e2e/editor-mobile-layout.spec.ts:213:5 › Editor — mobile preview layout › keeps test-image.jpg contained in Films and while Advanced is open
+[48/78] [mobile-chrome] › e2e/editor-mobile-layout.spec.ts:213:5 › Editor — mobile preview layout › keeps test-image-2.jpg contained in Films and while Advanced is open
+[49/78] [mobile-chrome] › e2e/editor-mobile-layout.spec.ts:232:3 › Editor — mobile preview layout › Manual exposes the label and value during keyboard and pointer slider changes
+[50/78] [mobile-chrome] › e2e/editor-mobile-layout.spec.ts:267:7 › Editor — mobile preview layout › compact mobile chrome at 320px › keeps touch targets, rows, and text within the viewport
+[51/78] [mobile-chrome] › e2e/editor-mobile-layout.spec.ts:309:7 › Editor — mobile preview layout › compact mobile chrome at 320px › keeps Advanced tabs and Manual controls keyboard reachable and touch-sized
+[52/78] [mobile-chrome] › e2e/editor-mobile-layout.spec.ts:267:7 › Editor — mobile preview layout › compact mobile chrome at 393px › keeps touch targets, rows, and text within the viewport
+[53/78] [mobile-chrome] › e2e/editor-mobile-layout.spec.ts:309:7 › Editor — mobile preview layout › compact mobile chrome at 393px › keeps Advanced tabs and Manual controls keyboard reachable and touch-sized
+[54/78] [mobile-chrome] › e2e/editor-mobile-layout.spec.ts:339:3 › Editor — mobile preview layout › restores canceled Manual settings and keeps applied settings after reopening
+[55/78] [mobile-chrome] › e2e/editor-mobile-layout.spec.ts:361:3 › Editor — mobile preview layout › resizing across mobile widths preserves the selected film and geometry
+[56/78] [mobile-chrome] › e2e/editor-mobile-layout.spec.ts:376:3 › Editor — mobile preview layout › opens a contained non-modal portrait Crop session in one click
+[57/78] [mobile-chrome] › e2e/editor-mobile-presets.spec.ts:32:3 › Editor — mobile films › offers Original and exactly ten films with touch-sized main choices
+[58/78] [mobile-chrome] › e2e/editor-mobile-presets.spec.ts:45:3 › Editor — mobile films › selecting a film scrolls it into view and has one active color
+[59/78] [mobile-chrome] › e2e/editor-mobile-presets.spec.ts:53:3 › Editor — mobile films › native film-row scrolling preserves the applied choice
+[60/78] [mobile-chrome] › e2e/editor-mobile-presets.spec.ts:61:3 › Editor — mobile films › keeps film-row scroll position and selected film after Help rerenders
+[61/78] [mobile-chrome] › e2e/editor-mobile-presets.spec.ts:72:3 › Editor — mobile films › touch-sized recipe selection stays a draft and Cancel restores the applied film
+[62/78] [mobile-chrome] › e2e/editor-mobile-presets.spec.ts:91:3 › Editor — mobile films › the three-photo demo applies base films and preserves action restrictions
+[63/78] [mobile-chrome] › e2e/editor-mobile-presets.spec.ts:106:3 › Editor — mobile films › keyboard selects films and Original without recipe browsing
+[64/78] [mobile-chrome] › e2e/editor-mobile-presets.spec.ts:116:3 › Editor — mobile films › reduced motion retains keyboard selection and reachable row ends
+[65/78] [mobile-chrome] › e2e/editor-mobile-presets.spec.ts:124:3 › Editor — mobile films › video uses the same eleven neutral color choices
+[66/78] [mobile-chrome] › e2e/landing.spec.ts:5:3 › Playable demo › recovers from a failed initial demo request
+[67/78] [mobile-chrome] › e2e/landing.spec.ts:17:3 › Playable demo › shows real demo photos, base films, compare surface, and a persistent upload CTA
+[68/78] [mobile-chrome] › e2e/landing.spec.ts:25:3 › Playable demo › uploads a single image and transitions to editor
+[69/78] [mobile-chrome] › e2e/landing.spec.ts:33:3 › Playable demo › keeps the current editor visible and previews the selected photo while decoding
+[70/78] [mobile-chrome] › e2e/landing.spec.ts:75:3 › Playable demo › retries a failed image load with the originally selected photo
+[71/78] [mobile-chrome] › e2e/landing.spec.ts:106:3 › Playable demo › retries a failed video load as video and exposes video recovery input
+[72/78] [mobile-chrome] › e2e/landing.spec.ts:140:3 › Playable demo › uploads multiple images and exposes batch actions without a filename strip
+[73/78] [mobile-chrome] › e2e/mobile-collection.spec.ts:6:3 › on-demand collection preserves independent edits at 320px
+[74/78] [mobile-chrome] › e2e/mobile-collection.spec.ts:6:3 › on-demand collection preserves independent edits at 393px
+[75/78] [mobile-chrome] › e2e/mobile-collection.spec.ts:6:3 › on-demand collection preserves independent edits at 1440px
+[76/78] [mobile-chrome] › e2e/mobile-collection.spec.ts:25:1 › demo collection switches photos and retains demo restrictions
+[77/78] [mobile-chrome] › e2e/mobile-collection.spec.ts:35:1 › canceling import retains edits and rejects late decoder completion
+[78/78] [mobile-chrome] › e2e/mobile-collection.spec.ts:61:1 › focused manual tool and draft survive desktop/mobile resize, then Cancel discards all changes
+  5 skipped
+  73 passed (1.7m)

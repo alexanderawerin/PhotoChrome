@@ -1,0 +1,152 @@
+[
+  {
+    "name": "film",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Multimedia/film-film_roll-movie-movies-cinema-strip-reel-animation-r-s.svg",
+    "sha256": "c84738aac3060f5409401f44d04e8f1e906f234c14ca3e035b50b14e2b007fb9",
+    "matches_official_svg": true
+  },
+  {
+    "name": "sliders",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Interface/sliders-slider-adjustments-button_group-content_preferences-preferences-r-s.svg",
+    "sha256": "24fbf643d8187df2d122bb514737e8aa2452f002b4cbc1eb0fba37a7f4832e16",
+    "matches_official_svg": true
+  },
+  {
+    "name": "crop_tool",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Interface/crop_tool-crop-frame-resize-r-s.svg",
+    "sha256": "a7f199b7768e3e5a4ef08a88e838b0f963b82ab182e141a38d80e212e7347c37",
+    "matches_official_svg": true
+  },
+  {
+    "name": "cross",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Interface/cross-close-cross_mark-multiply-remove-wrong-no-dismiss-r-s.svg",
+    "sha256": "e9f27ecddbf9f6a5dab3e1cb960053d284ba058eb69902f5cbac9556d8ae6383",
+    "matches_official_svg": true
+  },
+  {
+    "name": "more",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Interface/more-others-other-additional-extra-options-ellipsis-overflow-r-s.svg",
+    "sha256": "c71b64c187362e777e1aa575cd33bfe658ab4920ddc98f3fabc5c1fbc95c1354",
+    "matches_official_svg": true
+  },
+  {
+    "name": "download",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Arrows/download-get_app-bottom-get-fetch-bar-r-s.svg",
+    "sha256": "bea9f32d2a1ba06bb42749d46cd7885d8f4975a6a8ed9ccf34d2ddeb62f396d1",
+    "matches_official_svg": true
+  },
+  {
+    "name": "publish",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Arrows/publish-upload-top-jump-bar-r-s.svg",
+    "sha256": "e197a3aaafca5ed584c57882d64b274790057026bc79a203741106a611096f8c",
+    "matches_official_svg": true
+  },
+  {
+    "name": "copy",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Interface/copy-duplicate-clone-replicate-paste-ctrl-r-s.svg",
+    "sha256": "12827fc134493afcb08aad56be381b2eb1880c4cdc2e688e7ef535f169b3d61c",
+    "matches_official_svg": true
+  },
+  {
+    "name": "plus",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Interface/plus-add-create-increase-new_thread-new_post-r-s.svg",
+    "sha256": "3b341739afdb19086139262176c8b2e2f41194d2ff4b42991def0f1b15b3223b",
+    "matches_official_svg": true
+  },
+  {
+    "name": "rotate_cw",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Arrows/rotate_cw-clockwise-cw-rotate-turn-circular-r-s.svg",
+    "sha256": "dfa818b45148bb1e7e9d092ee183e0cd66f083034bd03a1f7eb7402b041456b8",
+    "matches_official_svg": true
+  },
+  {
+    "name": "flip_horizontal",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Interface/flip_horizontal-flip_horizontally-flip_h-reverse_horizontal-turn_over_horizontal-flip_left_right-mirror_image_horizontal-r-s.svg",
+    "sha256": "30c389efb360f39a28f2c227815a3f1fd79e20ce0cd1c79638abbb84b2b1d5fa",
+    "matches_official_svg": true
+  },
+  {
+    "name": "rotate_ccw",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Arrows/rotate_ccw-anticlockwise-rotate_anti_clockwise-counterclockwise-counter_clockwise-ccw-rotate-turn-circular-r-s.svg",
+    "sha256": "3908a9a7f8ea56a0d35d9d5f62466f6760f06467243b08fc62d7fe437ba636ca",
+    "matches_official_svg": true
+  },
+  {
+    "name": "sun",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Weather/sun-brightness-brightness_high-sunny-bright-warmth-day-solar-r-s.svg",
+    "sha256": "d485e9fa0fe1314f666c965406538ef1702ef1ef5d04f182bb328cace8172348",
+    "matches_official_svg": true
+  },
+  {
+    "name": "crescent",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Weather/crescent-sleep-moon-night-dark-lunar-nighttime-bedtime-r-s.svg",
+    "sha256": "0cdc3e93af04fbaf91157caa97b9d9734168b75a4ac673248eaf2ed3818e36fc",
+    "matches_official_svg": true
+  },
+  {
+    "name": "palette",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Objects/palette-artist_palette-color-colour-colors-colours-design-art-paint-creative-theme-gradient-r-s.svg",
+    "sha256": "881d0eb1efa37b41a3b2f966bb7c48527b4ecdad4c104d9e39f17ce8c25e7d2d",
+    "matches_official_svg": true
+  },
+  {
+    "name": "target",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Interface/target-bullseye-aim-goal-objective-focus-r-s.svg",
+    "sha256": "96bad49db94a3640ff1081979473b555344b3cb63d540c640ff9d77be603653e",
+    "matches_official_svg": true
+  },
+  {
+    "name": "sparkles",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Interface/sparkles-sparkle-ai_sparkles-magic-shine-glitter-enhance-auto_awesome-r-s.svg",
+    "sha256": "a2c732b5564dd575005c9d7c23020d74c5c362daaa773d84f346ff91e7fce4fb",
+    "matches_official_svg": true
+  },
+  {
+    "name": "temperature",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Weather/temperature-degree-unit-symbol-angular-measurement-rotate-r-s.svg",
+    "sha256": "cf28db4dfde4f80fdb5f6f943598bfcbb0dcf1574080b5adf1199c144afab069",
+    "matches_official_svg": true
+  },
+  {
+    "name": "grid_3x3",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Interface/grid_3x3-grid_3-table_grid-grid_view-cells-matrix-tiles-r-s.svg",
+    "sha256": "a8825d70850dd8881ddd1dd690676b08564598365d2b9ce8fafff7fd848652df",
+    "matches_official_svg": true
+  },
+  {
+    "name": "circle_half_left",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Interface/circle_half_left-left_half_black_circle-contrast-dark_mode-light_mode-theme-r-s.svg",
+    "sha256": "ea28231d2249f4948b1e7317e0d9114b12c52cc53e32cce1475f43fa7fd7c681",
+    "matches_official_svg": true
+  },
+  {
+    "name": "droplet",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Weather/droplet-drop-liquid-chemistry-ink-blood-drip-r-s.svg",
+    "sha256": "8d62972e378febd94382b59f7f974f99dee9c10282f6aefeaf5faa3bab0371b6",
+    "matches_official_svg": true
+  },
+  {
+    "name": "columns",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Interface/columns-view_columns-side-parallel-multi-column-layout-kanban-board-r-s.svg",
+    "sha256": "4b1b626b5406344ea234081a3421b9345a45944a3ec0911abc2f143f3790771c",
+    "matches_official_svg": true
+  },
+  {
+    "name": "chevron_left",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Arrows/chevron_left-back-previous-return-r-s.svg",
+    "sha256": "b3b2649a389c2b14097bcfd0d33b9dc18ba3b0f5601e47b70b6071073958dd01",
+    "matches_official_svg": true
+  },
+  {
+    "name": "chevron_right",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Arrows/chevron_right-next-forward-submenu-disclosure-chevron-r-s.svg",
+    "sha256": "57ac7d6401ce437eedddbc612e6b30068b154a22bc327f737b94379c0307dd06",
+    "matches_official_svg": true
+  },
+  {
+    "name": "checkmark",
+    "source": "https://raw.githubusercontent.com/iconoteka/iconoteka/02.01.00/Icons/Interface/checkmark-checked-check-done-complete-tick-yes-success-correct-ok-accept-r-s.svg",
+    "sha256": "1ccfa3be0fc5b01747482dcce305f715b39bb10490a7a5114cad24485e7df038",
+    "matches_official_svg": true
+  }
+]

@@ -1,0 +1,48 @@
+{
+  "jpeg": {
+    "format": "JPEG",
+    "size": [
+      1200,
+      1600
+    ]
+  },
+  "zip": [
+    {
+      "name": "photochrome_provia-portrait_Old-town.jpg",
+      "size": [
+        1200,
+        1600
+      ],
+      "format": "JPEG"
+    },
+    {
+      "name": "photochrome_original_Evening-tide.jpg",
+      "size": [
+        1600,
+        1066
+      ],
+      "format": "JPEG"
+    }
+  ],
+  "video": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "width": 786,
+        "height": 1784,
+        "pix_fmt": "yuv420p"
+      }
+    ],
+    "format": {
+      "duration": "48.120000",
+      "size": "9942808"
+    }
+  },
+  "build": {
+    "assets/index-Bg7m3jzO.js": "9370f4b712f4f83beb95e6fe06371604556c04a60bf93f9428e23b376eb11f2e",
+    "assets/index-D18sFcVE.js": "43979e1f4df25316c57e630329bbcb43271bac301e111f354a357de7ed5b5518",
+    "assets/index-O5wtUJgV.css": "2c72a4fae2a18f9f2ab7688acd55df6fd812b6bd970bf74ba2e106158a8068cf"
+  }
+}

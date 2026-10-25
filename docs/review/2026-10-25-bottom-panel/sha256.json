@@ -1,0 +1,38 @@
+{
+  "PhotoChrome-bottom-panel-walkthrough.mp4": {
+    "bytes": 9942808,
+    "sha256": "014dbfcaf091ce0f4e9e00565cf15eaa2e863f2c09710470f2e8dc9a1c7b5e7e"
+  },
+  "PhotoChrome-panel-adjustment.png": {
+    "bytes": 283607,
+    "sha256": "23ebc6e2e49b19b28616083211d08c2b42a2c62c0748855c5ec7cc5da6b99474"
+  },
+  "PhotoChrome-panel-crop.png": {
+    "bytes": 325921,
+    "sha256": "78c52cb7d81d485b7979b8574e832e2faaedfce3594cd1b6e8a2c09e7f2c95a8"
+  },
+  "PhotoChrome-panel-films.png": {
+    "bytes": 419094,
+    "sha256": "6dd487d081766d218e0c955d87987e62f45a68e17c2bced0fe3fde24d2485242"
+  },
+  "PhotoChrome-panel-recipes.png": {
+    "bytes": 412040,
+    "sha256": "b884b05cf22904ac387bcf8fac9094d5035ac8edad1a4cf9de9a862d282a0504"
+  },
+  "PhotoChrome-panel-safe-area.png": {
+    "bytes": 157840,
+    "sha256": "225b4da185186df15484d030174f941da039f37ec13101f64f3fced2449e23b1"
+  },
+  "before-crop.png": {
+    "bytes": 322729,
+    "sha256": "c84e6e5172c09d9ccd503171ac82f495e3df7431ab3bb996ac70ee4ee4e63085"
+  },
+  "before-films.png": {
+    "bytes": 422942,
+    "sha256": "5d5b81c6d2d9c44b175ac3a7b92e89534c63184c600ba11e6643c14b3f4d93ab"
+  },
+  "before-manual.png": {
+    "bytes": 261257,
+    "sha256": "3cc0b5261634e624dca25ef9194c9691dc87c2b17569e147a2c9c31bd4ce6a9e"
+  }
+}
