@@ -75,6 +75,12 @@ export function Editor({
   const [previewRetry, setPreviewRetry] = useState(0)
   const [isExporting, setIsExporting] = useState(false)
   const [isApplyingToAll, setIsApplyingToAll] = useState(false)
+  const [batchFeedback, setBatchFeedback] = useState<{ message: string } | null>(null)
+  useEffect(() => {
+    if (!batchFeedback) return
+    const timeout = window.setTimeout(() => setBatchFeedback(null), 5000)
+    return () => window.clearTimeout(timeout)
+  }, [batchFeedback])
   const [showOriginal, setShowOriginal] = useState(false)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [isCollectionOpen, setIsCollectionOpen] = useState(false)
@@ -187,7 +193,7 @@ export function Editor({
           onImageUpdate(img.id, { recipe, customSettings: structuredClone(customSettings) })
         }
       })
-
+      setBatchFeedback({ message: `Color applied to ${images.length} photos` })
     } finally {
       setIsApplyingToAll(false)
     }
@@ -468,7 +474,7 @@ export function Editor({
     id: 'apply-crop', label: 'Done', onClick: () => closeCrop(true), disabled: !commands.editDraft,
   }] : [
     ...(totalImages > 1 ? [{
-      id: 'apply-all', label: 'Apply to all', ariaLabel: `Apply current color to all ${totalImages} images`,
+      id: 'apply-all', label: 'Apply color to all', ariaLabel: `Apply current color to all ${totalImages} images`,
       variant: 'outline' as const,
       onClick: handleApplyToAll, disabled: !commands.applyToAll,
     }, {
@@ -489,6 +495,7 @@ export function Editor({
     >
       {/* Главный блок: фото + toolbar */}
       <div className="editor-stage mobile-editor-stage relative isolate flex-1 min-w-0 min-h-0 overflow-hidden">
+        <div role="status" aria-live="polite" aria-atomic="true" className={batchFeedback ? 'editor-feedback' : 'sr-only'}>{batchFeedback?.message}</div>
         <div className="mobile-editor-header mobile-editor-surface relative z-20 flex-shrink-0">
         <input
           ref={demoUploadRef}

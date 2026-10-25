@@ -3,9 +3,9 @@ import { uploadImage, uploadVideo, waitForEditor } from './upload'
 
 export type AdvancedMedia = 'photo' | 'video'
 
-export const advancedPanel = (page: Page) => page.getByRole('region', { name: 'Advanced settings', exact: true })
+export const advancedPanel = (page: Page) => page.getByRole('region', { name: 'Adjust settings', exact: true })
 export const appliedColor = (page: Page) => page.getByLabel('Applied color', { exact: true })
-export const advancedTrigger = (page: Page) => page.getByRole('navigation', { name: 'Editor modes', exact: true }).getByRole('button', { name: 'Open Advanced settings', exact: true })
+export const advancedTrigger = (page: Page) => page.getByRole('group', { name: 'Editor tools', exact: true }).getByRole('button', { name: 'Open Adjust settings', exact: true })
 export const editorCanvas = (page: Page, media: AdvancedMedia) => page.getByLabel(media === 'photo' ? 'Preview' : 'Video preview', { exact: true })
 
 export async function startAdvancedMedia(page: Page, media: AdvancedMedia, width: number) {
@@ -38,7 +38,7 @@ export async function selectPortraitDraft(page: Page) {
   const panel = advancedPanel(page)
   await panel.getByRole('tab', { name: 'Recipes', exact: true }).click()
   await panel.getByRole('button', { name: /^Apply preset Provia Portrait(?:, selected)?$/ }).click()
-  await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true })).toBeEnabled()
+  await expect(page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true })).toBeEnabled()
 }
 
 export async function changeHighlight(page: Page) {
@@ -49,7 +49,7 @@ export async function changeHighlight(page: Page) {
   await slider.focus()
   await page.keyboard.press(before === '4' ? 'ArrowLeft' : 'ArrowRight')
   await expect(slider).not.toHaveAttribute('aria-valuenow', before!)
-  await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true })).toBeEnabled()
+  await expect(page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true })).toBeEnabled()
   return slider.getAttribute('aria-valuenow')
 }
 

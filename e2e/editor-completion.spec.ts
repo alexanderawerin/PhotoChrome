@@ -140,7 +140,6 @@ async function uploadNamedBatch(page: Page): Promise<void> {
 }
 
 async function selectMobileFilm(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Films', exact: true }).click()
   await page.getByRole('button', { name: 'Select film Provia', exact: true }).click()
   await expect(currentExportButton(page)).toBeEnabled()
 }

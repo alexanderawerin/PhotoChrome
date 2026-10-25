@@ -26,7 +26,7 @@ const WHATS_NEW = [
     version: 'Current',
     items: [
       'Start with Original or choose one of ten base films for photos and video',
-      'Explore all 100 recipes and Manual controls in film-scoped Advanced settings',
+      'Explore all 100 recipes and Manual controls in film-scoped Adjust settings',
       'Apply or Cancel color and crop drafts; geometry survives film changes',
       'Export every loaded photo, including Original; video sound fallback requires consent',
     ],
@@ -93,11 +93,11 @@ const BASE_KEYBOARD_SHORTCUTS = [
   { keys: ['Shift', 'R'], description: 'Rotate counter-clockwise' },
   { keys: ['C'], description: 'Open crop mode' },
   { keys: ['F'], description: 'Flip horizontally' },
-  { keys: ['T'], description: 'Open Advanced settings' },
+  { keys: ['T'], description: 'Open Adjust settings' },
   { keys: ['P'], description: 'Toggle film panel' },
   { keys: ['Space'], description: 'Compare before/after (hold)' },
-  { keys: ['Esc'], description: 'Cancel crop or Advanced draft' },
-  { keys: ['Enter'], description: 'Apply crop or Advanced draft' },
+  { keys: ['Esc'], description: 'Cancel crop or Adjust draft' },
+  { keys: ['Enter'], description: 'Apply crop or Adjust draft' },
   { keys: ['⌘/Ctrl', 'S'], description: 'Export applied photo or video' },
 ]
 
@@ -230,10 +230,10 @@ function QuickGuideContent() {
     ['Try the demo', 'Switch between three photos, choose a film and hold the preview to compare. Add your own media to unlock editing and export.'],
     ['Add photos or video', 'New media starts as Original. Add a photo batch or one video up to 30 seconds. Tap the filename and count to open your photo collection.'],
     ['Choose a film', 'Select Original or one of ten base films. Changing film resets color settings and keeps your composition.'],
-    ['Advanced settings', 'For a selected film, Recipes and Manual share one temporary preview. Apply saves both; Cancel or Escape restores the applied result. Finish the draft before choosing another mode. On phones, choose a Manual tool to focus its controls.'],
+    ['Adjust settings', 'For a selected film, Recipes and Manual share one temporary preview. Apply saves both; Cancel or Escape restores the applied result. Finish the draft before choosing another mode. On phones, choose a Manual tool to focus its controls.'],
     ['Compose', 'Crop, position, zoom, rotate, fine-tune the angle or reflect photos and video. Apply or Cancel the crop draft; comparison keeps the same geometry.'],
-    ['Apply color to all', 'Copy the applied color to every photo, including Original. Each photo keeps its own crop, rotation and reflection.'],
-    ['Export', 'Save the applied photo as JPEG, every loaded photo as a ZIP, or the composed video as MP4. Original and geometry-only edits are exportable. Apply or Cancel a draft first.'],
+    ['Apply color to all', 'Open More to copy the applied color to every photo, including Original. Each photo keeps its own crop, rotation and reflection.'],
+    ['Export', 'Save the applied photo as JPEG, use More → Export all for a ZIP, or the composed video as MP4. Original and geometry-only edits are exportable. Apply or Cancel a draft first.'],
     ['Video sound', 'If this browser cannot preserve source sound, choose Export without sound explicitly or Cancel. An already silent clip needs no consent.'],
   ]
   return (

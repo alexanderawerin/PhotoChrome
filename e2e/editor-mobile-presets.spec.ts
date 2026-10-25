@@ -71,7 +71,7 @@ test.describe('Editor — mobile films', () => {
 
   test('touch-sized recipe selection stays a draft and Cancel restores the applied film', async ({ page, editorPage }) => {
     await film(page, 'Provia').click()
-    await expect(page.getByRole('button', { name: 'Open Advanced settings', exact: true })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Open Adjust settings', exact: true })).toBeEnabled()
     const appliedPixels = await previewPixels(page, 'photo')
     await openAdvanced(page)
     const panel = advancedPanel(page)
@@ -81,7 +81,7 @@ test.describe('Editor — mobile films', () => {
     await recipe.click()
     await expect(recipe).toHaveAttribute('aria-pressed', 'true')
     await expect.poll(() => previewPixels(page, 'photo')).not.toBe(appliedPixels)
-    await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
+    await page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
     await expect.poll(() => previewPixels(page, 'photo')).toBe(appliedPixels)
     await openAdvanced(page)
     await expect(recipe).toHaveAttribute('aria-pressed', 'false')
@@ -90,9 +90,9 @@ test.describe('Editor — mobile films', () => {
 
   test('the three-photo demo applies base films and preserves action restrictions', async ({ page, landingPage }) => {
     await expect(page.getByRole('button', { name: 'Upload photos', exact: true })).toBeVisible({ timeout: 15000 })
-    const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
-    await expect(modes.getByRole('button', { name: 'Films', exact: true })).toHaveAttribute('aria-current', 'page')
-    await expect(modes.getByRole('button', { name: 'Open Advanced settings', exact: true })).toHaveCount(0)
+    const modes = page.getByRole('group', { name: 'Editor tools', exact: true })
+    await expect(modes).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Open Adjust settings', exact: true })).toHaveCount(0)
     await expect(modes.getByRole('button', { name: 'Crop', exact: true })).toHaveCount(0)
     await expect(page.getByRole('button', { name: /Export/ })).toHaveCount(0)
     await film(page, 'Provia').click()

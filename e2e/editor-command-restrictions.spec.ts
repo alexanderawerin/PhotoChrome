@@ -38,8 +38,8 @@ test('Help blocks rotate/export and shortcuts resume after dismissal', async ({ 
 
 test('unfinished tuning cannot be exported through buttons or shortcuts', async ({ page, editorPage }) => {
   await selectBaseFilm(page)
-  await page.getByRole('button', { name: 'Open Advanced settings' }).click()
-  const panel = page.getByRole('region', { name: 'Advanced settings' })
+  await page.getByRole('button', { name: 'Open Adjust settings' }).click()
+  const panel = page.getByRole('region', { name: 'Adjust settings' })
   await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
   const highlight = panel.getByRole('slider', { name: 'Highlight', exact: true })
   await highlight.focus()

@@ -22,8 +22,8 @@ test('every retained recipe is available only inside its film Advanced catalog',
   const seen = new Set<string>()
   for (const [id, name] of films) {
     await selectBaseFilm(page, name)
-    await page.getByRole('button', { name: 'Open Advanced settings', exact: true }).click()
-    const panel = page.getByRole('region', { name: 'Advanced settings', exact: true })
+    await page.getByRole('button', { name: 'Open Adjust settings', exact: true }).click()
+    const panel = page.getByRole('region', { name: 'Adjust settings', exact: true })
     const expected = records.filter(recipe => recipe.filmSimulation === id)
     const choices = panel.getByRole('button', { name: /^Apply preset / })
     await expect(choices).toHaveCount(expected.length)
@@ -31,7 +31,7 @@ test('every retained recipe is available only inside its film Advanced catalog',
     expect(labels.sort()).toEqual(expected.map(recipe => `Apply preset ${recipe.name}`).sort())
     for (const recipe of expected) seen.add(recipe.id)
     await expect(panel.getByRole('button', { name: /Random|Randomize|Smart Picks|Editor's Choice/i })).toHaveCount(0)
-    await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
+    await page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
   }
   expect(seen.size).toBe(100)
 })
@@ -43,14 +43,14 @@ for (const media of ['photo', 'video'] as const) {
     if (media === 'photo') { await uploadImage(page); await waitForEditor(page) }
     else await uploadVideo(page, 'test-video-silent.mp4')
     await selectBaseFilm(page)
-    await page.getByRole('button', { name: /^(Open Advanced settings|Advanced settings)$/ }).click()
-    const panel = page.getByRole('region', { name: 'Advanced settings', exact: true })
+    await page.getByRole('button', { name: /^(Open Adjust settings|Adjust settings)$/ }).click()
+    const panel = page.getByRole('region', { name: 'Adjust settings', exact: true })
     await expect(panel.getByRole('button', { name: /favorites/i })).toHaveCount(0)
     const labels = await panel.getByRole('button', { name: /^Apply preset / }).evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))
     expect(labels[0]).toBe('Apply preset Provia Portrait')
     expect(new Set(labels).size).toBe(8)
     await expect(panel.getByRole('button', { name: /^Apply preset Classic Color/ })).toHaveCount(0)
-    await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
+    await page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('photochrome_favorites') || '[]'))).toEqual(['provia-daylight', 'classic-color'])
   })
 }

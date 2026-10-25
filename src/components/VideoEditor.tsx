@@ -207,7 +207,7 @@ export function VideoEditor({
     const frame = requestAnimationFrame(() => {
       const trigger = sessionTriggerRef.current
       const target = trigger?.isConnected ? trigger
-        : document.querySelector<HTMLElement>('nav[aria-label="Editor modes"] button[aria-current="page"]')
+        : document.querySelector<HTMLElement>('[role="group"][aria-label="Editor tools"] button')
       if (target && !(target instanceof HTMLButtonElement && target.disabled)) {
         target.focus({ preventScroll: true })
         restoreSessionFocus.current = false

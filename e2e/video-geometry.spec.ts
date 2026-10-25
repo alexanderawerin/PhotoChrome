@@ -76,7 +76,6 @@ test.describe('Video geometry and source timing', () => {
     const pause = playback.getByRole('button', { name: 'Pause', exact: true })
     if (await pause.count()) await pause.click()
     const originalCorners = await canvasCorners(page)
-    await editorModes(page).getByRole('button', { name: 'Films', exact: true }).click()
     await page.getByRole('button', { name: 'Select film Provia', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Export video', exact: true })).toBeEnabled()
     await page.evaluate(() => (document.activeElement as HTMLElement)?.blur())

@@ -109,7 +109,14 @@ export function CropPanel({
               <span aria-hidden="true" className={`absolute transition-opacity duration-150 motion-reduce:transition-none ${isChangingAngle ? 'opacity-100' : 'opacity-0'}`}>{fineAngle.toFixed(1)}°</span>
             </Button>
             {isRatioOpen && createPortal(
-              <div ref={ratioPopupRef} id={ratioListId} style={ratioPosition} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget) && !ratioControlRef.current?.contains(event.relatedTarget)) setIsRatioOpen(false) }} className="fixed z-[250] grid w-44 grid-cols-2 gap-1 overflow-y-auto rounded-xl border border-white/15 bg-zinc-900 p-2 shadow-xl" role="group" aria-label="Crop ratios">
+              <div ref={ratioPopupRef} id={ratioListId} style={ratioPosition} onKeyDown={event => {
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setIsRatioOpen(false)
+                  ratioButtonRef.current?.focus()
+                }
+              }} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget) && !ratioControlRef.current?.contains(event.relatedTarget)) setIsRatioOpen(false) }} className="fixed z-[250] grid w-44 grid-cols-2 gap-1 overflow-y-auto rounded-xl border border-white/15 bg-zinc-900 p-2 shadow-xl" role="group" aria-label="Crop ratios">
                 {MOBILE_CROP_RATIOS.map(ratio => (
                   <Button
                     key={ratio.value}
@@ -120,7 +127,7 @@ export function CropPanel({
                       setIsRatioOpen(false)
                       ratioButtonRef.current?.focus()
                     }}
-                    className="min-h-11 text-xs"
+                    className="min-h-12 text-xs"
                     aria-pressed={cropRatio === ratio.value}
                   >
                     {ratio.label}

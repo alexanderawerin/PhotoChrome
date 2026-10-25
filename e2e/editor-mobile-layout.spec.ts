@@ -87,7 +87,7 @@ async function selectMobileFilm(page: Page): Promise<void> {
   const choice = page.getByRole('group', { name: 'Film selection', exact: true }).getByRole('button', { name: 'Select film Provia', exact: true })
   await choice.click()
   await expect(choice).toHaveAttribute('aria-pressed', 'true')
-  await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true }).getByRole('button', { name: 'Open Advanced settings', exact: true })).toBeEnabled()
+  await expect(page.getByRole('group', { name: 'Editor tools', exact: true }).getByRole('button', { name: 'Open Adjust settings', exact: true })).toBeEnabled()
 }
 
 async function expectTouchTarget(locator: Locator): Promise<void> {
@@ -186,7 +186,7 @@ async function expectVisibleButtonTextFits(buttons: Locator): Promise<void> {
 }
 
 async function stressTextSize(page: Page): Promise<void> {
-  await page.locator('header button, nav[aria-label="Editor modes"] button, .editor-header-actions button, section[aria-label="Advanced settings"] button, section[aria-label="Advanced settings"] label, section[aria-label="Advanced settings"] p, section[aria-label="Advanced settings"] h2').evaluateAll(elements => {
+  await page.locator('header button, [role="group"][aria-label="Editor tools"] button, .editor-header-actions button, section[aria-label="Adjust settings"] button, section[aria-label="Adjust settings"] label, section[aria-label="Adjust settings"] p, section[aria-label="Adjust settings"] h2').evaluateAll(elements => {
     const sizes = elements.map(element => Number.parseFloat(getComputedStyle(element).fontSize))
     for (const [index, element] of elements.entries()) {
       const fontSize = sizes[index]
@@ -202,9 +202,9 @@ test.describe('Editor — mobile preview layout', () => {
     await expect(page.getByRole('button', { name: 'Upload photos', exact: true })).toBeVisible({ timeout: 15_000 })
     await expectContainedInWorkspace(page)
 
-    const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
-    await expect(modes.getByRole('button', { name: /^films$/i })).toHaveAttribute('aria-current', 'page')
-    await expect(modes.getByRole('button', { name: /^(Open|Close) Advanced settings$/ })).toHaveCount(0)
+    const modes = page.getByRole('group', { name: 'Editor tools', exact: true })
+    await expect(modes).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^(Open|Close) Adjust settings$/ })).toHaveCount(0)
     await expect(modes.getByRole('button', { name: /^crop$/i })).toHaveCount(0)
     await expect(page.getByRole('button', { name: /Export/ })).toHaveCount(0)
   })
@@ -218,13 +218,13 @@ test.describe('Editor — mobile preview layout', () => {
       await selectMobileFilm(page)
       await expectContainedInWorkspace(page)
 
-      const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
-      await modes.getByRole('button', { name: /^(Open|Close) Advanced settings$/ }).click()
+      const modes = page.getByRole('group', { name: 'Editor tools', exact: true })
+      await modes.getByRole('button', { name: /^(Open|Close) Adjust settings$/ }).click()
       await expect(modes).toBeHidden()
-      await expect(page.getByLabel('Current edit', { exact: true })).toHaveText('Advanced')
+      await expect(page.getByLabel('Current edit', { exact: true })).toHaveText('Adjust')
       await expect(advancedPanel(page)).toBeVisible()
       await expectContainedInWorkspace(page)
-      await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
+      await page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
       await expectContainedInWorkspace(page)
     })
   }
@@ -266,8 +266,8 @@ test.describe('Editor — mobile preview layout', () => {
 
       test('keeps touch targets, rows, and text within the viewport', async ({ page, editorPage }) => {
         const header = page.locator('header:visible')
-        const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
-        const actions = page.getByRole('toolbar', { name: 'Editor actions', exact: true })
+        const modes = page.getByRole('group', { name: 'Editor tools', exact: true })
+        const actions = page.getByRole('group', { name: 'Editor actions', exact: true })
 
         await expectVisibleTouchTargets(header.locator('button:visible'))
         await expectVisibleTouchTargets(modes.locator('button:visible'))
@@ -294,8 +294,8 @@ test.describe('Editor — mobile preview layout', () => {
         await waitForEditor(page)
         await selectMobileFilm(page)
 
-        const batchActions = page.getByRole('toolbar', { name: 'Editor actions', exact: true })
-        await expect(batchActions.getByRole('button', { name: /Apply current color to all 2 images/ })).toBeVisible()
+        const batchActions = page.getByRole('group', { name: 'Editor actions', exact: true })
+        await expect(batchActions.getByRole('button', { name: /Apply current color to all 2 images/ })).toBeHidden()
         await batchActions.getByRole('button', { name: 'More editor actions', exact: true }).click()
         await expect(batchActions.getByRole('button', { name: /Apply current color to all 2 images/ })).toBeVisible()
         await expect(batchActions.getByRole('button', { name: 'Export all photos', exact: true })).toBeVisible()
@@ -321,17 +321,17 @@ test.describe('Editor — mobile preview layout', () => {
         await expect(slider).not.toHaveAttribute('aria-valuenow', initial!)
         await expectTouchTarget(panel.locator('#slider-highlight'))
         await expectTouchTarget(panel.getByRole('button', { name: 'Reset Highlight to profile', exact: true }))
-        await expectTouchTarget(page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true }))
+        await expectTouchTarget(page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true }))
         await expectNoHorizontalOverflow(page)
         await stressTextSize(page)
         await expectNoHorizontalOverflow(page)
         await expectNonOverlappingVisibleButtons(panel.getByRole('tablist'))
         await expectVisibleButtonTextFits(panel.getByRole('tab'))
-        await expectVisibleButtonTextFits(page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: /^(Apply|Cancel)$/ }))
+        await expectVisibleButtonTextFits(page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name: /^(Apply|Cancel)$/ }))
         await expectContainedInWorkspace(page)
         await page.keyboard.press('Escape')
         await expect(panel).toHaveCount(0)
-        await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true }).getByRole('button', { name: 'Open Advanced settings', exact: true })).toBeFocused()
+        await expect(page.getByRole('group', { name: 'Editor tools', exact: true }).getByRole('button', { name: 'Open Adjust settings', exact: true })).toBeFocused()
       })
     })
   }
@@ -345,14 +345,14 @@ test.describe('Editor — mobile preview layout', () => {
     const baseline = await slider.getAttribute('aria-valuenow')
     await slider.focus()
     await page.keyboard.press('ArrowRight')
-    await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
+    await page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
     await openAdvanced(page)
     await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
     await expect(slider).toHaveAttribute('aria-valuenow', baseline!)
     await slider.focus()
     await page.keyboard.press('ArrowRight')
     const committed = await slider.getAttribute('aria-valuenow')
-    await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true }).click()
+    await page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true }).click()
     await openAdvanced(page)
     await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
     await expect(slider).toHaveAttribute('aria-valuenow', committed!)
@@ -379,7 +379,7 @@ test.describe('Editor — mobile preview layout', () => {
     await waitForEditor(page)
     await waitForPreview(page)
 
-    const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
+    const modes = page.getByRole('group', { name: 'Editor tools', exact: true })
     await modes.getByRole('button', { name: /^crop$/i }).click()
     await expect(page.getByLabel('Current edit', { exact: true })).toHaveText('Crop')
     await expect(page.getByLabel('Crop tools', { exact: true })).toBeVisible()
@@ -396,14 +396,14 @@ test.describe('Editor — mobile preview layout', () => {
 
     await page.getByRole('button', { name: 'Cancel', exact: true }).click()
     await expect(cropRegion).toBeHidden()
-    await expect(modes.getByRole('button', { name: 'Films', exact: true })).toHaveAttribute('aria-current', 'page')
+    await expect(modes).toBeVisible()
     await expectContainedInWorkspace(page)
 
     await modes.getByRole('button', { name: 'Crop', exact: true }).click()
     await expect(cropRegion).toBeVisible()
     await page.getByRole('button', { name: 'Done', exact: true }).click()
     await expect(cropRegion).toBeHidden()
-    await expect(modes.getByRole('button', { name: 'Films', exact: true })).toHaveAttribute('aria-current', 'page')
+    await expect(modes).toBeVisible()
     await expectContainedInWorkspace(page)
   })
 })

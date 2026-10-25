@@ -12,7 +12,7 @@ test.describe('Editor — mobile header', () => {
 
   test('keeps a compact filename header, bottom modes, and appends through Add', async ({ page, multiImageEditorPage }) => {
     await expect(page.getByRole('button', { name: 'Add photos', exact: true })).toBeVisible()
-    await expect(page.getByRole('complementary', { name: 'Editor controls', exact: true }).getByRole('navigation', { name: 'Editor modes', exact: true })).toBeVisible()
+    await expect(page.getByRole('complementary', { name: 'Editor controls', exact: true }).getByRole('group', { name: 'Editor tools', exact: true })).toBeVisible()
     await expect(page.locator('header').getByRole('button', { name: 'Open photo collection, 1 of 2', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Previous image', exact: true })).toBeHidden()
     await expect(page.getByRole('button', { name: 'Next image', exact: true })).toBeHidden()
@@ -34,10 +34,10 @@ test.describe('Editor — mobile header', () => {
   })
 
   test('resolves an Advanced draft explicitly before choosing another mode', async ({ page, editorPage }) => {
-    const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
-    await expect(modes.getByRole('button', { name: 'Films', exact: true })).toHaveAttribute('aria-current', 'page')
+    const modes = page.getByRole('group', { name: 'Editor tools', exact: true })
+    await expect(modes).toBeVisible()
     await selectBaseFilm(page)
-    await modes.getByRole('button', { name: 'Open Advanced settings', exact: true }).click()
+    await modes.getByRole('button', { name: 'Open Adjust settings', exact: true }).click()
     const panel = advancedPanel(page)
     await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
     const slider = panel.getByRole('slider', { name: 'Highlight', exact: true })
@@ -45,20 +45,20 @@ test.describe('Editor — mobile header', () => {
     await slider.focus()
     await page.keyboard.press('ArrowRight')
     await expect(slider).not.toHaveAttribute('aria-valuenow', initialValue!)
-    await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true })).toBeVisible()
-    await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true })).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true })).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true })).toBeVisible()
     await expect(modes).toBeHidden()
     await page.getByRole('button', { name: 'Cancel', exact: true }).click()
     await modes.getByRole('button', { name: 'Crop', exact: true }).click()
     await expect(panel).toHaveCount(0)
     await page.getByRole('button', { name: 'Cancel', exact: true }).click()
-    await modes.getByRole('button', { name: 'Open Advanced settings', exact: true }).click()
+    await modes.getByRole('button', { name: 'Open Adjust settings', exact: true }).click()
     await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
     await expect(slider).toHaveAttribute('aria-valuenow', initialValue!)
   })
 
   test('opens a reversible Crop session with all ratios, angle, zoom, rotate, and flip', async ({ page, editorPage }) => {
-    const modes = page.getByRole('navigation', { name: 'Editor modes' })
+    const modes = page.getByRole('group', { name: 'Editor tools' })
     await modes.getByRole('button', { name: 'Crop' }).click()
     await expect(page.getByRole('button', { name: 'Rotate clockwise' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Flip horizontal' })).toBeVisible()

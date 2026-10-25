@@ -7,9 +7,9 @@ test.describe('Editor — Multi-Image Navigation', () => {
   test('discards an uncommitted inspector draft when changing photos', async ({ page, multiImageEditorPage }) => {
     await page.setViewportSize({ width: 1600, height: 900 })
     await selectBaseFilm(page)
-    await page.getByRole('button', { name: 'Open Advanced settings', exact: true }).click()
-    await page.getByRole('region', { name: 'Advanced settings', exact: true }).getByRole('tab', { name: 'Manual', exact: true }).click()
-    const inspector = page.getByRole('region', { name: 'Advanced settings', exact: true })
+    await page.getByRole('button', { name: 'Open Adjust settings', exact: true }).click()
+    await page.getByRole('region', { name: 'Adjust settings', exact: true }).getByRole('tab', { name: 'Manual', exact: true }).click()
+    const inspector = page.getByRole('region', { name: 'Adjust settings', exact: true })
     const highlight = inspector.getByRole('slider', { name: 'Highlight', exact: true })
     const baseline = await highlight.getAttribute('aria-valuenow')
     await highlight.focus()
@@ -20,7 +20,7 @@ test.describe('Editor — Multi-Image Navigation', () => {
     await expect(inspector).toHaveCount(0)
     await expect(page.getByLabel('Applied color', { exact: true })).toContainText('Original')
     await navigateImage(page, 'previous')
-    await page.getByRole('button', { name: 'Open Advanced settings', exact: true }).click()
+    await page.getByRole('button', { name: 'Open Adjust settings', exact: true }).click()
     await inspector.getByRole('tab', { name: 'Manual', exact: true }).click()
     await expect(highlight).toHaveAttribute('aria-valuenow', baseline!)
   })
@@ -67,8 +67,8 @@ test.describe('Editor — Multi-Image Navigation', () => {
 
   test('places the single mode switch in the dock and photo navigation on the stage', async ({ page, multiImageEditorPage }) => {
     const header = page.locator('header')
-    await expect(page.getByRole('complementary', { name: 'Editor controls', exact: true }).getByRole('navigation', { name: 'Editor modes', exact: true })).toBeVisible()
-    await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true })).toHaveCount(1)
+    await expect(page.getByRole('complementary', { name: 'Editor controls', exact: true }).getByRole('group', { name: 'Editor tools', exact: true })).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Editor tools', exact: true })).toHaveCount(1)
     await expect(header.getByRole('button', { name: 'Open photo collection, 1 of 2', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Choose image', exact: true })).toHaveCount(0)
     await expect(page.getByRole('tablist', { name: 'Image thumbnails', exact: true })).toHaveCount(0)
@@ -96,7 +96,7 @@ test.describe('Editor — Multi-Image Navigation', () => {
   test('arrow keys navigate between photos', async ({ page, multiImageEditorPage }) => {
     const firstPixels = await previewPixels(page, 'photo')
     // Focus a non-slider surface so arrows execute the editor navigation command.
-    await page.getByRole('navigation', { name: 'Editor modes', exact: true }).getByRole('button', { name: 'Films', exact: true }).focus()
+    await page.getByRole('group', { name: 'Editor tools', exact: true }).getByRole('button', { name: 'Crop', exact: true }).focus()
     await page.keyboard.press('ArrowRight')
     await expect.poll(() => previewPixels(page, 'photo')).not.toBe(firstPixels)
     await page.keyboard.press('ArrowLeft')

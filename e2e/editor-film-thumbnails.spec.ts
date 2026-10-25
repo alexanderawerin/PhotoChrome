@@ -87,7 +87,7 @@ test('holding Original compares color reversibly with pointer and keyboard witho
 test('footer keeps current export primary and batch export in the menu at all widths', async ({ page, multiImageEditorPage }) => {
   for (const width of [1200, 393]) {
     await page.setViewportSize({ width, height: 852 })
-    const header = page.getByRole('toolbar', { name: 'Editor actions', exact: true })
+    const header = page.getByRole('group', { name: 'Editor actions', exact: true })
     const current = header.getByRole('button', { name: 'Export processed image (Ctrl+S)', exact: true })
     const batch = header.getByRole('button', { name: 'Export all photos', exact: true })
     const more = header.getByRole('button', { name: 'More editor actions', exact: true })
@@ -130,7 +130,7 @@ for (const width of [393, 1200]) {
     await page.setViewportSize({ width, height: 852 })
     await page.goto('/')
     const header = page.locator('header')
-    await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Upload photos', exact: true })).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Upload photos', exact: true })).toBeVisible()
     await expect(page.locator('header').getByRole('button', { name: 'Help', exact: true })).toBeVisible()
     await expect(header.getByRole('button', { name: 'More editor actions', exact: true })).toHaveCount(0)
     await expect(header.getByRole('button', { name: /Export/ })).toHaveCount(0)
@@ -144,8 +144,8 @@ for (const width of [393, 1200]) {
 }
 
 test('modes are Films, Advanced, Crop and Crop opens the session in one click', async ({ page, editorPage }) => {
-  const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
-  expect(await modes.getByRole('button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label') || button.textContent?.trim()))).toEqual(['Films', 'Open Advanced settings', 'Crop'])
+  const modes = page.getByRole('group', { name: 'Editor tools', exact: true })
+  expect(await modes.getByRole('button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label') || button.textContent?.trim()))).toEqual(['Open Adjust settings', 'Crop'])
   await modes.getByRole('button', { name: 'Crop', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Crop settings', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Open crop session', exact: true })).toHaveCount(0)
@@ -183,5 +183,5 @@ test('video keeps desktop More for two secondary actions and shows mobile Help d
   await page.setViewportSize({ width: 393, height: 852 })
   await expect(page.locator('header').getByRole('button', { name: 'Help', exact: true })).toBeVisible()
   await expect(header.getByRole('button', { name: 'More editor actions', exact: true })).toHaveCount(0)
-  await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Export video', exact: true })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Export video', exact: true })).toBeVisible()
 })

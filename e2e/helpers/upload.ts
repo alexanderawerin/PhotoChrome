@@ -60,11 +60,11 @@ export async function selectBaseFilm(page: Page, name = 'Provia') {
 
 /** Choose a detailed recipe in the active film's reversible Advanced draft. */
 export async function selectAdvancedRecipe(page: Page, recipeName: string, apply = true) {
-  const panel = page.getByRole('region', { name: 'Advanced settings', exact: true })
-  if (!await panel.isVisible()) await page.getByRole('navigation', { name: 'Editor modes', exact: true }).getByRole('button', { name: 'Open Advanced settings', exact: true }).click()
+  const panel = page.getByRole('region', { name: 'Adjust settings', exact: true })
+  if (!await panel.isVisible()) await page.getByRole('group', { name: 'Editor tools', exact: true }).getByRole('button', { name: 'Open Adjust settings', exact: true }).click()
   await panel.getByRole('tab', { name: 'Recipes', exact: true }).click()
   const escaped = recipeName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   await panel.getByRole('button', { name: new RegExp(`^Apply preset ${escaped}(?:, selected)?$`) }).click()
-  await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true })).toBeEnabled()
-  if (apply) await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true }).click()
+  await expect(page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true })).toBeEnabled()
+  if (apply) await page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true }).click()
 }

@@ -1,8 +1,8 @@
 import { expect, type Page } from '@playwright/test'
 
 export const editorControls = (page: Page) => page.getByRole('complementary', { name: 'Editor controls', exact: true })
-export const editorModes = (page: Page) => page.getByRole('navigation', { name: 'Editor modes', exact: true })
-export const editorActions = (page: Page) => page.getByRole('toolbar', { name: 'Editor actions', exact: true })
+export const editorModes = (page: Page) => page.getByRole('group', { name: 'Editor tools', exact: true })
+export const editorActions = (page: Page) => page.getByRole('group', { name: 'Editor actions', exact: true })
 const cropSettings = (page: Page) => editorControls(page).getByRole('region', { name: 'Crop settings', exact: true })
 
 export async function openCropSession(page: Page): Promise<void> {
@@ -23,7 +23,7 @@ export async function navigateImage(page: Page, direction: 'next' | 'previous'):
   if (await button.isVisible()) await button.click()
   else {
     const modes = editorModes(page)
-    if (await modes.isVisible()) await modes.getByRole('button', { name: 'Films', exact: true }).focus()
+    if (await modes.isVisible()) await modes.getByRole('button', { name: 'Crop', exact: true }).focus()
     else await editorActions(page).getByRole('button', { name: 'Cancel', exact: true }).focus()
     await page.keyboard.press(direction === 'next' ? 'ArrowRight' : 'ArrowLeft')
   }

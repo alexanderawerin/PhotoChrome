@@ -6,7 +6,7 @@ import { selectBaseFilm } from './helpers/upload'
 test.use({ viewport: { width: 393, height: 852 } })
 
 function modes(page: Page): Locator {
-  return page.getByRole('navigation', { name: 'Editor modes', exact: true })
+  return page.getByRole('group', { name: 'Editor tools', exact: true })
 }
 
 function cropRegion(page: Page): Locator {
@@ -14,7 +14,7 @@ function cropRegion(page: Page): Locator {
 }
 
 function actionZone(page: Page): Locator {
-  return page.getByRole('toolbar', { name: 'Editor actions', exact: true })
+  return page.getByRole('group', { name: 'Editor actions', exact: true })
 }
 
 async function openCropSession(page: Page): Promise<Locator> {
@@ -99,7 +99,7 @@ test.describe('Editor — mobile Crop session', () => {
     await expect(modes(page)).toBeHidden()
     await expect(page.getByLabel('Current edit', { exact: true })).toHaveText('Crop')
 
-    await expect(page.locator('header').getByRole('toolbar', { name: 'Editor actions', exact: true })).toHaveCount(0)
+    await expect(page.locator('header').getByRole('group', { name: 'Editor actions', exact: true })).toHaveCount(0)
 
     const cancel = actions.getByRole('button', { name: 'Cancel', exact: true })
     const done = actions.getByRole('button', { name: 'Done', exact: true })
@@ -211,7 +211,7 @@ test.describe('Editor — mobile Crop session', () => {
     await expect(modes(page)).toBeHidden()
     await actionZone(page).getByRole('button', { name: 'Cancel', exact: true }).click()
     await expect(region).toBeHidden()
-    await expect(modes(page).getByRole('button', { name: /^films$/i })).toHaveAttribute('aria-current', 'page')
+    await expect(modes(page)).toBeVisible()
 
     await modes(page).getByRole('button', { name: /^crop$/i }).click()
     region = cropRegion(page)
@@ -249,8 +249,8 @@ test.describe('Editor — mobile Crop session', () => {
   test('does not expose Crop when C is pressed in the playable demo', async ({ page, landingPage }) => {
     await page.keyboard.press('c')
     await expect(cropRegion(page)).toHaveCount(0)
-    await expect(modes(page).getByRole('button', { name: /^films$/i })).toHaveAttribute('aria-current', 'page')
-    await expect(modes(page).getByRole('button', { name: /^(Open|Close) Advanced settings$/ })).toHaveCount(0)
+    await expect(modes(page)).toHaveCount(0)
+    await expect(modes(page).getByRole('button', { name: /^(Open|Close) Adjust settings$/ })).toHaveCount(0)
     await expect(modes(page).getByRole('button', { name: /^crop$/i })).toHaveCount(0)
   })
 })

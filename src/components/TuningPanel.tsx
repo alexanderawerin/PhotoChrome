@@ -165,7 +165,7 @@ export function TuningPanel({
               const strip = button.parentElement!
               strip.scrollTo({ left: button.offsetLeft - strip.offsetLeft - (strip.clientWidth - button.offsetWidth) / 2, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
             }}>
-            <Iconoteka name={icon} /><span>{tool.label.replace('WB Shift ', '').replace(' Effect', '').replace('White Balance', 'Balance').replace('Dynamic Range', 'Range')}</span>
+            <Iconoteka name={icon} /><span>{tool.label.replace('WB Shift ', 'WB ').replace(' Effect', '').replace('White Balance', 'Balance').replace('Dynamic Range', 'Range')}</span>
           </button>
         })}
       </div>

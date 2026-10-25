@@ -77,3 +77,11 @@ Visual inspection caught a naming trap: Iconoteka's `check` is a bank cheque. Re
 - **Behavior:** choosing another mode now follows explicit Apply/Done or Cancel. This intentional interaction change prevents an implicit mode click from discarding a draft. Existing shortcuts, media-owned drafts, recipe/manual sharing, composition and real exports are retained.
 
 Before/after screenshots, fresh walkthrough and exact verification results are in `docs/review/2026-10-25-bottom-panel/`. No material visual mismatches remain against the accepted v2 design and the scoped refinement. Physical Android, iPhone, Safari and optional device AAC acceptance are not claimed.
+
+## 25 October — guideline-led refinement
+
+The accepted dark editor and Iconoteka assets are retained. A fresh audit of running film, recipe, manual, crop and ratio states is mapped to current official Apple HIG and Google/Android guidance in [the guideline audit](docs/review/2026-10-25-guidelines/AUDIT.md).
+
+The idle footer now has one row of document actions (Adjust, Crop, More, Export); the filmstrip supplies film selection without a repeated Films destination. This replaces the earlier two-row pattern described above. Batch commands are under More. Temporary edits still replace this row with Cancel / task / Apply or Done. Keyboard popup dismissal respects the current crop transaction, and batch color application has visible polite status feedback. Mobile targets are 48 CSS px, with safe-area content insets and clearer manual labels. Icon paths and MIT provenance are unchanged.
+
+Final verification counts, recording source commit and new screenshots will be recorded in [the review delivery](docs/review/2026-10-25-guidelines/README.md). Older review evidence is preserved as history, not presented as new device verification.

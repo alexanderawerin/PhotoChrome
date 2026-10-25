@@ -171,8 +171,8 @@ test.describe('Editor — Preview Rendering', () => {
         return original(image, plan)
       }
     })
-    await page.getByRole('button', { name: 'Open Advanced settings', exact: true }).click()
-    const panel = page.getByRole('region', { name: 'Advanced settings', exact: true })
+    await page.getByRole('button', { name: 'Open Adjust settings', exact: true }).click()
+    const panel = page.getByRole('region', { name: 'Adjust settings', exact: true })
     const card = panel.getByRole('button', { name: 'Apply preset Provia Portrait', exact: true })
     const offscreen = panel.getByRole('button', { name: 'Apply preset Provia Afternoon', exact: true })
     await expect(card.locator('.film-thumbnail')).toHaveAttribute('data-preview-state', 'ready')

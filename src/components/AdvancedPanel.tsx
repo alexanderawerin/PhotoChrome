@@ -43,14 +43,14 @@ export function AdvancedPanel({ profile, settings, sourceImage, onProfileSelect,
   }, [profile.id, tab, recipeOrder])
 
   return (
-    <section role="region" aria-label="Advanced settings" data-advanced-tab={tab} className="editor-advanced-panel flex h-full min-h-0 flex-col">
+    <section role="region" aria-label="Adjust settings" data-advanced-tab={tab} className="editor-advanced-panel flex h-full min-h-0 flex-col">
       <div className="editor-advanced-heading">
         <div className="editor-advanced-leading">
           <div className="editor-advanced-profile">
             <p className="editor-advanced-base-name">{baseName}</p>
             {!isBaseProfile(profile) && <p className="editor-advanced-recipe-name">{profile.name}</p>}
           </div>
-          <div role="tablist" aria-label="Advanced settings mode" className="editor-advanced-tabs">
+          <div role="tablist" aria-label="Adjust settings mode" className="editor-advanced-tabs">
             {(['recipes', 'manual'] as const).map(value => (
               <button key={value} type="button" role="tab" id={`${id}-${value}`} aria-controls={`${id}-panel-${value}`} aria-selected={tab === value} tabIndex={tab === value ? 0 : -1}
                 onClick={() => setTab(value)}

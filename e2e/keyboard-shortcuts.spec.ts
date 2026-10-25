@@ -34,11 +34,11 @@ test.describe('Keyboard Shortcuts', () => {
     await selectBaseFilm(page)
     // Film resources can be ready before the worker finishes its first preview.
     // The enabled action is the observable boundary shared with shortcut guards.
-    await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true })
-      .getByRole('button', { name: 'Open Advanced settings', exact: true })).toBeEnabled()
+    await expect(page.getByRole('group', { name: 'Editor tools', exact: true })
+      .getByRole('button', { name: 'Open Adjust settings', exact: true })).toBeEnabled()
 
     await page.keyboard.press('t')
-    const panel = page.getByRole('region', { name: 'Advanced settings', exact: true })
+    const panel = page.getByRole('region', { name: 'Adjust settings', exact: true })
     await expect(panel.getByRole('tab', { name: 'Recipes', exact: true })).toHaveAttribute('aria-selected', 'true')
     await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
     await expect(panel.getByRole('slider', { name: 'Highlight', exact: true })).toBeVisible()
@@ -47,7 +47,7 @@ test.describe('Keyboard Shortcuts', () => {
   test('Enter applies crop', async ({ page, editorPage }) => {
     await page.keyboard.press('c')
     await expect(page.getByRole('slider', { name: 'Crop angle' })).toBeVisible()
-    await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true })
+    await expect(page.getByRole('group', { name: 'Editor actions', exact: true })
       .getByRole('button', { name: 'Done', exact: true })).toBeEnabled()
     // Enter on the focused ratio button opens its chooser; exercise the global
     // shortcut from a neutral surface after the crop draft is ready to apply.

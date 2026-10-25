@@ -24,7 +24,7 @@ for (const width of [320, 393, 1200, 1600]) {
       expect(preview!.width).toBeGreaterThanOrEqual(60)
       expect(preview!.height).toBeGreaterThanOrEqual(60)
       for (const name of ['Apply', 'Cancel']) {
-        const button = page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name, exact: true })
+        const button = page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name, exact: true })
         const box = await button.boundingBox()
         expect(box).not.toBeNull()
         expect(box!.x).toBeGreaterThanOrEqual(0)
@@ -34,7 +34,7 @@ for (const width of [320, 393, 1200, 1600]) {
       }
       const scan = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
       expect(scan.violations).toEqual([])
-      await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
+      await page.getByRole('group', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
       await expect(panel).toHaveCount(0)
     })
   }

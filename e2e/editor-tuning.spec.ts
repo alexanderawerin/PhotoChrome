@@ -3,11 +3,11 @@ import { selectBaseFilm } from './helpers/upload'
 
 test.describe('Editor — Tuning Panel', () => {
   const inspector = (page: import('@playwright/test').Page) =>
-    page.getByRole('region', { name: 'Advanced settings', exact: true })
+    page.getByRole('region', { name: 'Adjust settings', exact: true })
 
   const selectAndOpen = async (page: import('@playwright/test').Page) => {
     await selectBaseFilm(page)
-    await page.getByRole('button', { name: 'Open Advanced settings' }).click()
+    await page.getByRole('button', { name: 'Open Adjust settings' }).click()
     await inspector(page).getByRole('tab', { name: 'Manual', exact: true }).click()
   }
 

@@ -3,11 +3,11 @@ import { selectBaseFilm, selectAdvancedRecipe } from './helpers/upload'
 
 test.describe('Editor — Kelvin White Balance', () => {
   const tuningOverlay = (page: import('@playwright/test').Page) =>
-    page.getByRole('region', { name: 'Advanced settings', exact: true })
+    page.getByRole('region', { name: 'Adjust settings', exact: true })
 
   const selectAndOpen = async (page: import('@playwright/test').Page) => {
     await selectBaseFilm(page)
-    await page.getByRole('button', { name: 'Open Advanced settings' }).click()
+    await page.getByRole('button', { name: 'Open Adjust settings' }).click()
     await tuningOverlay(page).getByRole('tab', { name: 'Manual', exact: true }).click()
   }
 

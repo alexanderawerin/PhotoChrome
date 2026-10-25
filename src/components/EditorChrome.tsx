@@ -44,24 +44,24 @@ export function EditorModes({ mode, onChange, disabled, demoMode = false, advanc
   demoMode?: boolean
   advancedOpen?: boolean
 }) {
-  const choices: EditorMode[] = demoMode ? ['films'] : ['films', 'advanced', 'crop']
+  if (demoMode) return null
+  const choices: EditorMode[] = ['advanced', 'crop']
   return (
-    <nav className={`mobile-editor-modes grid shrink-0 ${demoMode ? 'grid-cols-1' : 'grid-cols-3'}`} aria-label="Editor modes">
+    <div className="mobile-editor-modes" role="group" aria-label="Editor tools">
       {choices.map(value => (
         <button key={value} type="button" onClick={() => onChange(value)} disabled={disabled[value]}
-          aria-current={mode === value ? 'page' : undefined}
-          aria-label={value === 'advanced' ? advancedOpen ? 'Close Advanced settings' : 'Open Advanced settings' : undefined}
-          aria-expanded={value === 'advanced' ? advancedOpen : undefined}
+          aria-label={value === 'advanced' ? advancedOpen ? 'Close Adjust settings' : 'Open Adjust settings' : undefined}
+          aria-expanded={mode === value}
           className={`flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-40 ${mode === value ? 'text-white' : 'text-zinc-400'}`}>
           {value === 'films' ? <Iconoteka name="film" className="size-4 shrink-0" aria-hidden="true" /> : value === 'advanced' ? <Iconoteka name="sliders" className="size-4 shrink-0" aria-hidden="true" /> : <Iconoteka name="crop_tool" className="size-4 shrink-0" aria-hidden="true" />}
-          <span className="min-w-0 break-words">{value === 'films' ? 'Films' : value === 'advanced' ? 'Advanced' : 'Crop'}</span>
+          <span className="min-w-0 break-words">{value === 'films' ? 'Films' : value === 'advanced' ? 'Adjust' : 'Crop'}</span>
         </button>
       ))}
-    </nav>
+    </div>
   )
 }
 
-function EditorOverflow({ children }: { children: ReactNode }) {
+function EditorOverflow({ children, labeled = false }: { children: ReactNode; labeled?: boolean }) {
   const ref = useRef<HTMLDetailsElement>(null)
   useEffect(() => {
     const closeOutside = (event: PointerEvent) => {
@@ -71,14 +71,16 @@ function EditorOverflow({ children }: { children: ReactNode }) {
     return () => document.removeEventListener('pointerdown', closeOutside)
   }, [])
   return (
-    <details ref={ref} className="editor-overflow" onKeyDown={event => {
+    <details ref={ref} className="editor-overflow" onBlur={event => {
+      if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false
+    }} onKeyDown={event => {
       if (event.key === 'Escape' && ref.current?.open) {
         event.stopPropagation()
         ref.current.open = false
         ref.current.querySelector('summary')?.focus()
       }
     }}>
-      <summary className="editor-control" role="button" aria-label="More editor actions"><Iconoteka name="more" className="size-5" aria-hidden="true" /></summary>
+      <summary className="editor-control" role="button" aria-label="More editor actions"><Iconoteka name="more" className="size-5" aria-hidden="true" />{labeled && <span>More</span>}</summary>
       <div className="editor-overflow-panel" role="group" aria-label="More editor actions" onClickCapture={event => {
         const button = event.target instanceof Element ? event.target.closest('button') : null
         if (button && !button.disabled && ref.current) {
@@ -97,7 +99,7 @@ export function EditorActions({ actions, placement = 'dock', primaryId = 'export
   extraActions?: EditorAction[]
 }) {
   const isMdUp = useIsMdUp()
-  const sessionLabel = primaryId === 'apply-advanced' ? 'Advanced' : primaryId === 'apply-crop' ? 'Crop' : undefined
+  const sessionLabel = primaryId === 'apply-advanced' ? 'Adjust' : primaryId === 'apply-crop' ? 'Crop' : undefined
   const visible = [...actions, ...extraActions].filter(action => !action.desktopOnly || isMdUp)
   const renderAction = (action: EditorAction, primary = false, direct = false) => (
     <Button key={action.id} ref={action.buttonRef} variant={primary ? 'default' : action.variant ?? 'ghost'} onClick={action.onClick}
@@ -114,7 +116,7 @@ export function EditorActions({ actions, placement = 'dock', primaryId = 'export
     if (!visible.length) return null
     const secondaryControls = secondary.length === 1 ? renderAction(secondary[0], false, true)
       : secondary.length > 1 ? <EditorOverflow>{secondary.map(action => renderAction(action))}</EditorOverflow> : null
-    return <div className="editor-header-actions" role={actions.length ? 'toolbar' : undefined} aria-label={actions.length ? 'Editor actions' : undefined}
+    return <div className="editor-header-actions" role={actions.length ? 'group' : undefined} aria-label={actions.length ? 'Editor actions' : undefined}
       onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') event.stopPropagation() }}>
       {primary && renderAction(primary, true)}{secondaryControls}
     </div>
@@ -122,13 +124,13 @@ export function EditorActions({ actions, placement = 'dock', primaryId = 'export
   if (!visible.length) return null
   const primary = visible.find(action => action.id === primaryId) ?? visible.find(action => action.id === 'upload')
   const secondary = visible.filter(action => action !== primary)
-  const overflow = secondary.length > 1 ? secondary.filter(action => action.id !== 'apply-all') : []
+  const overflow = sessionLabel ? [] : secondary
   return (
-    <div className="mobile-editor-actions" data-edit-session={sessionLabel ? true : undefined} role="toolbar" aria-label="Editor actions"
+    <div className="mobile-editor-actions" data-edit-session={sessionLabel ? true : undefined} role="group" aria-label="Editor actions"
       onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') event.stopPropagation() }}>
-      <div className="editor-action-secondary">
+      <div className="editor-action-secondary" hidden={!secondary.length}>
         {secondary.filter(action => !overflow.includes(action)).map(action => renderAction(action))}
-        {overflow.length > 0 && <EditorOverflow>{overflow.map(action => renderAction(action))}</EditorOverflow>}
+        {overflow.length > 0 && <EditorOverflow labeled>{overflow.map(action => renderAction(action))}</EditorOverflow>}
       </div>
       {sessionLabel && <span className="editor-session-title" aria-label="Current edit">{sessionLabel}</span>}
       {primary && renderAction(primary, true)}
@@ -165,7 +167,7 @@ export function EditorControlDock({ children, mode, modes, actions, contentRef, 
     <aside className="editor-control-dock mobile-editor-dock mobile-editor-surface relative z-20 min-w-0" aria-label="Editor controls" data-editor-mode={mode} data-desktop-hidden={hideDesktop || undefined}>
       <div ref={contentRef} className="editor-context-panel min-h-0" data-editor-mode={mode}>{children}</div>
       <div className="editor-dock-footer" data-edit-session={mode !== 'films' || undefined}>
-        {/* Keep navigation mounted for focus restoration, but resolve a draft explicitly. */}
+        {/* Keep tools mounted for focus restoration, but resolve a draft explicitly. */}
         <div className="editor-mode-navigation" hidden={mode !== 'films'}>{modes}</div>
         {actions}
       </div>
