@@ -10,7 +10,10 @@ for (const width of [320, 393]) {
       await page.setViewportSize({ width, height: 852 })
       const cdp = await page.context().newCDPSession(page)
       await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { bottom: safeBottom, left: 12, right: 12 } })
+      const original = await previewPixels(page, 'photo')
       await selectBaseFilm(page)
+      // Profile state updates before its asynchronous canvas paint completes.
+      await expect.poll(() => previewPixels(page, 'photo')).not.toBe(original)
       const baseline = await previewPixels(page, 'photo')
       const actions = editorActions(page)
       const nav = editorModes(page)
