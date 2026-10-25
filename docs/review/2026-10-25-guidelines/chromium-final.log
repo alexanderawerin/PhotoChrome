@@ -1,0 +1,260 @@
+
+> photochrome@1.6.0 test:e2e:chromium
+> playwright test --project=chromium --workers=2 --reporter=line
+
+
+[WebServer] (node:108512) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 205 tests using 2 workers
+
+
+(node:108783) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:108785) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1/205] [chromium] › e2e/accessibility.spec.ts:19:3 › Accessibility › playable demo has no detectable WCAG A/AA violations
+[2/205] [chromium] › e2e/accessibility.spec.ts:24:3 › Accessibility › photo editor has no detectable WCAG A/AA violations
+[3/205] [chromium] › e2e/accessibility.spec.ts:28:3 › Accessibility › Help dialog has no detectable WCAG A/AA violations
+[4/205] [chromium] › e2e/accessibility.spec.ts:34:3 › Accessibility › Crop inspector has no detectable WCAG A/AA violations
+[5/205] [chromium] › e2e/advanced-sessions.spec.ts:8:5 › photo Escape cancels a pending preview and restores focus at 393px
+[6/205] [chromium] › e2e/advanced-sessions.spec.ts:8:5 › photo Escape cancels a failed preview and restores focus at 393px
+[7/205] [chromium] › e2e/advanced-sessions.spec.ts:53:7 › photo Advanced at 393px › Recipes and Manual preview one draft and Apply commits both together
+[8/205] [chromium] › e2e/advanced-sessions.spec.ts:87:7 › photo Advanced at 393px › Cancel and Escape restore pixels and focus without applying a recipe
+[9/205] [chromium] › e2e/advanced-sessions.spec.ts:105:7 › photo Advanced at 393px › choosing another draft recipe clears manual overrides and reselecting the base film clears the applied recipe
+[10/205] [chromium] › e2e/advanced-sessions.spec.ts:53:7 › video Advanced at 393px › Recipes and Manual preview one draft and Apply commits both together
+[11/205] [chromium] › e2e/advanced-sessions.spec.ts:87:7 › video Advanced at 393px › Cancel and Escape restore pixels and focus without applying a recipe
+[12/205] [chromium] › e2e/advanced-sessions.spec.ts:105:7 › video Advanced at 393px › choosing another draft recipe clears manual overrides and reselecting the base film clears the applied recipe
+[13/205] [chromium] › e2e/advanced-sessions.spec.ts:126:3 › photo recipe order survives draft Cancel without favorite controls at 393px
+[14/205] [chromium] › e2e/advanced-sessions.spec.ts:145:3 › Base film reselection and film changes preserve approved photo geometry at 393px
+[15/205] [chromium] › e2e/advanced-sessions.spec.ts:8:5 › photo Escape cancels a pending preview and restores focus at 1600px
+[16/205] [chromium] › e2e/advanced-sessions.spec.ts:8:5 › photo Escape cancels a failed preview and restores focus at 1600px
+[17/205] [chromium] › e2e/advanced-sessions.spec.ts:53:7 › photo Advanced at 1600px › Recipes and Manual preview one draft and Apply commits both together
+[18/205] [chromium] › e2e/advanced-sessions.spec.ts:87:7 › photo Advanced at 1600px › Cancel and Escape restore pixels and focus without applying a recipe
+[19/205] [chromium] › e2e/advanced-sessions.spec.ts:105:7 › photo Advanced at 1600px › choosing another draft recipe clears manual overrides and reselecting the base film clears the applied recipe
+[20/205] [chromium] › e2e/advanced-sessions.spec.ts:53:7 › video Advanced at 1600px › Recipes and Manual preview one draft and Apply commits both together
+[21/205] [chromium] › e2e/advanced-sessions.spec.ts:87:7 › video Advanced at 1600px › Cancel and Escape restore pixels and focus without applying a recipe
+[22/205] [chromium] › e2e/advanced-sessions.spec.ts:105:7 › video Advanced at 1600px › choosing another draft recipe clears manual overrides and reselecting the base film clears the applied recipe
+[23/205] [chromium] › e2e/advanced-sessions.spec.ts:126:3 › photo recipe order survives draft Cancel without favorite controls at 1600px
+[24/205] [chromium] › e2e/advanced-sessions.spec.ts:145:3 › Base film reselection and film changes preserve approved photo geometry at 1600px
+[25/205] [chromium] › e2e/advanced-sessions.spec.ts:164:1 › changing photos discards an unfinished draft and preserves each applied profile
+[26/205] [chromium] › e2e/advanced-sessions.spec.ts:186:3 › photo canceling the draft before changing the main film clears recipe and manual overrides
+[27/205] [chromium] › e2e/advanced-sessions.spec.ts:186:3 › video canceling the draft before changing the main film clears recipe and manual overrides
+[28/205] [chromium] › e2e/batch-export.spec.ts:23:1 › Export all creates a stored-JPEG ZIP including Original photos
+[29/205] [chromium] › e2e/batch-export.spec.ts:49:1 › cancelling batch export destroys the partial archive and does not download
+[30/205] [chromium] › e2e/batch-film-first.spec.ts:45:1 › Export all includes geometry-only Original and a film photo with matching JPEGs and metadata
+[31/205] [chromium] › e2e/batch-film-first.spec.ts:58:1 › Apply to all copies committed manual color and preserves each composition
+[32/205] [chromium] › e2e/batch-film-first.spec.ts:86:1 › Apply Original to all removes color while retaining separate geometry
+[33/205] [chromium] › e2e/batch-film-first.spec.ts:104:1 › partial failure ZIP contains only saved JPEGs and reports the actual completion counts
+[34/205] [chromium] › e2e/batch-film-first.spec.ts:132:1 › zero successful files produce no ZIP and batch Retry saves the original request
+[35/205] [chromium] › e2e/editor-basic.spec.ts:8:5 › Editor — Desktop at 1200px › starts with Original and keeps Advanced contextual
+[36/205] [chromium] › e2e/editor-basic.spec.ts:16:5 › Editor — Desktop at 1200px › opens and cancels Advanced with explicit completion and restored mode focus
+[37/205] [chromium] › e2e/editor-basic.spec.ts:8:5 › Editor — Desktop at 1600px › starts with Original and keeps Advanced contextual
+[38/205] [chromium] › e2e/editor-basic.spec.ts:16:5 › Editor — Desktop at 1600px › opens and cancels Advanced with explicit completion and restored mode focus
+[39/205] [chromium] › e2e/editor-bottom-panel.spec.ts:8:5 › explicit draft actions remain reachable at 320px with 0px safe area
+[40/205] [chromium] › e2e/editor-bottom-panel.spec.ts:8:5 › explicit draft actions remain reachable at 320px with 34px safe area
+[41/205] [chromium] › e2e/editor-bottom-panel.spec.ts:8:5 › explicit draft actions remain reachable at 393px with 0px safe area
+[42/205] [chromium] › e2e/editor-bottom-panel.spec.ts:8:5 › explicit draft actions remain reachable at 393px with 34px safe area
+[43/205] [chromium] › e2e/editor-bottom-panel.spec.ts:71:1 › one compact tool row exposes batch commands with keyboard dismissal and status feedback
+[44/205] [chromium] › e2e/editor-bottom-panel.spec.ts:104:1 › Escape closes the ratio popup before cancelling its crop draft
+[45/205] [chromium] › e2e/editor-catalog.spec.ts:14:1 › every retained recipe is available only inside its film Advanced catalog
+[46/205] [chromium] › e2e/editor-catalog.spec.ts:40:3 › photo ignores legacy favorite ordering and scopes recipes to their film
+[47/205] [chromium] › e2e/editor-catalog.spec.ts:40:3 › video ignores legacy favorite ordering and scopes recipes to their film
+[48/205] [chromium] › e2e/editor-command-restrictions.spec.ts:5:1 › demo shortcuts cannot transform or export the demo media
+[49/205] [chromium] › e2e/editor-command-restrictions.spec.ts:21:1 › Help blocks rotate/export and shortcuts resume after dismissal
+[50/205] [chromium] › e2e/editor-command-restrictions.spec.ts:39:1 › unfinished tuning cannot be exported through buttons or shortcuts
+[51/205] [chromium] › e2e/editor-completion.spec.ts:158:3 › Editor — Export completion › single export shows only the current photo and its downloaded pixels
+[52/205] [chromium] › e2e/editor-completion.spec.ts:186:3 › Editor — Export completion › batch completion includes only successful archive entries and accurate error counts
+[53/205] [chromium] › e2e/editor-completion.spec.ts:225:3 › Editor — Export completion › zero-success batch reports failure without a download or success completion
+[54/205] [chromium] › e2e/editor-completion.spec.ts:242:3 › Editor — Export completion › traps focus, blocks editor shortcuts, and restores export focus on Escape
+[55/205] [chromium] › e2e/editor-completion.spec.ts:290:3 › Editor — Export completion › preserves editing on Back to editor and returns to the demo on New edit
+[56/205] [chromium] › e2e/editor-completion.spec.ts:337:5 › Editor — mobile completion at 320px › keeps actions touch-sized, traps focus, and has no detected WCAG A/AA violations
+[57/205] [chromium] › e2e/editor-completion.spec.ts:337:5 › Editor — mobile completion at 393px › keeps actions touch-sized, traps focus, and has no detected WCAG A/AA violations
+[58/205] [chromium] › e2e/editor-desktop-density.spec.ts:7:3 › Films and Recipes use compact same-photo thumbnails at 393px
+[59/205] [chromium] › e2e/editor-desktop-density.spec.ts:7:3 › Films and Recipes use compact same-photo thumbnails at 1440px
+[60/205] [chromium] › e2e/editor-desktop-density.spec.ts:28:1 › desktop film dock fits its contents and narrow dock scrolls without page overflow
+[61/205] [chromium] › e2e/editor-desktop-density.spec.ts:42:1 › desktop Crop keeps geometry above sliders and confirmation in the common footer
+[62/205] [chromium] › e2e/editor-desktop-density.spec.ts:61:1 › applied color stays within the photo in every mode and desktop comparison has compact bounds
+[63/205] [chromium] › e2e/editor-desktop-density.spec.ts:83:1 › wide touch Manual keeps toggle, reset, white balance and slider targets touch-sized
+[64/205] [chromium] › e2e/editor-export.spec.ts:6:3 › Editor — Export › export triggers a download
+[65/205] [chromium] › e2e/editor-export.spec.ts:29:3 › Editor — Export › Ctrl+S triggers export with a base film selected
+[66/205] [chromium] › e2e/editor-film-thumbnails.spec.ts:8:1 › film dock paints real source-based previews and selection does not redraw ready thumbnails
+[67/205] [chromium] › e2e/editor-film-thumbnails.spec.ts:46:1 › offscreen film thumbnails render lazily when the mobile film strip scrolls
+[68/205] [chromium] › e2e/editor-film-thumbnails.spec.ts:60:1 › holding Original compares color reversibly with pointer and keyboard without changing geometry
+[69/205] [chromium] › e2e/editor-film-thumbnails.spec.ts:87:1 › footer keeps current export primary and batch export in the menu at all widths
+[70/205] [chromium] › e2e/editor-film-thumbnails.spec.ts:112:1 › secondary export returns focus to the visible More trigger after completion closes
+[71/205] [chromium] › e2e/editor-film-thumbnails.spec.ts:129:3 › demo and single-photo Help are direct actions without More at 393px
+[72/205] [chromium] › e2e/editor-film-thumbnails.spec.ts:129:3 › demo and single-photo Help are direct actions without More at 1200px
+[73/205] [chromium] › e2e/editor-film-thumbnails.spec.ts:146:1 › modes are Films, Advanced, Crop and Crop opens the session in one click
+[74/205] [chromium] › e2e/editor-film-thumbnails.spec.ts:156:1 › film arrows disappear when everything fits and both appear for desktop overflow
+[75/205] [chromium] › e2e/editor-film-thumbnails.spec.ts:176:1 › video keeps desktop More for two secondary actions and shows mobile Help directly
+[76/205] [chromium] › e2e/editor-kelvin-wb.spec.ts:14:3 › Editor — Kelvin White Balance › WB section shows Preset/Kelvin toggle
+[77/205] [chromium] › e2e/editor-kelvin-wb.spec.ts:21:3 › Editor — Kelvin White Balance › switching to Kelvin mode shows slider
+[78/205] [chromium] › e2e/editor-kelvin-wb.spec.ts:31:3 › Editor — Kelvin White Balance › switching back to Preset mode hides slider
+[79/205] [chromium] › e2e/editor-kelvin-wb.spec.ts:44:3 › Editor — Kelvin White Balance › recipe with kelvin WB: switching to preset mode disables kelvin
+[80/205] [chromium] › e2e/editor-mobile-crop.spec.ts:92:3 › Editor — mobile Crop session › moves completion actions into the Crop dock and exposes a non-modal region
+[81/205] [chromium] › e2e/editor-mobile-crop.spec.ts:115:3 › Editor — mobile Crop session › dismisses and selects crop ratios with the keyboard while preserving focus
+[82/205] [chromium] › e2e/editor-mobile-crop.spec.ts:149:3 › Editor — mobile Crop session › shows the fine angle only while the angle control is held and keeps sliders touch-sized
+[83/205] [chromium] › e2e/editor-mobile-crop.spec.ts:160:3 › Editor — mobile Crop session › reverts a canceled crop draft and persists a completed one
+[84/205] [chromium] › e2e/editor-mobile-crop.spec.ts:201:3 › Editor — mobile Crop session › cancels an unfinished crop explicitly before returning to mode navigation
+[85/205] [chromium] › e2e/editor-mobile-crop.spec.ts:223:3 › Editor — mobile Crop session › keeps C restricted during an Advanced draft and restores color after Cancel then Crop
+[86/205] [chromium] › e2e/editor-mobile-crop.spec.ts:249:3 › Editor — mobile Crop session › does not expose Crop when C is pressed in the playable demo
+[87/205] [chromium] › e2e/editor-mobile-header.spec.ts:13:3 › Editor — mobile header › keeps a compact filename header, bottom modes, and appends through Add
+[88/205] [chromium] › e2e/editor-mobile-header.spec.ts:26:3 › Editor — mobile header › opens unread updates first, then remembers them and opens Quick Guide
+[89/205] [chromium] › e2e/editor-mobile-header.spec.ts:36:3 › Editor — mobile header › resolves an Advanced draft explicitly before choosing another mode
+[90/205] [chromium] › e2e/editor-mobile-header.spec.ts:60:3 › Editor — mobile header › opens a reversible Crop session with all ratios, angle, zoom, rotate, and flip
+[91/205] [chromium] › e2e/editor-mobile-layout.spec.ts:200:3 › Editor — mobile preview layout › contains the demo preview while preserving demo restrictions
+[92/205] [chromium] › e2e/editor-mobile-layout.spec.ts:213:5 › Editor — mobile preview layout › keeps test-image.jpg contained in Films and while Advanced is open
+[93/205] [chromium] › e2e/editor-mobile-layout.spec.ts:213:5 › Editor — mobile preview layout › keeps test-image-2.jpg contained in Films and while Advanced is open
+[94/205] [chromium] › e2e/editor-mobile-layout.spec.ts:232:3 › Editor — mobile preview layout › Manual exposes the label and value during keyboard and pointer slider changes
+[95/205] [chromium] › e2e/editor-mobile-layout.spec.ts:267:7 › Editor — mobile preview layout › compact mobile chrome at 320px › keeps touch targets, rows, and text within the viewport
+[96/205] [chromium] › e2e/editor-mobile-layout.spec.ts:309:7 › Editor — mobile preview layout › compact mobile chrome at 320px › keeps Advanced tabs and Manual controls keyboard reachable and touch-sized
+[97/205] [chromium] › e2e/editor-mobile-layout.spec.ts:267:7 › Editor — mobile preview layout › compact mobile chrome at 393px › keeps touch targets, rows, and text within the viewport
+[98/205] [chromium] › e2e/editor-mobile-layout.spec.ts:309:7 › Editor — mobile preview layout › compact mobile chrome at 393px › keeps Advanced tabs and Manual controls keyboard reachable and touch-sized
+[99/205] [chromium] › e2e/editor-mobile-layout.spec.ts:339:3 › Editor — mobile preview layout › restores canceled Manual settings and keeps applied settings after reopening
+[100/205] [chromium] › e2e/editor-mobile-layout.spec.ts:361:3 › Editor — mobile preview layout › resizing across mobile widths preserves the selected film and geometry
+[101/205] [chromium] › e2e/editor-mobile-layout.spec.ts:376:3 › Editor — mobile preview layout › opens a contained non-modal portrait Crop session in one click
+[102/205] [chromium] › e2e/editor-mobile-presets.spec.ts:32:3 › Editor — mobile films › offers Original and exactly ten films with touch-sized main choices
+[103/205] [chromium] › e2e/editor-mobile-presets.spec.ts:45:3 › Editor — mobile films › selecting a film scrolls it into view and has one active color
+[104/205] [chromium] › e2e/editor-mobile-presets.spec.ts:53:3 › Editor — mobile films › native film-row scrolling preserves the applied choice
+[105/205] [chromium] › e2e/editor-mobile-presets.spec.ts:61:3 › Editor — mobile films › keeps film-row scroll position and selected film after Help rerenders
+[106/205] [chromium] › e2e/editor-mobile-presets.spec.ts:72:3 › Editor — mobile films › touch-sized recipe selection stays a draft and Cancel restores the applied film
+[107/205] [chromium] › e2e/editor-mobile-presets.spec.ts:91:3 › Editor — mobile films › the three-photo demo applies base films and preserves action restrictions
+[108/205] [chromium] › e2e/editor-mobile-presets.spec.ts:106:3 › Editor — mobile films › keyboard selects films and Original without recipe browsing
+[109/205] [chromium] › e2e/editor-mobile-presets.spec.ts:116:3 › Editor — mobile films › reduced motion retains keyboard selection and reachable row ends
+[110/205] [chromium] › e2e/editor-mobile-presets.spec.ts:124:3 › Editor — mobile films › video uses the same eleven neutral color choices
+[111/205] [chromium] › e2e/editor-multi-image.spec.ts:7:3 › Editor — Multi-Image Navigation › discards an uncommitted inspector draft when changing photos
+[112/205] [chromium] › e2e/editor-multi-image.spec.ts:28:3 › Editor — Multi-Image Navigation › preserves the edited batch after a failed append and retries the append
+[113/205] [chromium] › e2e/editor-multi-image.spec.ts:68:3 › Editor — Multi-Image Navigation › places the single mode switch in the dock and photo navigation on the stage
+[114/205] [chromium] › e2e/editor-multi-image.spec.ts:88:3 › Editor — Multi-Image Navigation › stage navigation restores each photo selection
+[115/205] [chromium] › e2e/editor-multi-image.spec.ts:96:3 › Editor — Multi-Image Navigation › arrow keys navigate between photos
+[116/205] [chromium] › e2e/editor-preview.spec.ts:49:3 › Editor — Preview Rendering › WebGL pipeline compiles and applies preprocessing settings
+[117/205] [chromium] › e2e/editor-preview.spec.ts:97:3 › Editor — Preview Rendering › WebGL applies recipe saturation after a HaldCLUT
+[118/205] [chromium] › e2e/editor-preview.spec.ts:149:3 › Editor — Preview Rendering › main preview is not black after selecting a base film
+[119/205] [chromium] › e2e/editor-preview.spec.ts:154:3 › Editor — Preview Rendering › Advanced previews leave offscreen cards idle, render after scrolling, and stop in Manual
+[120/205] [chromium] › e2e/editor-transform.spec.ts:5:3 › Editor — Transform (Rotate & Crop) › rotate clockwise button works
+[121/205] [chromium] › e2e/editor-transform.spec.ts:15:3 › Editor — Transform (Rotate & Crop) › crop mode shows crop toolbar with ratio chooser
+[122/205] [chromium] › e2e/editor-transform.spec.ts:22:3 › Editor — Transform (Rotate & Crop) › select crop ratio and apply on desktop
+[123/205] [chromium] › e2e/editor-transform.spec.ts:36:3 › Editor — Transform (Rotate & Crop) › cancel crop returns to normal mode
+[124/205] [chromium] › e2e/editor-tuning.spec.ts:14:3 › Editor — Tuning Panel › Manual opens from Advanced for a base film
+[125/205] [chromium] › e2e/editor-tuning.spec.ts:20:3 › Editor — Tuning Panel › tuning panel shows sliders for main parameters
+[126/205] [chromium] › e2e/editor-tuning.spec.ts:29:3 › Editor — Tuning Panel › reset control restores a slider to the preset value
+[127/205] [chromium] › e2e/editor-tuning.spec.ts:40:3 › Editor — Tuning Panel › inspector is dedicated to adjustments
+[128/205] [chromium] › e2e/film-first-accessibility.spec.ts:7:5 › photo at 320px supports 200% text, reduced motion, keyboard and Advanced accessibility
+[129/205] [chromium] › e2e/film-first-accessibility.spec.ts:7:5 › video at 320px supports 200% text, reduced motion, keyboard and Advanced accessibility
+[130/205] [chromium] › e2e/film-first-accessibility.spec.ts:7:5 › photo at 393px supports 200% text, reduced motion, keyboard and Advanced accessibility
+[131/205] [chromium] › e2e/film-first-accessibility.spec.ts:7:5 › video at 393px supports 200% text, reduced motion, keyboard and Advanced accessibility
+[132/205] [chromium] › e2e/film-first-accessibility.spec.ts:7:5 › photo at 1200px supports 200% text, reduced motion, keyboard and Advanced accessibility
+[133/205] [chromium] › e2e/film-first-accessibility.spec.ts:7:5 › video at 1200px supports 200% text, reduced motion, keyboard and Advanced accessibility
+[134/205] [chromium] › e2e/film-first-accessibility.spec.ts:7:5 › photo at 1600px supports 200% text, reduced motion, keyboard and Advanced accessibility
+[135/205] [chromium] › e2e/film-first-accessibility.spec.ts:7:5 › video at 1600px supports 200% text, reduced motion, keyboard and Advanced accessibility
+[136/205] [chromium] › e2e/film-first.spec.ts:6:1 › new photo starts as Original and exposes exactly ten main films
+[137/205] [chromium] › e2e/film-first.spec.ts:15:1 › Original exports a valid full-resolution JPEG
+[138/205] [chromium] › e2e/film-first.spec.ts:27:1 › selecting Original or another film preserves approved geometry
+[139/205] [chromium] › e2e/film-first.spec.ts:42:1 › comparison retains the same geometry while removing color
+[140/205] [chromium] › e2e/keyboard-shortcuts.spec.ts:5:3 › Keyboard Shortcuts › R rotates the image
+[141/205] [chromium] › e2e/keyboard-shortcuts.spec.ts:20:3 › Keyboard Shortcuts › C opens crop mode
+[142/205] [chromium] › e2e/keyboard-shortcuts.spec.ts:25:3 › Keyboard Shortcuts › Escape cancels crop mode
+[143/205] [chromium] › e2e/keyboard-shortcuts.spec.ts:33:3 › Keyboard Shortcuts › T opens Advanced when a film is selected
+[144/205] [chromium] › e2e/keyboard-shortcuts.spec.ts:47:3 › Keyboard Shortcuts › Enter applies crop
+[145/205] [chromium] › e2e/landing.spec.ts:5:3 › Playable demo › recovers from a failed initial demo request
+[146/205] [chromium] › e2e/landing.spec.ts:17:3 › Playable demo › shows real demo photos, base films, compare surface, and a persistent upload CTA
+[147/205] [chromium] › e2e/landing.spec.ts:25:3 › Playable demo › uploads a single image and transitions to editor
+[148/205] [chromium] › e2e/landing.spec.ts:33:3 › Playable demo › keeps the current editor visible and previews the selected photo while decoding
+[149/205] [chromium] › e2e/landing.spec.ts:75:3 › Playable demo › retries a failed image load with the originally selected photo
+[150/205] [chromium] › e2e/landing.spec.ts:106:3 › Playable demo › retries a failed video load as video and exposes video recovery input
+[151/205] [chromium] › e2e/landing.spec.ts:140:3 › Playable demo › uploads multiple images and exposes batch actions without a filename strip
+[152/205] [chromium] › e2e/mobile-collection.spec.ts:6:3 › on-demand collection preserves independent edits at 320px
+[153/205] [chromium] › e2e/mobile-collection.spec.ts:6:3 › on-demand collection preserves independent edits at 393px
+[154/205] [chromium] › e2e/mobile-collection.spec.ts:6:3 › on-demand collection preserves independent edits at 1440px
+[155/205] [chromium] › e2e/mobile-collection.spec.ts:25:1 › demo collection switches photos and retains demo restrictions
+[156/205] [chromium] › e2e/mobile-collection.spec.ts:35:1 › canceling import retains edits and rejects late decoder completion
+[157/205] [chromium] › e2e/mobile-collection.spec.ts:61:1 › focused manual tool and draft survive desktop/mobile resize, then Cancel discards all changes
+[158/205] [chromium] › e2e/performance-budgets.spec.ts:36:3 › Chromium performance budgets › two-photo editor and ten film choices meet readiness budgets
+[159/205] [chromium] › e2e/photo-export-error.spec.ts:32:3 › Photo export recovery › shows a dismissible alert and Retry succeeds after the worker recovers
+[160/205] [chromium] › e2e/performance-budgets.spec.ts:55:3 › Chromium performance budgets › film preview meets its budget
+[161/205] [chromium] › e2e/photo-export-error.spec.ts:65:3 › Photo export recovery › does not present user cancellation as an error
+[162/205] [chromium] › e2e/performance-budgets.spec.ts:64:3 › Chromium performance budgets › photo export meets its budget
+[163/205] [chromium] › e2e/performance-budgets.spec.ts:73:3 › Chromium performance budgets › three-second video export meets its budget
+[164/205] [chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: Original ignores stale nonneutral effects
+[chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: Original ignores stale nonneutral effects
+Original ignores stale nonneutral effects: {"maxRgbDelta":0,"changedRgbChannels":0,"alphaMismatches":0}
+
+[165/205] [chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: combined curve
+[chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: combined curve
+combined curve: {"maxRgbDelta":0,"changedRgbChannels":0,"alphaMismatches":0}
+
+[166/205] [chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: sharpness maximum
+[chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: sharpness maximum
+sharpness maximum: {"maxRgbDelta":0,"changedRgbChannels":0,"alphaMismatches":0}
+
+[167/205] [chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: sharpness minimum
+[168/205] [chromium] › e2e/performance-budgets.spec.ts:86:3 › Chromium performance budgets › twenty-photo batch export meets its budget
+[chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: sharpness minimum
+sharpness minimum: {"maxRgbDelta":0,"changedRgbChannels":0,"alphaMismatches":0}
+
+[169/205] [chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: clarity maximum
+[chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: clarity maximum
+clarity maximum: {"maxRgbDelta":0,"changedRgbChannels":0,"alphaMismatches":0}
+
+[170/205] [chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: clarity minimum
+[171/205] [chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: tone saturation WB extremes
+[chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: clarity minimum
+clarity minimum: {"maxRgbDelta":0,"changedRgbChannels":0,"alphaMismatches":0}
+
+[172/205] [chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: Kelvin minimum
+[chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: tone saturation WB extremes
+tone saturation WB extremes: {"maxRgbDelta":0,"changedRgbChannels":0,"alphaMismatches":0}
+
+[173/205] [chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: Kelvin maximum and DR400
+[chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: Kelvin minimum
+Kelvin minimum: {"maxRgbDelta":0,"changedRgbChannels":0,"alphaMismatches":0}
+
+[174/205] [chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: real Provia LUT combined effects
+[chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: Kelvin maximum and DR400
+Kelvin maximum and DR400: {"maxRgbDelta":0,"changedRgbChannels":0,"alphaMismatches":0}
+
+[175/205] [chromium] › e2e/processing-loading.spec.ts:21:1 › a delayed actual LUT blocks export without moving the photo before or after readiness
+[chromium] › e2e/processing-golden.spec.ts:19:32 › Processing engine golden parity › CPU, worker, WebGL: real Provia LUT combined effects
+real Provia LUT combined effects: {"maxRgbDelta":0,"changedRgbChannels":0,"alphaMismatches":0}
+
+[176/205] [chromium] › e2e/processing-loading.spec.ts:70:1 › required LUT failure has no fallback download and Retry loads the intended film and thumbnail
+[177/205] [chromium] › e2e/processing-loading.spec.ts:109:1 › late LUT completion after a film change cannot replace Original
+[178/205] [chromium] › e2e/shared-editor-ui.spec.ts:13:3 › photo keeps the same Manual draft, tab and focused slider through 393→1200→393 resize
+[179/205] [chromium] › e2e/shared-editor-ui.spec.ts:56:3 › photo preserves Recipes selection and focus through 1200→393→1200 resize without applying its draft
+[180/205] [chromium] › e2e/shared-editor-ui.spec.ts:13:3 › video keeps the same Manual draft, tab and focused slider through 393→1200→393 resize
+[181/205] [chromium] › e2e/shared-editor-ui.spec.ts:56:3 › video preserves Recipes selection and focus through 1200→393→1200 resize without applying its draft
+[182/205] [chromium] › e2e/touch-comparison.spec.ts:64:5 › real touch comparison in the demo multi-photo editor › stationary hold shows Original and release restores color without navigating
+[183/205] [chromium] › e2e/touch-comparison.spec.ts:72:5 › real touch comparison in the demo multi-photo editor › touch cancellation and window blur release comparison without changing photos
+[184/205] [chromium] › e2e/touch-comparison.spec.ts:90:5 › real touch comparison in the demo multi-photo editor › crossing the swipe threshold releases comparison and navigates exactly once on release
+[185/205] [chromium] › e2e/touch-comparison.spec.ts:100:5 › real touch comparison in the demo multi-photo editor › wide touch layouts keep arrows hidden and navigate by swiping the preview
+[186/205] [chromium] › e2e/touch-comparison.spec.ts:111:5 › real touch comparison in the demo multi-photo editor › a swipe starting on the Original button compares without changing photos
+[187/205] [chromium] › e2e/touch-comparison.spec.ts:125:5 › real touch comparison in the demo multi-photo editor › a Crop drag does not navigate and cancel restores the same photo
+[188/205] [chromium] › e2e/touch-comparison.spec.ts:137:5 › real touch comparison in the demo multi-photo editor › photo navigation during a hold invalidates the old gesture
+[189/205] [chromium] › e2e/touch-comparison.spec.ts:64:5 › real touch comparison in the batch multi-photo editor › stationary hold shows Original and release restores color without navigating
+[190/205] [chromium] › e2e/touch-comparison.spec.ts:72:5 › real touch comparison in the batch multi-photo editor › touch cancellation and window blur release comparison without changing photos
+[191/205] [chromium] › e2e/touch-comparison.spec.ts:90:5 › real touch comparison in the batch multi-photo editor › crossing the swipe threshold releases comparison and navigates exactly once on release
+[192/205] [chromium] › e2e/touch-comparison.spec.ts:100:5 › real touch comparison in the batch multi-photo editor › wide touch layouts keep arrows hidden and navigate by swiping the preview
+[193/205] [chromium] › e2e/touch-comparison.spec.ts:111:5 › real touch comparison in the batch multi-photo editor › a swipe starting on the Original button compares without changing photos
+[194/205] [chromium] › e2e/touch-comparison.spec.ts:125:5 › real touch comparison in the batch multi-photo editor › a Crop drag does not navigate and cancel restores the same photo
+[195/205] [chromium] › e2e/touch-comparison.spec.ts:137:5 › real touch comparison in the batch multi-photo editor › photo navigation during a hold invalidates the old gesture
+[196/205] [chromium] › e2e/video-export.spec.ts:43:3 › Video import and export › fixture is 3s 640×360 H.264 at 30 FPS with AAC 440 Hz audio
+[197/205] [chromium] › e2e/video-export.spec.ts:76:3 › Video import and export › imports, applies a recipe, recovers from unsupported WebCodecs, and exports video
+[198/205] [chromium] › e2e/video-export.spec.ts:160:3 › Video import and export › unsupported source sound waits for explicit consent and can be dismissed
+[199/205] [chromium] › e2e/video-export.spec.ts:186:3 › Video import and export › a silent source exports without a consent prompt when AAC is unsupported
+[200/205] [chromium] › e2e/video-export.spec.ts:200:3 › Video import and export › supported AAC retains the source audio offset and end time
+[201/205] [chromium] › e2e/video-export.spec.ts:221:3 › Video import and export › actual AAC initialization failure offers consent and explicit choice bypasses the failing encoder
+[202/205] [chromium] › e2e/video-geometry.spec.ts:56:3 › Video geometry and source timing › Original, film and comparison retain rotation/reflection/crop; downloaded frames match composition
+[203/205] [chromium] › e2e/video-geometry.spec.ts:105:3 › Video geometry and source timing › mobile crop is reversible and VFR source keeps every packet duration
+[chromium] › e2e/video-geometry.spec.ts:56:3 › Video geometry and source timing › Original, film and comparison retain rotation/reflection/crop; downloaded frames match composition
+{"previewCorners":[[254,0,0],[0,0,253],[0,254,1],[255,255,2]],"outputCorners":[[252,0,0],[0,0,250],[0,253,1],[252,254,1]]}
+
+{"decodedSourceCorners":[[253,0,0],[0,0,254],[0,253,0],[253,253,0]]}
+
+[204/205] [chromium] › e2e/video-geometry.spec.ts:132:3 › Video geometry and source timing › source rotation metadata is baked into composed MP4 dimensions
+[205/205] [chromium] › e2e/video-geometry.spec.ts:144:3 › Video geometry and source timing › free crop pads odd dimensions and keeps preview/output pixel geometry
+  4 skipped
+  201 passed (4.6m)

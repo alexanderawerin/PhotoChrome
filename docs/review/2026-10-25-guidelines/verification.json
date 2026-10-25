@@ -1,0 +1,28 @@
+{
+  "sourceCommit": "e7fad82633e3a1f82a1255d16e5bcaef84a76b63",
+  "lint": "passed",
+  "unused": "passed",
+  "applicationTypes": "passed (tsc -b in build)",
+  "unitTypes": "passed",
+  "e2eTypes": "passed",
+  "unit": {
+    "passed": 179,
+    "files": 29
+  },
+  "chromium": {
+    "passed": 201,
+    "skipped": 4,
+    "failed": 0
+  },
+  "mobile": {
+    "passed": 75,
+    "skipped": 5,
+    "failed": 0
+  },
+  "video": "passed",
+  "library": {
+    "status": "failed before preparation",
+    "error": "hosted apps tools/list request failed: network",
+    "library_file_id": null
+  }
+}

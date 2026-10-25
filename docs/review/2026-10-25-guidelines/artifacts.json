@@ -1,0 +1,52 @@
+[
+  {
+    "name": "PhotoChrome-guidelines-adjustment.png",
+    "bytes": 266150,
+    "sha256": "cfb7576a4ee9506aaf1d2adfb90887bbbd4568a4d9e5c24ab6b931f3344d3297"
+  },
+  {
+    "name": "PhotoChrome-guidelines-crop.png",
+    "bytes": 325627,
+    "sha256": "7c5753f954f5128ad6aa9948a55fc00c8cbc121b433b9ca92a6fec796cb6a6af"
+  },
+  {
+    "name": "PhotoChrome-guidelines-films.png",
+    "bytes": 441861,
+    "sha256": "50bf3fa060354899c7cfe04d7e6eff680be4b0f702fa98df4f7d99e8f05da505"
+  },
+  {
+    "name": "PhotoChrome-guidelines-landscape.png",
+    "bytes": 200727,
+    "sha256": "9870c37fd430cf2a3a246e080513bf1f0ef17aec97585336b29688ed611727ed"
+  },
+  {
+    "name": "PhotoChrome-guidelines-more.png",
+    "bytes": 346920,
+    "sha256": "09a09b2081b252cecc09dd6c120cc7a274e98077700c01061dfb3110e71b6083"
+  },
+  {
+    "name": "PhotoChrome-guidelines-recipes.png",
+    "bytes": 405960,
+    "sha256": "514f6d58fa0eed0569b17aadd2be8d9a308cbea781a29acf9f6bc849e981425e"
+  },
+  {
+    "name": "PhotoChrome-guidelines-safe-area.png",
+    "bytes": 277930,
+    "sha256": "2bdf336d6dbb9a1ca2b6ea8d51b3aab87bc6527a9e36337e630df1734bcfd365"
+  },
+  {
+    "name": "PhotoChrome-mobile-guidelines.mp4",
+    "bytes": 12106975,
+    "sha256": "3b97813aaffa7c462ca5fde85b7796df897dcf9ef2cc86d77e2e18a5c8581012"
+  },
+  {
+    "name": "before-films.png",
+    "bytes": 419094,
+    "sha256": "6dd487d081766d218e0c955d87987e62f45a68e17c2bced0fe3fde24d2485242"
+  },
+  {
+    "name": "before-manual.png",
+    "bytes": 299666,
+    "sha256": "30f4c602fde5c34bedf1ab54d9e0dc31667d403c7d7d94e429a314f2e414cd73"
+  }
+]

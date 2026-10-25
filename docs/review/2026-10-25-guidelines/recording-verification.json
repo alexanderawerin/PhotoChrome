@@ -1,0 +1,48 @@
+{
+  "passed": true,
+  "sourceCommit": "e7fad82633e3a1f82a1255d16e5bcaef84a76b63",
+  "viewport": {
+    "width": 393,
+    "height": 852
+  },
+  "browser": "151.0.7922.173",
+  "mobileEmulation": true,
+  "errors": [],
+  "checks": [
+    {
+      "action": "Touch hold comparison and release",
+      "passed": true
+    },
+    {
+      "action": "Cancel restores exact pre-draft pixels",
+      "passed": true
+    },
+    {
+      "action": "Apply commits the shared recipe/manual draft",
+      "passed": true
+    },
+    {
+      "action": "Crop Cancel restores committed color and composition",
+      "passed": true
+    },
+    {
+      "action": "Batch color application and visible status",
+      "passed": true
+    },
+    {
+      "action": "Collection navigation after committed crop",
+      "passed": true
+    },
+    {
+      "action": "Export processed image (Ctrl+S)",
+      "output": "PhotoChrome-guidelines-edited.jpg",
+      "passed": true
+    },
+    {
+      "action": "Export all photos",
+      "output": "PhotoChrome-guidelines-series.zip",
+      "passed": true
+    }
+  ],
+  "duration": 59.962
+}

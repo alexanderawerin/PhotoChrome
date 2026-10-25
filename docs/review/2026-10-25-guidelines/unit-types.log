@@ -1,0 +1,4 @@
+
+> photochrome@1.6.0 test:types
+> tsc -p tsconfig.test.json
+

@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "duration": 58.8,
+  "width": 786,
+  "height": 1784,
+  "progress": 1.801061,
+  "error": null,
+  "samples": [
+    {
+      "at": 5,
+      "digest": "e03cb1b6a20b22e01509652337b871672301bdd3b26bf8e7f080f8e4059c289c"
+    },
+    {
+      "at": 15,
+      "digest": "ecd7440e9c82078844ff3c643a60250039d6cb62cdaa7bc306a94f2d383bea34"
+    },
+    {
+      "at": 25,
+      "digest": "ccb0078cc7a3cbb1b1cfbe0c9b5e89bb28e3aa63ec5cf589351fc67198c3b1b2"
+    },
+    {
+      "at": 35,
+      "digest": "f4cea46771570cc47132e78e3cb7f2f57155250a87a2b232fda3df28599a1c3c"
+    },
+    {
+      "at": 56,
+      "digest": "e2c7d2c9f28405de777c7b4785e442c99b8d0e4ef51b072983bf11bf88e8803a"
+    }
+  ]
+}

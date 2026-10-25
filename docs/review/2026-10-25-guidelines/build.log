@@ -1,0 +1,33 @@
+
+> photochrome@1.6.0 build
+> tsc -b && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 1924 modules transformed.
+rendering chunks...
+computing gzip size...
+out/index.html                                                    6.28 kB │ gzip:   2.10 kB
+out/assets/processor.worker-B3tINHdw.js                          11.18 kB
+out/assets/acros-DmsASuhy.png                                   105.98 kB
+out/assets/neopan-DzJxZSAk.png                                  131.58 kB
+out/assets/alexander-awerin-AQI2wTv1SWo-unsplash-lYAEYx6k.webp  334.91 kB
+out/assets/alexander-awerin-3yqVPhHHsdI-unsplash-l2DVLOEJ.webp  534.08 kB
+out/assets/velvia-C20efQUr.png                                  566.85 kB
+out/assets/provia-BtI4_qCR.png                                  589.79 kB
+out/assets/astia-33J_ZP9U.png                                   598.06 kB
+out/assets/classic-chrome-Bq1gDH1a.png                          599.13 kB
+out/assets/superia-lRHcmhVY.png                                 661.50 kB
+out/assets/pro400h-D4EjgydD.png                                 670.29 kB
+out/assets/alexander-awerin-yafEjegDFl4-unsplash-CTFMUSDa.webp  855.95 kB
+out/assets/index-Db7tXFJL.css                                    50.73 kB │ gzip:  10.30 kB
+out/assets/browser-CkpcyLtW.js                                    5.05 kB │ gzip:   2.32 kB
+out/assets/piexif-D469qK86.js                                    30.61 kB │ gzip:   9.22 kB
+out/assets/index-BNHZEirE.js                                     67.61 kB │ gzip:  18.04 kB
+out/assets/index-BVBRrxO3.js                                    872.27 kB │ gzip: 244.95 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 5.76s

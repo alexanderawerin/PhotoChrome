@@ -1,0 +1,29 @@
+{
+  "jpeg": {
+    "name": "PhotoChrome-guidelines-edited.jpg",
+    "format": "JPEG",
+    "dimensions": [
+      1200,
+      1600
+    ],
+    "bytes": 475303
+  },
+  "zip": [
+    {
+      "name": "photochrome_provia-portrait_Old-town.jpg",
+      "dimensions": [
+        1200,
+        1600
+      ],
+      "format": "JPEG"
+    },
+    {
+      "name": "photochrome_provia-portrait_Evening-tide.jpg",
+      "dimensions": [
+        1600,
+        1066
+      ],
+      "format": "JPEG"
+    }
+  ]
+}

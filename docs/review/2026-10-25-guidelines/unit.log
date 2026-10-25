@@ -1,0 +1,13 @@
+
+> photochrome@1.6.0 test
+> vitest run
+
+
+ RUN  v4.1.11 /workspace/PhotoChrome-mobile
+
+
+ Test Files  29 passed (29)
+      Tests  179 passed (179)
+   Start at  06:29:33
+   Duration  4.15s (transform 2.23s, setup 0ms, import 3.76s, tests 1.24s, environment 2ms)
+

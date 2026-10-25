@@ -1,0 +1,4 @@
+
+> photochrome@1.6.0 test:e2e:types
+> tsc -p tsconfig.e2e.json
+

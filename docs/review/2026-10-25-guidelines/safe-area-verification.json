@@ -1,0 +1,27 @@
+{
+  "viewport": {
+    "width": 320,
+    "height": 740
+  },
+  "emulatedInsets": {
+    "bottom": 34,
+    "left": 12,
+    "right": 12,
+    "top": 24
+  },
+  "footer": {
+    "paddingBottom": "34px",
+    "paddingLeft": "16px",
+    "bounds": {
+      "x": 0,
+      "y": 649,
+      "width": 320,
+      "height": 91,
+      "top": 649,
+      "right": 320,
+      "bottom": 740,
+      "left": 0
+    }
+  },
+  "overflow": false
+}
