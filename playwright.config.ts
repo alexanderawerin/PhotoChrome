@@ -39,7 +39,7 @@ export default defineConfig({
     },
     {
       name: 'mobile-chrome',
-      testMatch: /(landing|advanced-sessions|editor-mobile-header|editor-mobile-presets|editor-mobile-layout|editor-mobile-crop|editor-completion)\.spec\.ts/,
+      testMatch: /(landing|contact-sheet|advanced-sessions|editor-mobile-header|editor-mobile-presets|editor-mobile-layout|editor-mobile-crop|editor-completion)\.spec\.ts/,
       use: {
         ...devices['Pixel 7'],
         launchOptions: {

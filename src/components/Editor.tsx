@@ -4,6 +4,7 @@ import { APP_VERSION, APP_URL } from '../constants'
 import { Button } from './ui/button'
 import { Spinner } from './ui/spinner'
 import { Preview } from './Preview'
+import { MediaContactSheet } from './MediaContactSheet'
 import { FilmSelector } from './FilmSelector'
 import { AdvancedPanel } from './AdvancedPanel'
 import { EditorHeader, EditorModes, EditorActions, EditorControlDock, EditorCompare, EditorPhotoNavigation, EditorProcessing, EditorAppliedColor, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
@@ -33,6 +34,7 @@ interface EditorProps {
   onImageUpdate: (id: string, updates: Partial<ImageItem>) => void
   onNextImage?: () => void
   onPreviousImage?: () => void
+  onSelectImage: (index: number) => void
   onBack: () => void
   onAddImages: (files: File[]) => Promise<void>
   demoMode?: boolean
@@ -53,6 +55,7 @@ export function Editor({
   onImageUpdate,
   onNextImage,
   onPreviousImage,
+  onSelectImage,
   onBack,
   onAddImages,
   demoMode = false,
@@ -453,7 +456,7 @@ export function Editor({
   const displayImage = showOriginal || preview.imageId !== currentImage.id ? transformedThumbnail : preview.data
 
   const actions: EditorAction[] = demoMode ? [{
-    id: 'upload', label: 'Upload photos', ariaLabel: 'Upload photos',
+    id: 'upload', label: 'Add media', ariaLabel: 'Add media (photos or video)',
     onClick: () => demoUploadRef.current?.click(), disabled: !commands.add,
   }] : isTuning ? [] : isCropping ? [{
     id: 'cancel-crop', label: 'Cancel', variant: 'ghost', onClick: () => closeCrop(false), disabled: !commands.cancelDraft,
@@ -476,7 +479,7 @@ export function Editor({
   ]
 
   return (
-    <div 
+    <main
       className="flex flex-col md:flex-row overflow-hidden"
       style={{ height: getViewportHeightStyle(viewportHeight) }}
     >
@@ -541,6 +544,9 @@ export function Editor({
 
         </div>
 
+        <MediaContactSheet images={images} currentIndex={currentIndex} onSelect={onSelectImage}
+          disabled={!commands.navigate} demoMode={demoMode} />
+
         <div className="mobile-photo-stage relative flex min-h-0 flex-col overflow-hidden" role="region" aria-label="Photo workspace" data-preview-fit="contain">
           <div className="relative min-h-0 flex-1">
           <Preview
@@ -556,7 +562,7 @@ export function Editor({
             onCropScaleChange={cropScale => edit.changeCrop({ cropScale })}
             cropGridActive={isCropControlActive}
             statusOverlay={isProcessing ? <EditorProcessing /> : undefined}
-            colorOverlay={<EditorAppliedColor profile={currentImage.recipe} settings={currentImage.customSettings} preparing={isProcessing} unavailable={!!previewError} />}
+            colorOverlay={<EditorAppliedColor profile={currentImage.recipe} settings={currentImage.customSettings} preparing={!isPreviewReady} unavailable={!!previewError} />}
             overlay={!isCropping && !isTuning ? <EditorCompare active={showOriginal} disabled={!commands.compare}
               onStart={handleCompareStart} onEnd={handleCompareEnd} /> : undefined}
             onMouseDown={handleCompareStart}
@@ -624,9 +630,9 @@ export function Editor({
           aria-label="Applying preset to all images"
           aria-live="polite"
         >
-          <div className="flex items-center gap-3 pl-4 pr-4 py-3 rounded-xl bg-zinc-800/80">
-            <Spinner className="size-5 text-zinc-400 flex-shrink-0" />
-            <p className="text-sm text-zinc-300 whitespace-nowrap">
+          <div className="editor-paper flex items-center gap-3 p-4 rounded-lg">
+            <Spinner className="size-5 text-muted-foreground flex-shrink-0" />
+            <p className="text-sm text-foreground whitespace-nowrap">
               Applying preset to {totalImages} images...
             </p>
           </div>
@@ -640,20 +646,20 @@ export function Editor({
           aria-label="Batch export progress"
           aria-live="polite"
         >
-          <div className="w-full max-w-sm space-y-4 rounded-2xl bg-zinc-900 p-6">
+          <div className="editor-paper w-full max-w-sm space-y-4 rounded-lg p-6">
             <div>
-              <p className="font-medium text-white">Exporting all photos</p>
-              <p className="mt-1 truncate text-xs text-zinc-400">
+              <p className="font-medium text-foreground">Exporting all photos</p>
+              <p className="mt-1 truncate text-xs text-muted-foreground">
                 {batchProgress.fileName ?? 'Preparing archive...'}
               </p>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-zinc-800" role="progressbar" aria-label="Photos processed" aria-valuemin={0} aria-valuemax={batchProgress.total} aria-valuenow={batchProgress.current}>
+            <div className="h-2 overflow-hidden rounded-full bg-secondary" role="progressbar" aria-label="Photos processed" aria-valuemin={0} aria-valuemax={batchProgress.total} aria-valuenow={batchProgress.current}>
               <div
-                className="h-full bg-white transition-[width] duration-200 motion-reduce:transition-none"
+                className="h-full bg-primary transition-[width] duration-200 motion-reduce:transition-none"
                 style={{ width: `${batchProgress.total === 0 ? 100 : (batchProgress.current / batchProgress.total) * 100}%` }}
               />
             </div>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-muted-foreground">
               {batchProgress.current}/{batchProgress.total} · {batchProgress.exported} exported · {batchProgress.skipped} skipped · {batchProgress.errors} errors
             </p>
             <Button variant="outline" className="w-full" onClick={() => batchAbortControllerRef.current?.abort()}>
@@ -679,7 +685,7 @@ export function Editor({
         />
       )}
 
-    </div>
+    </main>
   )
 }
 

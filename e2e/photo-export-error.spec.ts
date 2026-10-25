@@ -3,6 +3,8 @@ import { selectBaseFilm } from './helpers/upload'
 import sharp from 'sharp'
 
 async function mockPhotoExportFailure(page: import('@playwright/test').Page, errorName = 'Error') {
+  // Inject a failure into export only after the selected preview has finished.
+  await expect(page.getByRole('button', { name: 'Export processed image (Ctrl+S)', exact: true })).toBeEnabled()
   await page.evaluate((name) => {
     const original = Worker.prototype.postMessage
     const originalEncoder = HTMLCanvasElement.prototype.toBlob

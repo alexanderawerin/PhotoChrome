@@ -321,7 +321,7 @@ test.describe('Editor — Export completion', () => {
     await expect(dialog).toBeVisible()
     await dialog.getByRole('button', { name: 'New edit', exact: true }).click()
     await expect(dialog).toBeHidden()
-    await expect(page.getByRole('button', { name: 'Upload photos', exact: true })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: 'Add media (photos or video)', exact: true })).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('button', { name: /^adjust$/i })).toHaveCount(0)
     await expect(page.getByRole('button', { name: /^crop$/i })).toHaveCount(0)
   })

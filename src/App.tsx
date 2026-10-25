@@ -30,9 +30,11 @@ const DEMO_PHOTOS = [demoOneUrl, demoTwoUrl, demoThreeUrl] as const
 function LoadingOverlay({
   mediaType = 'image',
   previewUrl,
+  onCancel,
 }: {
   mediaType?: 'image' | 'video'
   previewUrl?: string | null
+  onCancel?: () => void
 }) {
   return (
     <div
@@ -51,13 +53,14 @@ function LoadingOverlay({
         />
       )}
       <div className="absolute inset-0 bg-black/45" aria-hidden="true" />
-      <div className="relative z-10 flex w-full max-w-sm items-center justify-center gap-3 rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 shadow-2xl backdrop-blur-sm">
-        <Spinner className="size-5 shrink-0 text-zinc-300 motion-reduce:animate-none" aria-hidden="true" />
+      <div className="editor-paper relative z-10 flex w-full max-w-sm flex-col items-center justify-center gap-4 rounded-lg border p-6 shadow-2xl">
+        <Spinner className="size-5 shrink-0 text-muted-foreground motion-reduce:animate-none" aria-hidden="true" />
         <p
-          className="text-center text-sm leading-5 text-zinc-100"
+          className="text-center text-sm leading-5"
         >
           {mediaType === 'video' ? 'Loading video…' : 'Loading photo…'}
         </p>
+        {onCancel && <Button autoFocus variant="outline" className="min-h-11" onClick={onCancel}>Cancel import</Button>}
       </div>
     </div>
   )
@@ -121,6 +124,7 @@ function AppContent() {
         onImageUpdate={session.updateImage}
         onNextImage={() => session.goToImage(media.currentIndex + 1)}
         onPreviousImage={() => session.goToImage(media.currentIndex - 1)}
+        onSelectImage={session.goToImage}
         onBack={startDemo}
         onAddImages={files => session.load({ kind: 'photos', files, mode: media.kind === 'demo' ? 'replace' : 'append' })}
         onMediaSelect={handleFileSelect}
@@ -138,18 +142,18 @@ function AppContent() {
   return (
     <>
       <LoadingContent isLoading={blocked}>{content}</LoadingContent>
-      {isLoading && <LoadingOverlay mediaType={isVideoRequest ? 'video' : 'image'} previewUrl={previewUrl} />}
+      {isLoading && <LoadingOverlay mediaType={isVideoRequest ? 'video' : 'image'} previewUrl={previewUrl} onCancel={media ? session.resume : undefined} />}
       {error && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-zinc-950 p-4" role="alert">
-          <Empty className="max-w-md border-0">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" role="alert">
+          <Empty className="editor-paper max-w-md rounded-lg border p-6 shadow-2xl">
             <EmptyHeader>
               <EmptyMedia variant="icon" className="bg-rose-500/10 text-rose-400 size-16 rounded-2xl [&_svg]:size-8">
                 <ErrorIcon />
               </EmptyMedia>
-              <EmptyTitle className="text-xl text-white">
+              <EmptyTitle className="text-xl text-foreground">
                 {isVideoRequest ? 'Failed to load video' : request?.kind === 'demo' ? 'Failed to load demo' : 'Failed to load image'}
               </EmptyTitle>
-              <EmptyDescription className="text-zinc-400">{error}</EmptyDescription>
+              <EmptyDescription className="text-muted-foreground">{error}</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
               <div className="flex w-full flex-col gap-2">
@@ -170,11 +174,11 @@ function AppContent() {
                     }
                   }}
                 />
-                <Button ref={retryButtonRef} onClick={() => { void session.retry() }} variant="outline" className="gap-2 border-zinc-700 hover:bg-zinc-800 hover:text-white">
+                <Button ref={retryButtonRef} onClick={() => { void session.retry() }} variant="outline" className="min-h-11 gap-2">
                   <RefreshCw className="w-4 h-4" /> Retry
                 </Button>
-                <Button onClick={() => errorFileInputRef.current?.click()}>Choose another</Button>
-                <Button variant="ghost" onClick={media ? session.resume : startDemo}>
+                <Button className="min-h-11" onClick={() => errorFileInputRef.current?.click()}>Choose another</Button>
+                <Button variant="ghost" className="min-h-11" onClick={media ? session.resume : startDemo}>
                   {media && media.kind !== 'demo' ? 'Back to editor' : 'Back to demo'}
                 </Button>
               </div>

@@ -63,13 +63,14 @@ test('applied color stays within the photo in every mode and desktop comparison 
   const preview = page.getByLabel('Preview', { exact: true })
   const status = page.getByLabel('Applied color', { exact: true })
   const expectInsidePhoto = async () => {
-    const photo = await preview.boundingBox()
-    const label = await status.boundingBox()
-    if (!photo || !label) throw new Error('Photo status geometry unavailable')
-    expect(label.x).toBeGreaterThanOrEqual(photo.x)
-    expect(label.y).toBeGreaterThanOrEqual(photo.y)
-    expect(label.x + label.width).toBeLessThanOrEqual(photo.x + photo.width)
-    expect(label.y + label.height).toBeLessThanOrEqual(photo.y + photo.height)
+    await expect(status).toBeVisible()
+    // Read both rectangles in one frame: resize may settle between two remote reads.
+    await expect.poll(() => preview.evaluate(element => {
+      const photo = element.getBoundingClientRect()
+      const label = element.parentElement!.querySelector('[aria-label="Applied color"]')!.getBoundingClientRect()
+      return label.left >= photo.left && label.top >= photo.top
+        && label.right <= photo.right && label.bottom <= photo.bottom
+    })).toBe(true)
   }
   await expectInsidePhoto()
   const compare = await page.getByRole('button', { name: 'Hold to compare original', exact: true }).boundingBox()

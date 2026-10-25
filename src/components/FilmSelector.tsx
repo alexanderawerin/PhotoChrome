@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Recipe } from '../engine/types'
 import { getBaseFilms } from '../engine/film-profiles'
 import { FilmOption } from './FilmOption'
+import { revealSelection } from '../lib/reveal-selection'
 
 interface FilmSelectorProps {
   sourceImage: ImageData
@@ -50,13 +51,7 @@ export function FilmSelector({ sourceImage, activeRecipe, onSelect, disabled, re
     const scroll = scrollRef.current
     const selected = scroll?.querySelector<HTMLButtonElement>('[aria-pressed="true"]')
     if (!scroll || !selected) return
-    const containerBounds = scroll.getBoundingClientRect()
-    const bounds = selected.getBoundingClientRect()
-    // Scroll this strip only: Element.scrollIntoView can also move the editor/body.
-    if (bounds.left < containerBounds.left || bounds.right > containerBounds.right) {
-      const offset = bounds.left - containerBounds.left - (scroll.clientWidth - bounds.width) / 2
-      scroll.scrollTo({ left: scroll.scrollLeft + offset, behavior: scrollBehavior() })
-    }
+    revealSelection(scroll, selected, true)
   }, [activeId])
 
   const scrollFilms = (direction: number) => {

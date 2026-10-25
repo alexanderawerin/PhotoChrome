@@ -5,6 +5,7 @@ import { VideoPreview } from './VideoPreview'
 import { FilmSelector } from './FilmSelector'
 import { AdvancedPanel } from './AdvancedPanel'
 import { EditorHeader, EditorModes, EditorActions, EditorControlDock, EditorCompare, EditorProcessing, EditorAppliedColor, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
+import { MediaContext } from './MediaContactSheet'
 import { activeEditorSession, beginTuningSession, beginCropSession, editorSessionChanges, selectTuningProfile, updateTuningSession, updateCropSession, setCropRatio, type EditorSession } from '../engine/editor-sessions'
 import { createDefaultTransformState, nextQuarterTurn, renderImageTransform, type ImageTransformState } from '../engine/transform'
 import { getVideoOutputSize } from '../engine/video/geometry'
@@ -43,17 +44,17 @@ function ExportOverlay({
 }) {
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
-      <div className="bg-zinc-900 rounded-2xl p-6 max-w-sm w-full space-y-4">
+      <div className="editor-paper rounded-lg p-6 max-w-sm w-full space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Film className="w-5 h-5 text-zinc-400" />
-            <span className="text-sm font-medium text-white">Exporting Video</span>
+            <Film className="w-5 h-5 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground">Exporting Video</span>
           </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={onCancel}
-            className="text-zinc-400 hover:text-white -mr-2"
+            className="text-muted-foreground hover:text-foreground -mr-2"
             aria-label="Cancel export"
           >
             <X className="w-4 h-4" aria-hidden="true" />
@@ -62,19 +63,19 @@ function ExportOverlay({
 
         {/* Progress bar */}
         <div className="space-y-2">
-          <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+          <div className="h-2 bg-secondary rounded-full overflow-hidden">
             <div
-              className="h-full bg-white transition-all duration-300 ease-out"
+              className="h-full bg-primary transition-all duration-300 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <div className="flex justify-between text-xs text-zinc-400">
+          <div className="flex justify-between text-xs text-muted-foreground">
             <span>{status}</span>
             <span>{Math.round(progress)}%</span>
           </div>
         </div>
 
-        <p className="text-xs text-zinc-400 text-center">
+        <p className="text-xs text-muted-foreground text-center">
           This may take a while for longer videos
         </p>
       </div>
@@ -484,6 +485,7 @@ export function VideoEditor({
         </div>
 
         {/* Preview area */}
+        <MediaContext title={fileName} detail={`${metadata.width} × ${metadata.height} · ${metadata.duration.toFixed(1)}s video`} />
         <div className="editor-video-preview flex-1 min-h-0 px-3 md:px-6 relative overflow-hidden">
           <VideoPreview
             video={video}
@@ -533,7 +535,7 @@ export function VideoEditor({
       )}
 
       <Sheet open={!!exportState.requiresSilentAudioConsent} onOpenChange={open => { if (!open) onDismissExportError() }}>
-        <SheetContent side="bottom" className="mx-auto max-w-lg rounded-t-2xl space-y-4" onCloseAutoFocus={event => { event.preventDefault(); if (!exportState.isExporting) exportButtonRef.current?.focus() }}>
+        <SheetContent side="bottom" className="editor-paper mx-auto max-w-lg rounded-t-lg space-y-4" onCloseAutoFocus={event => { event.preventDefault(); if (!exportState.isExporting) exportButtonRef.current?.focus() }}>
           <SheetTitle>Export without sound?</SheetTitle>
           <SheetDescription>{exportState.error || 'This browser cannot preserve the sound in this clip.'} Your edit remains available if you cancel.</SheetDescription>
           <div className="flex justify-end gap-3">

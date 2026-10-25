@@ -89,7 +89,7 @@ test.describe('Editor — mobile films', () => {
   })
 
   test('the three-photo demo applies base films and preserves action restrictions', async ({ page, landingPage }) => {
-    await expect(page.getByRole('button', { name: 'Upload photos', exact: true })).toBeVisible({ timeout: 15000 })
+    await expect(page.getByRole('button', { name: 'Add media (photos or video)', exact: true })).toBeVisible({ timeout: 15000 })
     const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })
     await expect(modes.getByRole('button', { name: 'Films', exact: true })).toHaveAttribute('aria-current', 'page')
     await expect(modes.getByRole('button', { name: 'Open Advanced settings', exact: true })).toHaveCount(0)

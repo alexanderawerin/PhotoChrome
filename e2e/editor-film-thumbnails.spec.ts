@@ -130,7 +130,7 @@ for (const width of [393, 1200]) {
     await page.setViewportSize({ width, height: 852 })
     await page.goto('/')
     const header = page.locator('header')
-    await expect(header.getByRole('button', { name: 'Upload photos', exact: true })).toBeVisible()
+    await expect(header.getByRole('button', { name: 'Add media (photos or video)', exact: true })).toBeVisible()
     await expect(header.getByRole('button', { name: 'Help', exact: true })).toBeVisible()
     await expect(header.getByRole('button', { name: 'More editor actions', exact: true })).toHaveCount(0)
     await expect(header.getByRole('button', { name: /Export/ })).toHaveCount(0)

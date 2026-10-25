@@ -6,6 +6,7 @@ Implementation evidence and remaining browser/device gates are recorded in the [
 
 ## Features
 
+- **Contact sheet**: Switch photos directly on desktop or touch. The filename and source dimensions identify the current photo; each photo keeps its own applied color and geometry.
 - **Three-photo demo**: Switch photos, try films and compare with Original; add your own photos or video to unlock geometry, Advanced settings and export.
 - **Original and ten base films**: Provia, Velvia, Astia, Pro 400H, Superia, Acros, Neopan, Eterna, Classic Chrome and Classic Neg. New media starts as Original; choosing a film clears earlier color overrides while preserving geometry.
 - **100 Advanced recipes**: Recipes and Manual share one temporary preview. Apply commits the profile and settings together; Cancel, Escape or changing media/film discards the draft. Favorite recipe IDs are shared between photo and video, with favorites first within their film.
@@ -14,6 +15,7 @@ Implementation evidence and remaining browser/device gates are recorded in the [
 - **JPEG, ZIP and MP4 export**: Save applied edits, including Original and geometry-only results. Export all includes every loaded photo; partial failures are reported and zero-success exports produce no success archive.
 - **Apply color to all photos**: Copy the applied film, recipe and effective color settings, including Original, while preserving each photo's geometry.
 - **Video sound**: Preserve source audio when the actual browser export configuration supports it. Otherwise, silent output requires an explicit **Export without sound** choice; Cancel leaves the edit available. MP4 support is checked at runtime.
+- **Cancelable imports**: Cancel an in-progress replacement or append to return to the existing session. Late decoder results cannot replace the retained edit. Failed imports offer Retry, Choose another and Back to editor.
 - **Local processing**: CPU/worker processing for photos and WebGL2 for video and eligible photo previews. Required film resources must be ready before applying or exporting a processed result.
 - **EXIF and feedback**: JPEG export metadata and GitHub feedback from Help remain available.
 

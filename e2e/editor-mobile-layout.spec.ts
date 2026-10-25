@@ -199,7 +199,7 @@ async function stressTextSize(page: Page): Promise<void> {
 test.describe('Editor — mobile preview layout', () => {
   test('contains the demo preview while preserving demo restrictions', async ({ page, landingPage }) => {
     await waitForPreview(page)
-    await expect(page.getByRole('button', { name: 'Upload photos', exact: true })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: 'Add media (photos or video)', exact: true })).toBeVisible({ timeout: 15_000 })
     await expectContainedInWorkspace(page)
 
     const modes = page.getByRole('navigation', { name: 'Editor modes', exact: true })

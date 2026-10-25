@@ -134,7 +134,7 @@ export function HelpDialog({
         onClose()
       }}
     >
-      <SheetContent className="bg-zinc-900 border-zinc-800 w-[320px] sm:w-[380px] overflow-y-auto">
+      <SheetContent className="editor-paper border-border w-[320px] sm:w-[380px] overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="sr-only">Photochrome help</SheetTitle>
           <SheetDescription className="sr-only">
@@ -143,13 +143,13 @@ export function HelpDialog({
         </SheetHeader>
 
         {/* Tab buttons */}
-        <div className="flex border-b border-zinc-800 mt-4" role="tablist">
+        <div className="flex border-b border-border mt-4" role="tablist">
           <button
             onClick={() => setActiveTab('quick-guide')}
             className={`flex-1 min-h-11 py-2.5 text-sm font-medium transition-colors ${
               activeTab === 'quick-guide'
-                ? 'text-white border-b-2 border-white -mb-px'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'text-foreground border-b-2 border-primary -mb-px'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
             aria-selected={activeTab === 'quick-guide'}
             role="tab"
@@ -160,8 +160,8 @@ export function HelpDialog({
             onClick={() => setActiveTab('whats-new')}
             className={`flex-1 min-h-11 py-2.5 text-sm font-medium transition-colors ${
               activeTab === 'whats-new'
-                ? 'text-white border-b-2 border-white -mb-px'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'text-foreground border-b-2 border-primary -mb-px'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
             aria-selected={activeTab === 'whats-new'}
             role="tab"
@@ -172,8 +172,8 @@ export function HelpDialog({
             onClick={() => setActiveTab('shortcuts')}
             className={`flex-1 min-h-11 py-2.5 text-sm font-medium transition-colors ${
               activeTab === 'shortcuts'
-                ? 'text-white border-b-2 border-white -mb-px'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'text-foreground border-b-2 border-primary -mb-px'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
             aria-selected={activeTab === 'shortcuts'}
             role="tab"
@@ -184,8 +184,8 @@ export function HelpDialog({
             onClick={() => setActiveTab('feedback')}
             className={`flex-1 min-h-11 py-2.5 text-sm font-medium transition-colors ${
               activeTab === 'feedback'
-                ? 'text-white border-b-2 border-white -mb-px'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'text-foreground border-b-2 border-primary -mb-px'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
             aria-selected={activeTab === 'feedback'}
             role="tab"
@@ -203,18 +203,18 @@ export function HelpDialog({
         </div>
 
         {/* Disclaimer */}
-        <div className="pt-4 mt-4 border-t border-zinc-800">
-          <p className="text-[11px] text-zinc-400 leading-relaxed">
+        <div className="pt-4 mt-4 border-t border-border">
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
             This app is not affiliated with, endorsed by, or connected to FUJIFILM Corporation. 
             Film simulation names are used for reference purposes only.
           </p>
-          <p className="text-[11px] text-zinc-400 mt-2">
+          <p className="text-[11px] text-muted-foreground mt-2">
             Made by{' '}
             <a 
               href="https://netdesigner.ru" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-zinc-300 hover:text-white transition-colors"
+              className="text-foreground hover:text-foreground transition-colors"
             >
               Alexander Awerin
             </a>
@@ -240,12 +240,12 @@ function QuickGuideContent() {
     <ol className="space-y-3">
       {steps.map(([title, description], index) => (
         <li key={title} className="flex gap-3 text-sm">
-          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-xs text-zinc-400">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary text-xs text-muted-foreground">
             {index + 1}
           </span>
           <div>
-            <p className="font-medium text-zinc-200">{title}</p>
-            <p className="mt-0.5 text-zinc-400">{description}</p>
+            <p className="font-medium text-foreground">{title}</p>
+            <p className="mt-0.5 text-muted-foreground">{description}</p>
           </div>
         </li>
       ))}
@@ -258,13 +258,13 @@ function WhatsNewContent() {
     <div className="space-y-5">
       {WHATS_NEW.map((release) => (
         <div key={release.version}>
-          <h3 className="text-xs font-semibold text-zinc-400 mb-2">
+          <h3 className="text-xs font-semibold text-muted-foreground mb-2">
             {release.version === 'Current' ? 'Current workflow' : `Version ${release.version} (historical)`}
           </h3>
           <ul className="space-y-1.5">
             {release.items.map((item, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm text-zinc-300">
-                <span className="text-zinc-400 mt-0.5">•</span>
+              <li key={index} className="flex items-start gap-2 text-sm text-foreground">
+                <span className="text-muted-foreground mt-0.5">•</span>
                 {item}
               </li>
             ))}
@@ -285,9 +285,9 @@ function ShortcutsContent({ shortcuts }: ShortcutsContentProps) {
       {shortcuts.map((shortcut, index) => (
         <div
           key={index}
-          className="flex items-center justify-between py-2 border-b border-zinc-800/50 last:border-0"
+          className="flex items-center justify-between py-2 border-b border-border last:border-0"
         >
-          <span className="text-sm text-zinc-400">{shortcut.description}</span>
+          <span className="text-sm text-muted-foreground">{shortcut.description}</span>
           <KbdGroup>
             {shortcut.keys.map((key, keyIndex) => (
               <Kbd key={keyIndex}>{key}</Kbd>
@@ -302,7 +302,7 @@ function ShortcutsContent({ shortcuts }: ShortcutsContentProps) {
 function FeedbackContent() {
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-400">
+      <p className="text-sm text-muted-foreground">
         Help improve Photochrome — report bugs or suggest new features on GitHub.
       </p>
       <div className="space-y-2">
@@ -310,18 +310,18 @@ function FeedbackContent() {
           href={`${GITHUB_REPO_URL}/issues/new?template=bug_report.yml`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors text-sm text-zinc-300"
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md bg-secondary hover:bg-accent transition-colors text-sm text-foreground"
         >
-          <Bug className="w-4 h-4 text-zinc-500" />
+          <Bug className="w-4 h-4 text-muted-foreground" />
           Report a Bug
         </a>
         <a
           href={`${GITHUB_REPO_URL}/issues/new?template=feature_request.yml`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors text-sm text-zinc-300"
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md bg-secondary hover:bg-accent transition-colors text-sm text-foreground"
         >
-          <Lightbulb className="w-4 h-4 text-zinc-500" />
+          <Lightbulb className="w-4 h-4 text-muted-foreground" />
           Request a Feature
         </a>
       </div>
@@ -329,7 +329,7 @@ function FeedbackContent() {
         href={GITHUB_REPO_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-2 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+        className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
       >
         <Github className="w-3.5 h-3.5" />
         View on GitHub

@@ -11,12 +11,12 @@ test.describe('Playable demo', () => {
     await page.getByRole('button', { name: 'Retry', exact: true }).click()
     await waitForEditor(page)
     await expect(page.getByRole('alert')).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Upload photos', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Add media (photos or video)', exact: true })).toBeVisible()
   })
 
   test('shows real demo photos, base films, compare surface, and a persistent upload CTA', async ({ page, landingPage }) => {
     await waitForEditor(page)
-    await expect(page.getByRole('button', { name: 'Upload photos' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Add media (photos or video)' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Select film Provia', exact: true })).toBeVisible()
     await expect(page.getByRole('group', { name: 'Film selection', exact: true }).getByRole('button', { name: /^Select / })).toHaveCount(11)
     await expect(page.locator('canvas[aria-label="Preview"]')).toBeVisible()
@@ -137,11 +137,11 @@ test.describe('Playable demo', () => {
     await expect(page.locator('[data-slot="empty-title"]')).toHaveCount(0)
   })
 
-  test('uploads multiple images and exposes batch actions without a filename strip', async ({ page, landingPage }) => {
+  test('uploads multiple images and exposes batch actions and a separate contact sheet', async ({ page, landingPage }) => {
     await uploadMultipleImages(page)
     await waitForEditor(page)
     await expect(page.getByRole('button', { name: 'Apply current color to all 2 images', exact: true, includeHidden: true })).toHaveCount(1)
-    await expect(page.getByRole('tablist', { name: 'Image thumbnails', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('group', { name: 'Your photos', exact: true }).getByRole('button')).toHaveCount(2)
     await expect(page.locator('header').getByText('test-image.jpg', { exact: true })).toHaveCount(0)
   })
 

@@ -100,7 +100,7 @@ export function CropPanel({
               variant="outline"
               size="sm"
               onClick={() => !isChangingAngle && setIsRatioOpen(open => !open)}
-              className="editor-control relative min-h-11 w-20 rounded-lg px-2 text-xs text-white/80 tabular-nums"
+              className="editor-control relative min-h-11 w-20 rounded-lg px-2 text-xs text-foreground tabular-nums"
               aria-label="Choose crop ratio"
               aria-expanded={isRatioOpen}
               aria-controls={isRatioOpen ? ratioListId : undefined}
@@ -109,7 +109,7 @@ export function CropPanel({
               <span aria-hidden="true" className={`absolute transition-opacity duration-150 motion-reduce:transition-none ${isChangingAngle ? 'opacity-100' : 'opacity-0'}`}>{fineAngle.toFixed(1)}°</span>
             </Button>
             {isRatioOpen && createPortal(
-              <div ref={ratioPopupRef} id={ratioListId} style={ratioPosition} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget) && !ratioControlRef.current?.contains(event.relatedTarget)) setIsRatioOpen(false) }} className="fixed z-[250] grid w-44 grid-cols-2 gap-1 overflow-y-auto rounded-xl border border-white/15 bg-zinc-900 p-2 shadow-xl" role="group" aria-label="Crop ratios">
+              <div ref={ratioPopupRef} id={ratioListId} style={ratioPosition} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget) && !ratioControlRef.current?.contains(event.relatedTarget)) setIsRatioOpen(false) }} className="editor-paper fixed z-[250] grid w-44 grid-cols-2 gap-1 overflow-y-auto rounded-lg border p-2 shadow-xl" role="group" aria-label="Crop ratios">
                 {MOBILE_CROP_RATIOS.map(ratio => (
                   <Button
                     key={ratio.value}
@@ -153,10 +153,10 @@ export function CropPanel({
               aria-valuetext={`${fineAngle.toFixed(1)} degrees`}
             />
           </div>
-          <Button variant="ghost" size="sm" onClick={() => onFineAngleChange(0)} className="editor-control min-h-11 min-w-12 shrink-0 rounded-lg px-2 text-white/80" aria-label="Reset crop angle">Reset</Button>
+          <Button variant="ghost" size="sm" onClick={() => onFineAngleChange(0)} className="editor-control min-h-11 min-w-12 shrink-0 rounded-lg px-2 text-foreground" aria-label="Reset crop angle">Reset</Button>
         </div>
         <div className="flex min-h-11 items-center gap-3">
-          <span className="w-20 shrink-0 text-center text-xs text-white/70">Zoom</span>
+          <span className="w-20 shrink-0 text-center text-xs text-muted-foreground">Zoom</span>
           <Slider
             value={[cropScale]}
             min={1}
@@ -176,7 +176,7 @@ export function CropPanel({
             aria-label="Crop zoom"
             aria-valuetext={`${cropScale.toFixed(2)} times`}
           />
-          <span className="w-12 shrink-0 text-center text-xs text-white/70 tabular-nums" aria-hidden="true">{cropScale.toFixed(2)}×</span>
+          <span className="w-12 shrink-0 text-center text-xs text-muted-foreground tabular-nums" aria-hidden="true">{cropScale.toFixed(2)}×</span>
         </div>
       </div>
     </div>

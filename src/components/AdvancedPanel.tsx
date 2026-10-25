@@ -5,6 +5,7 @@ import { getBaseFilm, isBaseProfile } from '../engine/film-profiles'
 import { FilmOption } from './FilmOption'
 import { TuningPanel } from './TuningPanel'
 import { Button } from './ui/button'
+import { revealSelection } from '../lib/reveal-selection'
 
 interface AdvancedPanelProps {
   profile: Recipe
@@ -31,14 +32,7 @@ export function AdvancedPanel({ profile, settings, sourceImage, onProfileSelect,
     const strip = recipesRef.current
     const selected = strip?.querySelector<HTMLButtonElement>('.film-option[aria-pressed="true"]')
     if (!strip || !selected) return
-    const bounds = strip.getBoundingClientRect()
-    const option = selected.getBoundingClientRect()
-    if (option.left < bounds.left || option.right > bounds.right) {
-      strip.scrollTo({
-        left: strip.scrollLeft + option.left - bounds.left - (strip.clientWidth - option.width) / 2,
-        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-      })
-    }
+    revealSelection(strip, selected, true)
   }, [profile.id, tab, recipeOrder])
 
   return (

@@ -141,7 +141,7 @@ export function TuningPanel({
   }
 
   const resetButton = (key: keyof RecipeSettings, label: string) => (
-    <button type="button" onClick={() => resetSetting(key)} className="grid size-11 place-items-center md:size-7 rounded text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200" aria-label={`Reset ${label} to profile`}>
+    <button type="button" onClick={() => resetSetting(key)} className="grid size-11 place-items-center md:size-7 rounded text-muted-foreground hover:bg-secondary hover:text-foreground" aria-label={`Reset ${label} to profile`}>
       <RotateCcw className="size-3" aria-hidden="true" />
     </button>
   )
@@ -155,12 +155,12 @@ export function TuningPanel({
         return (
           <div key={param.key} className="editor-tuning-control">
             <div className="flex items-center justify-between gap-2">
-              <label htmlFor={sliderId} className="text-sm text-zinc-300">
+              <label htmlFor={sliderId} className="text-sm text-foreground">
                 {param.label}
               </label>
               <div className="flex items-center gap-1">
-                <span className="w-8 text-right text-sm tabular-nums text-zinc-500" aria-hidden="true">{value > 0 ? `+${value}` : value}</span>
-                <button type="button" onClick={() => resetSetting(param.key)} className="grid size-11 place-items-center md:size-7 rounded text-zinc-600 hover:bg-zinc-800 hover:text-zinc-200" aria-label={`Reset ${param.label} to profile`}>
+                <span className="w-8 text-right text-sm tabular-nums text-muted-foreground" aria-hidden="true">{value > 0 ? `+${value}` : value}</span>
+                <button type="button" onClick={() => resetSetting(param.key)} className="grid size-11 place-items-center md:size-7 rounded text-muted-foreground hover:bg-secondary hover:text-foreground" aria-label={`Reset ${param.label} to profile`}>
                   <RotateCcw className="size-3" aria-hidden="true" />
                 </button>
               </div>
@@ -187,7 +187,7 @@ export function TuningPanel({
         return (
           <div key={param.key} className="editor-tuning-control">
             <div className="flex items-center justify-between">
-              <label id={labelId} className="text-sm text-zinc-300">{param.label}</label>
+              <label id={labelId} className="text-sm text-foreground">{param.label}</label>
               {resetButton(param.key, param.label)}
             </div>
             <ToggleGroup
@@ -216,7 +216,7 @@ export function TuningPanel({
       {grainEffect !== 'off' && (
         <div className="editor-tuning-control animate-in fade-in duration-200">
           <div className="flex items-center justify-between">
-            <label id="toggle-label-grainSize" className="text-sm text-zinc-300">Grain Size</label>
+            <label id="toggle-label-grainSize" className="text-sm text-foreground">Grain Size</label>
             {resetButton('grainSize', 'Grain Size')}
           </div>
           <ToggleGroup
@@ -243,7 +243,7 @@ export function TuningPanel({
       {/* Dynamic Range */}
       <div className="editor-tuning-control">
         <div className="flex items-center justify-between">
-          <label id="toggle-label-dynamicRange" className="text-sm text-zinc-300">Dynamic Range</label>
+          <label id="toggle-label-dynamicRange" className="text-sm text-foreground">Dynamic Range</label>
           {resetButton('dynamicRange', 'Dynamic Range')}
         </div>
         <ToggleGroup
@@ -269,14 +269,14 @@ export function TuningPanel({
       {/* White Balance */}
       <div className="editor-tuning-control editor-tuning-white-balance">
         <div className="flex items-center justify-between">
-          <span className="flex items-center gap-1 text-sm text-zinc-300">White Balance{resetButton('whiteBalance', 'White Balance')}</span>
-          <div className="flex rounded-md overflow-hidden border border-zinc-700">
+          <span className="flex items-center gap-1 text-sm text-foreground">White Balance{resetButton('whiteBalance', 'White Balance')}</span>
+          <div className="flex rounded-md overflow-hidden border border-border">
             <button
               onClick={() => handleWBModeChange('preset')}
               className={`min-h-11 min-w-11 px-2 py-1 text-xs transition-colors md:min-h-8 ${
                 wbMode === 'preset'
-                  ? 'bg-zinc-600 text-white'
-                  : 'bg-transparent text-zinc-500 hover:text-zinc-300'
+                  ? 'bg-accent text-accent-foreground'
+                  : 'bg-transparent text-muted-foreground hover:text-foreground'
               }`}
               aria-pressed={wbMode === 'preset'}
               aria-label="White Balance Preset mode"
@@ -287,8 +287,8 @@ export function TuningPanel({
               onClick={() => handleWBModeChange('kelvin')}
               className={`min-h-11 min-w-11 px-2 py-1 text-xs transition-colors md:min-h-8 ${
                 wbMode === 'kelvin'
-                  ? 'bg-zinc-600 text-white'
-                  : 'bg-transparent text-zinc-500 hover:text-zinc-300'
+                  ? 'bg-accent text-accent-foreground'
+                  : 'bg-transparent text-muted-foreground hover:text-foreground'
               }`}
               aria-pressed={wbMode === 'kelvin'}
               aria-label="White Balance Kelvin mode"
@@ -320,8 +320,8 @@ export function TuningPanel({
         ) : (
           <div className="editor-tuning-temperature">
             <div className="flex items-center justify-between">
-              <label htmlFor="slider-kelvin" className="text-sm text-zinc-500">Temperature</label>
-              <span className="flex items-center gap-1 text-sm text-zinc-500 tabular-nums">
+              <label htmlFor="slider-kelvin" className="text-sm text-muted-foreground">Temperature</label>
+              <span className="flex items-center gap-1 text-sm text-muted-foreground tabular-nums">
                 <span aria-hidden="true">{kelvin}K</span>
                 {resetButton('whiteBalanceKelvin', 'Temperature')}
               </span>

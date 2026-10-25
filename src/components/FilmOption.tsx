@@ -1,4 +1,3 @@
-import { Circle } from 'lucide-react'
 import type { Recipe } from '../engine/types'
 import { FilmThumbnail } from './FilmThumbnail'
 
@@ -19,7 +18,6 @@ export function FilmOption({ sourceImage, recipe, active, onSelect, ariaLabel, d
   return (
     <button type="button" className="film-option" data-recipe-card={recipeOption ? '' : undefined}
       aria-label={ariaLabel} aria-pressed={active} disabled={disabled} onClick={onSelect}>
-      {active && <Circle className="film-selected-marker" aria-hidden="true" fill="currentColor" />}
       <FilmThumbnail sourceImage={sourceImage} recipe={recipe} retryKey={retryKey} />
       <span className="film-label" title={name}>{name}</span>
     </button>

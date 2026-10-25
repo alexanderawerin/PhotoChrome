@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ComponentProps, type ReactNode, type Ref } from 'react'
-import { Blend, Check, ChevronLeft, ChevronRight, Columns2, CopyCheck, Crop, Download, FlipHorizontal, MoreHorizontal, Plus, RotateCw, SlidersHorizontal, Upload } from 'lucide-react'
+import { Blend, Check, ChevronLeft, ChevronRight, Columns2, CopyCheck, Crop, Download, FlipHorizontal, MoreHorizontal, Plus, RotateCw, SlidersHorizontal } from 'lucide-react'
 import { Button } from './ui/button'
 import { CropPanel } from './CropPanel'
 import { Spinner } from './ui/spinner'
@@ -105,7 +105,7 @@ export function EditorActions({ actions, placement = 'dock', primaryId = 'export
     <Button key={action.id} ref={action.buttonRef} variant={primary ? 'default' : action.variant ?? 'ghost'} onClick={action.onClick}
       disabled={action.disabled} aria-label={action.ariaLabel ?? (direct ? action.label : undefined)} aria-busy={action.busy} title={direct ? action.label : undefined}
       className={`${direct ? 'editor-direct-action editor-control' : primary ? 'editor-primary-action' : 'editor-secondary-action'} min-h-11 min-w-0 whitespace-normal`}>
-      {action.busy ? <Spinner className="size-4" /> : action.icon ?? (primary ? (action.id === 'upload' ? <Plus className="size-4" aria-hidden="true" /> : action.id.startsWith('export') ? <Upload className="size-4" aria-hidden="true" /> : <Check className="size-4" aria-hidden="true" />)
+      {action.busy ? <Spinner className="size-4" /> : action.icon ?? (primary ? (action.id === 'upload' ? <Plus className="size-4" aria-hidden="true" /> : action.id.startsWith('export') ? <Download className="size-4" aria-hidden="true" /> : <Check className="size-4" aria-hidden="true" />)
         : placement === 'header' && (action.id === 'apply-all' ? <CopyCheck className="size-4" aria-hidden="true" /> : <Download className="size-4" aria-hidden="true" />))}
       <span className={direct ? 'sr-only' : undefined}>{action.label}</span>
     </Button>
@@ -155,6 +155,7 @@ export function EditorControlDock({ children, mode, contentRef, hideDesktop = fa
 }) {
   return (
     <aside className="editor-control-dock mobile-editor-dock mobile-editor-surface relative z-20 min-w-0" aria-label="Editor controls" data-editor-mode={mode} data-desktop-hidden={hideDesktop || undefined}>
+      {mode === 'films' && <div className="editor-dock-heading"><h2>Film library</h2><span>Original + 10 film looks</span></div>}
       <div ref={contentRef} className="editor-context-panel min-h-0" data-editor-mode={mode}>{children}</div>
     </aside>
   )
