@@ -1,4 +1,5 @@
-import { RotateCcw } from 'lucide-react'
+import { useState } from 'react'
+import { RotateCcw, Sun, Moon, Palette, Focus, Sparkles, Thermometer, CircleDot, Contrast, Droplets } from 'lucide-react'
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group'
 import { Slider } from './ui/slider'
 import { Recipe, RecipeSettings } from '../engine/types'
@@ -79,6 +80,9 @@ export function TuningPanel({
   customSettings,
   onSettingsChange
 }: TuningPanelProps) {
+  const [focusedTool, setFocusedTool] = useState<keyof RecipeSettings>('highlight')
+  const tools = [...SLIDER_PARAMS, ...TOGGLE_PARAMS, { key: 'dynamicRange' as const, label: 'Dynamic Range' }, { key: 'whiteBalance' as const, label: 'White Balance' }]
+  const toolIcons = { highlight: Sun, shadow: Moon, color: Palette, sharpness: Focus, clarity: Sparkles, wbShiftRed: Thermometer, wbShiftBlue: Thermometer, grainEffect: CircleDot, colorChromeEffect: Droplets, colorChromeFXBlue: Droplets, dynamicRange: Contrast, whiteBalance: Thermometer }
   const dynamicRange = customSettings.dynamicRange ?? recipe.settings.dynamicRange ?? 'DR100'
   const wbPreset = customSettings.whiteBalance ?? recipe.settings.whiteBalance ?? 'auto'
   const kelvin = customSettings.whiteBalanceKelvin ?? recipe.settings.whiteBalanceKelvin ?? 5500
@@ -142,18 +146,35 @@ export function TuningPanel({
 
   const resetButton = (key: keyof RecipeSettings, label: string) => (
     <button type="button" onClick={() => resetSetting(key)} className="grid size-11 place-items-center md:size-7 rounded text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200" aria-label={`Reset ${label} to profile`}>
-      <RotateCcw className="size-3" aria-hidden="true" />
+      <RotateCcw className="size-3" aria-hidden="true" /><span className="editor-reset-label">Reset</span>
     </button>
   )
 
   return (
-    <div className="editor-tuning-panel">
+    <div className="editor-tuning-panel" onFocusCapture={event => {
+      const control = (event.target as HTMLElement).closest<HTMLElement>('[data-tool]')
+      if (control?.dataset.tool) setFocusedTool(control.dataset.tool as keyof RecipeSettings)
+    }}>
+      <div className="editor-tool-picker" role="group" aria-label="Manual tools">
+        {tools.map(tool => {
+          const Icon = toolIcons[tool.key as keyof typeof toolIcons]
+          return <button key={tool.key} type="button" aria-label={`Adjust ${tool.label}`} aria-pressed={focusedTool === tool.key}
+            onClick={event => {
+              setFocusedTool(tool.key)
+              const button = event.currentTarget
+              const strip = button.parentElement!
+              strip.scrollTo({ left: button.offsetLeft - strip.offsetLeft - (strip.clientWidth - button.offsetWidth) / 2, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+            }}>
+            <Icon aria-hidden="true" /><span>{tool.label.replace('WB Shift ', '').replace(' Effect', '').replace('White Balance', 'Balance').replace('Dynamic Range', 'Range')}</span>
+          </button>
+        })}
+      </div>
       {/* Slider params */}
       {SLIDER_PARAMS.map((param) => {
         const value = (customSettings[param.key] ?? recipe.settings[param.key] ?? param.defaultValue) as number
         const sliderId = `slider-${param.key}`
         return (
-          <div key={param.key} className="editor-tuning-control">
+          <div key={param.key} className="editor-tuning-control" data-tool={param.key} data-focused={focusedTool === param.key}>
             <div className="flex items-center justify-between gap-2">
               <label htmlFor={sliderId} className="text-sm text-zinc-300">
                 {param.label}
@@ -161,7 +182,7 @@ export function TuningPanel({
               <div className="flex items-center gap-1">
                 <span className="w-8 text-right text-sm tabular-nums text-zinc-500" aria-hidden="true">{value > 0 ? `+${value}` : value}</span>
                 <button type="button" onClick={() => resetSetting(param.key)} className="grid size-11 place-items-center md:size-7 rounded text-zinc-600 hover:bg-zinc-800 hover:text-zinc-200" aria-label={`Reset ${param.label} to profile`}>
-                  <RotateCcw className="size-3" aria-hidden="true" />
+                  <RotateCcw className="size-3" aria-hidden="true" /><span className="editor-reset-label">Reset</span>
                 </button>
               </div>
             </div>
@@ -173,7 +194,7 @@ export function TuningPanel({
               max={param.max}
               step={param.step}
               onValueChange={(values) => handleSliderChange(param.key, values[0])}
-              className="editor-tuning-slider h-11 w-full"
+              className="editor-tuning-slider mobile-editor-ruler h-11 w-full"
               aria-valuetext={`${value > 0 ? '+' : ''}${value}`}
             />
           </div>
@@ -185,7 +206,7 @@ export function TuningPanel({
         const value = (customSettings[param.key] ?? recipe.settings[param.key] ?? 'off') as ToggleValue
         const labelId = `toggle-label-${param.key}`
         return (
-          <div key={param.key} className="editor-tuning-control">
+          <div key={param.key} className="editor-tuning-control" data-tool={param.key} data-focused={focusedTool === param.key}>
             <div className="flex items-center justify-between">
               <label id={labelId} className="text-sm text-zinc-300">{param.label}</label>
               {resetButton(param.key, param.label)}
@@ -214,7 +235,7 @@ export function TuningPanel({
 
       {/* Grain Size - only shown when grain is not off */}
       {grainEffect !== 'off' && (
-        <div className="editor-tuning-control animate-in fade-in duration-200">
+        <div className="editor-tuning-control animate-in fade-in duration-200" data-tool="grainEffect" data-focused={focusedTool === 'grainEffect'}>
           <div className="flex items-center justify-between">
             <label id="toggle-label-grainSize" className="text-sm text-zinc-300">Grain Size</label>
             {resetButton('grainSize', 'Grain Size')}
@@ -241,7 +262,7 @@ export function TuningPanel({
       )}
 
       {/* Dynamic Range */}
-      <div className="editor-tuning-control">
+      <div className="editor-tuning-control" data-tool="dynamicRange" data-focused={focusedTool === 'dynamicRange'}>
         <div className="flex items-center justify-between">
           <label id="toggle-label-dynamicRange" className="text-sm text-zinc-300">Dynamic Range</label>
           {resetButton('dynamicRange', 'Dynamic Range')}
@@ -267,7 +288,7 @@ export function TuningPanel({
       </div>
 
       {/* White Balance */}
-      <div className="editor-tuning-control editor-tuning-white-balance">
+      <div className="editor-tuning-control editor-tuning-white-balance" data-tool="whiteBalance" data-focused={focusedTool === 'whiteBalance'}>
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1 text-sm text-zinc-300">White Balance{resetButton('whiteBalance', 'White Balance')}</span>
           <div className="flex rounded-md overflow-hidden border border-zinc-700">
@@ -333,7 +354,7 @@ export function TuningPanel({
               max={10000}
               step={100}
               onValueChange={(values) => handleKelvinChange(values[0])}
-              className="editor-tuning-slider h-11 w-full"
+              className="editor-tuning-slider mobile-editor-ruler h-11 w-full"
               aria-label={`White balance ${kelvin} Kelvin`}
             />
           </div>

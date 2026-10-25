@@ -131,8 +131,8 @@ test.describe('Editor — mobile Crop session', () => {
 
     await trigger.click()
     await expect(ratios).toBeVisible()
-    // The brand is an inert outside target that preserves the Crop session.
-    await page.locator('header').getByText('PhotoChrome', { exact: true }).click()
+    // Header padding is an inert outside target that preserves the Crop session.
+    await page.locator('header').click({ position: { x: 2, y: 2 } })
     await expect(ratios).toBeHidden()
     await expect(region).toBeVisible()
 

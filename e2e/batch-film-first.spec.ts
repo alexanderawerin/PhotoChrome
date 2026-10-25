@@ -69,7 +69,7 @@ test('Apply to all copies committed manual color and preserves each composition'
   await expect(color).toHaveAttribute('aria-valuenow', '1')
   await expect(applyAll(page)).toHaveCount(0)
   await expect(exportAll(page)).toHaveCount(0)
-  await advanced.getByRole('button', { name: 'Apply', exact: true }).click()
+  await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true }).click()
   await expect(page.getByLabel('Applied color', { exact: true })).toContainText('Modified')
   await clickEditorAction(page, 'Apply current color to all 2 images')
   await expect(page.getByRole('status', { name: 'Applying preset to all images', exact: true })).toBeHidden()

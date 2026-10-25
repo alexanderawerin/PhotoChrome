@@ -4,7 +4,6 @@ import { getAllRecipes } from '../presets/recipes'
 import { getBaseFilm, isBaseProfile } from '../engine/film-profiles'
 import { FilmOption } from './FilmOption'
 import { TuningPanel } from './TuningPanel'
-import { Button } from './ui/button'
 
 interface AdvancedPanelProps {
   profile: Recipe
@@ -12,14 +11,11 @@ interface AdvancedPanelProps {
   sourceImage: ImageData
   onProfileSelect: (profile: Recipe) => void
   onSettingsChange: (settings: RecipeSettings) => void
-  onApply: () => void
-  onCancel: () => void
   disabled?: boolean
-  applyDisabled?: boolean
 }
 
 /** Both tabs edit the caller's one owner-bound draft; only active content runs. */
-export function AdvancedPanel({ profile, settings, sourceImage, onProfileSelect, onSettingsChange, onApply, onCancel, disabled = false, applyDisabled = false }: AdvancedPanelProps) {
+export function AdvancedPanel({ profile, settings, sourceImage, onProfileSelect, onSettingsChange, disabled = false }: AdvancedPanelProps) {
   const [tab, setTab] = useState<'recipes' | 'manual'>('recipes')
   const id = useId()
   const recipesRef = useRef<HTMLDivElement>(null)
@@ -66,10 +62,6 @@ export function AdvancedPanel({ profile, settings, sourceImage, onProfileSelect,
               </button>
             ))}
           </div>
-        </div>
-        <div className="editor-advanced-actions">
-          <Button variant="ghost" className="editor-advanced-cancel" onClick={onCancel}>Cancel</Button>
-          <Button className="editor-advanced-apply" onClick={onApply} disabled={disabled || applyDisabled}>Apply</Button>
         </div>
       </div>
       <div role="tabpanel" id={`${id}-panel-${tab}`} aria-labelledby={`${id}-${tab}`} className="min-h-0 flex-1 overflow-y-auto">

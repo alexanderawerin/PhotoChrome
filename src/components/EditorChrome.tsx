@@ -22,20 +22,17 @@ export interface EditorAction {
   icon?: ReactNode
 }
 
-/** One header DOM for both layouts; media owners supply their permitted actions. */
-export function EditorHeader({ leading, trailing, compact = false, modes }: {
+/** Utility chrome stays separate from the persistent editing dock. */
+export function EditorHeader({ leading, trailing, identity }: {
   leading?: ReactNode
   trailing?: ReactNode
-  compact?: boolean
-  modes: ReactNode
+  identity: ReactNode
 }) {
   return (
-    <header className="editor-header-content mobile-editor-header-content shrink-0 px-3 py-2">
-      <div className="editor-header-row" data-compact={compact || undefined}>
-        <div className="editor-header-leading"><span className="editor-brand">PhotoChrome</span>{leading}</div>
-        <div className="editor-header-modes">{modes}</div>
-        <div className="editor-header-trailing">{trailing}</div>
-      </div>
+    <header className="editor-header-content mobile-editor-header-content">
+      <div className="editor-header-leading">{leading}</div>
+      <div className="editor-header-identity">{identity}</div>
+      <div className="editor-header-trailing">{trailing}</div>
     </header>
   )
 }
@@ -47,7 +44,7 @@ export function EditorModes({ mode, onChange, disabled, demoMode = false, advanc
   demoMode?: boolean
   advancedOpen?: boolean
 }) {
-  const choices: EditorMode[] = demoMode ? ['films'] : ['films', 'crop', 'advanced']
+  const choices: EditorMode[] = demoMode ? ['films'] : ['films', 'advanced', 'crop']
   return (
     <nav className={`mobile-editor-modes grid shrink-0 ${demoMode ? 'grid-cols-1' : 'grid-cols-3'}`} aria-label="Editor modes">
       {choices.map(value => (
@@ -121,11 +118,18 @@ export function EditorActions({ actions, placement = 'dock', primaryId = 'export
       {primary && renderAction(primary, true)}{secondaryControls}
     </div>
   }
-  if (!actions.length) return null
+  if (!visible.length) return null
+  const primary = visible.find(action => action.id === primaryId) ?? visible.find(action => action.id === 'upload')
+  const secondary = visible.filter(action => action !== primary)
+  const overflow = secondary.length > 1 ? secondary.filter(action => action.id !== 'apply-all') : []
   return (
-    <div className="mobile-editor-actions flex min-h-11 shrink-0 flex-wrap gap-2 p-3" role="toolbar" aria-label="Editor actions"
+    <div className="mobile-editor-actions" role="toolbar" aria-label="Editor actions"
       onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') event.stopPropagation() }}>
-      {actions.map(action => renderAction(action, action.id === primaryId))}
+      <div className="editor-action-secondary">
+        {secondary.filter(action => !overflow.includes(action)).map(action => renderAction(action))}
+        {overflow.length > 0 && <EditorOverflow>{overflow.map(action => renderAction(action))}</EditorOverflow>}
+      </div>
+      {primary && renderAction(primary, true)}
     </div>
   )
 }
@@ -147,15 +151,18 @@ export function EditorAppliedColor({ profile, settings, preparing, unavailable }
 }
 
 /** A persistent host keeps an open Advanced tab/crop control mounted across resize. */
-export function EditorControlDock({ children, mode, contentRef, hideDesktop = false }: {
+export function EditorControlDock({ children, mode, modes, actions, contentRef, hideDesktop = false }: {
   children: ReactNode
   mode: EditorMode
+  modes: ReactNode
+  actions: ReactNode
   contentRef?: Ref<HTMLDivElement>
   hideDesktop?: boolean
 }) {
   return (
     <aside className="editor-control-dock mobile-editor-dock mobile-editor-surface relative z-20 min-w-0" aria-label="Editor controls" data-editor-mode={mode} data-desktop-hidden={hideDesktop || undefined}>
       <div ref={contentRef} className="editor-context-panel min-h-0" data-editor-mode={mode}>{children}</div>
+      <div className="editor-dock-footer">{modes}{actions}</div>
     </aside>
   )
 }
@@ -215,18 +222,16 @@ function CropTools({ onRotate, onFlip, disabled = false }: {
   )
 }
 
-export function CropSessionControls({ disabled, geometryDisabled, onRotate, onFlip, actions, ...panel }: ComponentProps<typeof CropPanel> & {
+export function CropSessionControls({ disabled, geometryDisabled, onRotate, onFlip, ...panel }: ComponentProps<typeof CropPanel> & {
   disabled?: boolean
   geometryDisabled?: boolean
   onRotate: () => void
   onFlip: () => void
-  actions: ReactNode
 }) {
   return (
     <section role="region" aria-label="Crop settings" className="editor-crop-session min-h-0">
       <div className="editor-crop-heading">
         <CropTools onRotate={onRotate} onFlip={onFlip} disabled={geometryDisabled ?? disabled} />
-        {actions}
       </div>
       <fieldset disabled={disabled} className="min-w-0 border-0 p-0">
         <CropPanel {...panel} />

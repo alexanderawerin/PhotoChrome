@@ -30,9 +30,11 @@ const DEMO_PHOTOS = [demoOneUrl, demoTwoUrl, demoThreeUrl] as const
 function LoadingOverlay({
   mediaType = 'image',
   previewUrl,
+  onCancel,
 }: {
   mediaType?: 'image' | 'video'
   previewUrl?: string | null
+  onCancel?: () => void
 }) {
   return (
     <div
@@ -58,6 +60,7 @@ function LoadingOverlay({
         >
           {mediaType === 'video' ? 'Loading video…' : 'Loading photo…'}
         </p>
+        {onCancel && <Button autoFocus variant="ghost" className="min-h-11" onClick={onCancel}>Cancel import</Button>}
       </div>
     </div>
   )
@@ -121,6 +124,7 @@ function AppContent() {
         onImageUpdate={session.updateImage}
         onNextImage={() => session.goToImage(media.currentIndex + 1)}
         onPreviousImage={() => session.goToImage(media.currentIndex - 1)}
+        onSelectImage={session.goToImage}
         onBack={startDemo}
         onAddImages={files => session.load({ kind: 'photos', files, mode: media.kind === 'demo' ? 'replace' : 'append' })}
         onMediaSelect={handleFileSelect}
@@ -138,7 +142,7 @@ function AppContent() {
   return (
     <>
       <LoadingContent isLoading={blocked}>{content}</LoadingContent>
-      {isLoading && <LoadingOverlay mediaType={isVideoRequest ? 'video' : 'image'} previewUrl={previewUrl} />}
+      {isLoading && <LoadingOverlay mediaType={isVideoRequest ? 'video' : 'image'} previewUrl={previewUrl} onCancel={media ? session.resume : undefined} />}
       {error && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-zinc-950 p-4" role="alert">
           <Empty className="max-w-md border-0">

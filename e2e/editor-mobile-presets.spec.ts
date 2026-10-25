@@ -81,7 +81,7 @@ test.describe('Editor — mobile films', () => {
     await recipe.click()
     await expect(recipe).toHaveAttribute('aria-pressed', 'true')
     await expect.poll(() => previewPixels(page, 'photo')).not.toBe(appliedPixels)
-    await panel.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
     await expect.poll(() => previewPixels(page, 'photo')).toBe(appliedPixels)
     await openAdvanced(page)
     await expect(recipe).toHaveAttribute('aria-pressed', 'false')

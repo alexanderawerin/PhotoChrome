@@ -142,7 +142,7 @@ test.describe('Playable demo', () => {
     await waitForEditor(page)
     await expect(page.getByRole('button', { name: 'Apply current color to all 2 images', exact: true, includeHidden: true })).toHaveCount(1)
     await expect(page.getByRole('tablist', { name: 'Image thumbnails', exact: true })).toHaveCount(0)
-    await expect(page.locator('header').getByText('test-image.jpg', { exact: true })).toHaveCount(0)
+    await expect(page.locator('header').getByText('test-image.jpg', { exact: true })).toBeVisible()
   })
 
 })

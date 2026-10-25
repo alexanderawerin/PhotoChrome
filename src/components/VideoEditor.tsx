@@ -426,7 +426,10 @@ export function VideoEditor({
   const actions: EditorAction[] = isCropping ? [
     { id: 'cancel-crop', label: 'Cancel', onClick: handleTuningCancel, variant: 'ghost', disabled: !commands.cancelDraft },
     { id: 'apply-crop', label: 'Done', onClick: handleTuningApply, disabled: !commands.editDraft || !processingPlan || !!renderError },
-  ] : isTuning ? [] : [
+  ] : isTuning ? [
+    { id: 'cancel-advanced', label: 'Cancel', onClick: handleTuningCancel, disabled: !commands.cancelDraft },
+    { id: 'apply-advanced', label: 'Apply', onClick: handleTuningApply, disabled: !commands.editDraft || !processingPlan || !!renderError },
+  ] : [
     {
       id: 'export', label: exportState.isExporting ? 'Exporting...' : 'Export',
       ariaLabel: exportState.isExporting ? 'Exporting...' : 'Export video',
@@ -443,16 +446,15 @@ export function VideoEditor({
       {/* The media stage and persistent control dock share one responsive layout. */}
       <div className="editor-stage editor-video-stage flex-1 min-w-0 min-h-0 overflow-hidden">
         <div className="mobile-editor-header mobile-editor-surface">
-          <EditorHeader compact={isTuning}
-            modes={<EditorModes mode={mode} onChange={changeMode} advancedOpen={isTuning}
-              disabled={{ films: !commands.selectColor, advanced: isTuning ? !commands.cancelDraft : !commands.advanced || !processingPlan, crop: isCropping ? !commands.cancelDraft : !(commands.geometry || (isTuning && commands.editDraft)) }} />}
+          <EditorHeader
+            identity={<div className="editor-file-identity"><span title={fileName}>{fileName}</span><small>Video</small></div>}
             leading={
               <Button variant="ghost" onClick={() => { if (commands.navigate) onBack() }} disabled={!commands.navigate}
                 className="editor-control min-h-11 min-w-11 rounded-lg p-0 text-zinc-300" aria-label="Back">
                 <ArrowLeft className="size-4" aria-hidden="true" />
               </Button>
             }
-            trailing={<EditorActions actions={isCropping ? [] : actions} placement="header" extraActions={[{
+            trailing={<EditorActions actions={[]} placement="header" extraActions={[{
               id: 'help', label: 'Help', icon: <HelpCircle className="size-4" aria-hidden="true" />,
               onClick: () => { if (commands.help) setIsHelpOpen(true) }, disabled: !commands.help,
             }, {
@@ -504,17 +506,18 @@ export function VideoEditor({
             onMouseLeave={handleCompareEnd}
           />
         </div>
-      <EditorControlDock mode={mode} contentRef={contextualPanelRef} hideDesktop={!isPanelOpen}>
+      <EditorControlDock mode={mode} contentRef={contextualPanelRef} hideDesktop={!isPanelOpen}
+        modes={<EditorModes mode={mode} onChange={changeMode} advancedOpen={isTuning}
+          disabled={{ films: !commands.selectColor, advanced: isTuning ? !commands.cancelDraft : !commands.advanced || !processingPlan, crop: isCropping ? !commands.cancelDraft : !(commands.geometry || (isTuning && commands.editDraft)) }} />}
+        actions={<EditorActions actions={actions} primaryId={isTuning ? 'apply-advanced' : isCropping ? 'apply-crop' : 'export'} />}>
         {mode === 'films' && <FilmSelector sourceImage={transformedThumbnail} activeRecipe={activeRecipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor} retryKey={preparationAttempt} />}
         {mode === 'advanced' && session?.kind === 'tuning' && session.profile && (
           <AdvancedPanel profile={session.profile} settings={session.draft} sourceImage={transformedThumbnail}
             onProfileSelect={changeDraftProfile} onSettingsChange={handleSettingsChange}
-            onApply={handleTuningApply} onCancel={handleTuningCancel}
-            disabled={!commands.editDraft} applyDisabled={!processingPlan || !!renderError} />
+            disabled={!commands.editDraft} />
         )}
         {mode === 'crop' && session?.kind === 'crop' && (
           <CropSessionControls disabled={!commands.cropGeometry}
-            actions={<EditorActions actions={actions} primaryId="apply-crop" />}
             onRotate={() => changeGeometry({ quarterTurns: nextQuarterTurn(visibleTransform.quarterTurns) })}
             onFlip={() => changeGeometry({ flipHorizontal: !visibleTransform.flipHorizontal })}
             cropRatio={session.draft.cropRatio} fineAngle={session.draft.fineAngle} cropScale={session.draft.cropScale}

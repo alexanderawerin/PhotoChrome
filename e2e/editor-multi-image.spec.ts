@@ -65,11 +65,11 @@ test.describe('Editor — Multi-Image Navigation', () => {
     await expect(page.getByRole('button', { name: 'Apply current color to all 3 images', exact: true, includeHidden: true })).toHaveCount(1)
   })
 
-  test('places the single mode switch in the header and photo navigation on the stage', async ({ page, multiImageEditorPage }) => {
+  test('places the single mode switch in the dock and photo navigation on the stage', async ({ page, multiImageEditorPage }) => {
     const header = page.locator('header')
-    await expect(header.getByRole('navigation', { name: 'Editor modes', exact: true })).toBeVisible()
+    await expect(page.getByRole('complementary', { name: 'Editor controls', exact: true }).getByRole('navigation', { name: 'Editor modes', exact: true })).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true })).toHaveCount(1)
-    await expect(header.getByText(/test-image|of 2/)).toHaveCount(0)
+    await expect(header.getByRole('button', { name: 'Open photo collection, 1 of 2', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Choose image', exact: true })).toHaveCount(0)
     await expect(page.getByRole('tablist', { name: 'Image thumbnails', exact: true })).toHaveCount(0)
     const workspace = page.getByRole('region', { name: 'Photo workspace', exact: true })

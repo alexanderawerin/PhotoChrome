@@ -38,7 +38,7 @@ export async function selectPortraitDraft(page: Page) {
   const panel = advancedPanel(page)
   await panel.getByRole('tab', { name: 'Recipes', exact: true }).click()
   await panel.getByRole('button', { name: /^Apply preset Provia Portrait(?:, selected)?$/ }).click()
-  await expect(panel.getByRole('button', { name: 'Apply', exact: true })).toBeEnabled()
+  await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true })).toBeEnabled()
 }
 
 export async function changeHighlight(page: Page) {
@@ -49,7 +49,7 @@ export async function changeHighlight(page: Page) {
   await slider.focus()
   await page.keyboard.press(before === '4' ? 'ArrowLeft' : 'ArrowRight')
   await expect(slider).not.toHaveAttribute('aria-valuenow', before!)
-  await expect(panel.getByRole('button', { name: 'Apply', exact: true })).toBeEnabled()
+  await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true })).toBeEnabled()
   return slider.getAttribute('aria-valuenow')
 }
 

@@ -26,7 +26,7 @@ for (const width of [1200, 1600]) {
       await expect(open).toBeFocused()
       await open.click()
       await expect(advanced).toBeVisible()
-      await advanced.getByRole('button', { name: 'Cancel', exact: true }).click()
+      await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
       await expect(open).toBeFocused()
     })
   })

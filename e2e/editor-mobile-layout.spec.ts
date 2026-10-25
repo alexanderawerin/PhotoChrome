@@ -71,14 +71,14 @@ async function waitForPreview(page: Page): Promise<void> {
 async function expectContainedInWorkspace(page: Page): Promise<void> {
   await expect.poll(async () => {
     const box = await readPreviewGeometry(page)
-    const modes = await readRect(page.getByRole('navigation', { name: 'Editor modes', exact: true }))
+    const header = await readRect(page.locator('header'))
     const dock = await readRect(page.getByRole('complementary', { name: 'Editor controls', exact: true }))
     return box.sourceWidth > 0
       && box.sourceHeight > 0
       && Math.abs(box.width / box.height - box.sourceWidth / box.sourceHeight) < 0.01
       && box.left >= -EPSILON
       && box.right <= box.viewportWidth + EPSILON
-      && box.top >= modes.bottom - EPSILON
+      && box.top >= header.bottom - EPSILON
       && box.bottom <= dock.top + EPSILON
   }).toBe(true)
 }
@@ -223,7 +223,7 @@ test.describe('Editor — mobile preview layout', () => {
       await expect(modes.getByRole('button', { name: /^(Open|Close) Advanced settings$/ })).toHaveAttribute('aria-current', 'page')
       await expect(advancedPanel(page)).toBeVisible()
       await expectContainedInWorkspace(page)
-      await advancedPanel(page).getByRole('button', { name: 'Cancel', exact: true }).click()
+      await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
       await expectContainedInWorkspace(page)
     })
   }
@@ -234,7 +234,7 @@ test.describe('Editor — mobile preview layout', () => {
     const panel = advancedPanel(page)
     await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
     const slider = panel.getByRole('slider', { name: 'Highlight', exact: true })
-    await expect(panel.getByText('Highlight', { exact: true })).toBeVisible()
+    await expect(panel.locator('label[for="slider-highlight"]')).toBeVisible()
     await expect(panel.getByRole('button', { name: 'Reset Highlight to profile', exact: true })).toBeVisible()
     const initial = await slider.getAttribute('aria-valuenow')
     await slider.focus()
@@ -253,7 +253,7 @@ test.describe('Editor — mobile preview layout', () => {
     await page.mouse.move(box.x + box.width * 0.7, box.y + box.height / 2)
     await expect(slider).not.toHaveAttribute('aria-valuenow', initial!)
     await page.mouse.up()
-    await expect(panel.getByText('Highlight', { exact: true })).toBeVisible()
+    await expect(panel.locator('label[for="slider-highlight"]')).toBeVisible()
   })
 
   for (const viewport of [
@@ -294,7 +294,7 @@ test.describe('Editor — mobile preview layout', () => {
         await selectMobileFilm(page)
 
         const batchActions = page.getByRole('toolbar', { name: 'Editor actions', exact: true })
-        await expect(batchActions.getByRole('button', { name: /Apply current color to all 2 images/ })).toBeHidden()
+        await expect(batchActions.getByRole('button', { name: /Apply current color to all 2 images/ })).toBeVisible()
         await batchActions.getByRole('button', { name: 'More editor actions', exact: true }).click()
         await expect(batchActions.getByRole('button', { name: /Apply current color to all 2 images/ })).toBeVisible()
         await expect(batchActions.getByRole('button', { name: 'Export all photos', exact: true })).toBeVisible()
@@ -320,13 +320,13 @@ test.describe('Editor — mobile preview layout', () => {
         await expect(slider).not.toHaveAttribute('aria-valuenow', initial!)
         await expectTouchTarget(panel.locator('#slider-highlight'))
         await expectTouchTarget(panel.getByRole('button', { name: 'Reset Highlight to profile', exact: true }))
-        await expectTouchTarget(panel.getByRole('button', { name: 'Apply', exact: true }))
+        await expectTouchTarget(page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true }))
         await expectNoHorizontalOverflow(page)
         await stressTextSize(page)
         await expectNoHorizontalOverflow(page)
         await expectNonOverlappingVisibleButtons(panel.getByRole('tablist'))
         await expectVisibleButtonTextFits(panel.getByRole('tab'))
-        await expectVisibleButtonTextFits(panel.getByRole('button', { name: /^(Apply|Cancel)$/ }))
+        await expectVisibleButtonTextFits(page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: /^(Apply|Cancel)$/ }))
         await expectContainedInWorkspace(page)
         await page.keyboard.press('Escape')
         await expect(panel).toHaveCount(0)
@@ -344,14 +344,14 @@ test.describe('Editor — mobile preview layout', () => {
     const baseline = await slider.getAttribute('aria-valuenow')
     await slider.focus()
     await page.keyboard.press('ArrowRight')
-    await panel.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
     await openAdvanced(page)
     await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
     await expect(slider).toHaveAttribute('aria-valuenow', baseline!)
     await slider.focus()
     await page.keyboard.press('ArrowRight')
     const committed = await slider.getAttribute('aria-valuenow')
-    await panel.getByRole('button', { name: 'Apply', exact: true }).click()
+    await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true }).click()
     await openAdvanced(page)
     await panel.getByRole('tab', { name: 'Manual', exact: true }).click()
     await expect(slider).toHaveAttribute('aria-valuenow', committed!)

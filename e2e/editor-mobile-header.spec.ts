@@ -10,10 +10,10 @@ test.describe('Editor — mobile header', () => {
     await page.addInitScript(() => localStorage.removeItem('photochrome-help-version'))
   })
 
-  test('keeps modes in the header, omits filename navigation, and appends through Add', async ({ page, multiImageEditorPage }) => {
+  test('keeps a compact filename header, bottom modes, and appends through Add', async ({ page, multiImageEditorPage }) => {
     await expect(page.getByRole('button', { name: 'Add photos', exact: true })).toBeVisible()
-    await expect(page.locator('header').getByRole('navigation', { name: 'Editor modes', exact: true })).toBeVisible()
-    await expect(page.locator('header').getByText(/test-image|of 2/)).toHaveCount(0)
+    await expect(page.getByRole('complementary', { name: 'Editor controls', exact: true }).getByRole('navigation', { name: 'Editor modes', exact: true })).toBeVisible()
+    await expect(page.locator('header').getByRole('button', { name: 'Open photo collection, 1 of 2', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Previous image', exact: true })).toBeHidden()
     await expect(page.getByRole('button', { name: 'Next image', exact: true })).toBeHidden()
     await expect(page.getByRole('button', { name: 'Apply current color to all 2 images', exact: true, includeHidden: true })).toHaveCount(1)
@@ -45,8 +45,8 @@ test.describe('Editor — mobile header', () => {
     await slider.focus()
     await page.keyboard.press('ArrowRight')
     await expect(slider).not.toHaveAttribute('aria-valuenow', initialValue!)
-    await expect(panel.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible()
-    await expect(panel.getByRole('button', { name: 'Apply', exact: true })).toBeVisible()
+    await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true })).toBeVisible()
+    await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Apply', exact: true })).toBeVisible()
     await expect(modes).toBeVisible()
     await modes.getByRole('button', { name: 'Crop', exact: true }).click()
     await expect(panel).toHaveCount(0)

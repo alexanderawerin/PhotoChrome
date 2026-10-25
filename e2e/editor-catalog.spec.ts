@@ -31,7 +31,7 @@ test('every retained recipe is available only inside its film Advanced catalog',
     expect(labels.sort()).toEqual(expected.map(recipe => `Apply preset ${recipe.name}`).sort())
     for (const recipe of expected) seen.add(recipe.id)
     await expect(panel.getByRole('button', { name: /Random|Randomize|Smart Picks|Editor's Choice/i })).toHaveCount(0)
-    await panel.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
   }
   expect(seen.size).toBe(100)
 })
@@ -50,7 +50,7 @@ for (const media of ['photo', 'video'] as const) {
     expect(labels[0]).toBe('Apply preset Provia Portrait')
     expect(new Set(labels).size).toBe(8)
     await expect(panel.getByRole('button', { name: /^Apply preset Classic Color/ })).toHaveCount(0)
-    await panel.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('photochrome_favorites') || '[]'))).toEqual(['provia-daylight', 'classic-color'])
   })
 }

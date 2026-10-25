@@ -4,8 +4,8 @@ import { advancedPanel, advancedTrigger, appliedColor, changeHighlight, openAdva
 async function expectOneControlHost(page: import('@playwright/test').Page) {
   await expect(page.getByRole('complementary', { name: 'Editor controls', exact: true, includeHidden: true })).toHaveCount(1)
   await expect(page.getByRole('navigation', { name: 'Editor modes', exact: true, includeHidden: true })).toHaveCount(1)
-  // Advanced owns its Apply/Cancel controls; the common action toolbar is absent.
-  await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true, includeHidden: true })).toHaveCount(0)
+  // Draft actions share the one persistent footer with the other modes.
+  await expect(page.getByRole('toolbar', { name: 'Editor actions', exact: true, includeHidden: true })).toHaveCount(1)
   await expect(advancedPanel(page)).toHaveCount(1)
 }
 
@@ -42,7 +42,7 @@ for (const media of ['photo', 'video'] as const satisfies readonly AdvancedMedia
       await expect(appliedColor(page)).not.toContainText('Modified')
     }
 
-    await panel.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
     await expect(panel).toHaveCount(0)
     await expect.poll(() => previewPixels(page, media)).toBe(appliedPixels)
     await expect(advancedTrigger(page)).toBeFocused()
@@ -81,7 +81,7 @@ for (const media of ['photo', 'video'] as const satisfies readonly AdvancedMedia
       await expect.poll(() => previewPixels(page, media)).toBe(draftPixels)
     }
 
-    await panel.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await page.getByRole('toolbar', { name: 'Editor actions', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click()
     await expect.poll(() => previewPixels(page, media)).toBe(appliedPixels)
     await expect(appliedColor(page)).not.toContainText('Provia Portrait')
     await expect(advancedTrigger(page)).toBeFocused()

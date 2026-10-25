@@ -7,6 +7,7 @@ import { Preview } from './Preview'
 import { FilmSelector } from './FilmSelector'
 import { AdvancedPanel } from './AdvancedPanel'
 import { EditorHeader, EditorModes, EditorActions, EditorControlDock, EditorCompare, EditorPhotoNavigation, EditorProcessing, EditorAppliedColor, CropSessionControls, type EditorMode, type EditorAction } from './EditorChrome'
+import { PhotoCollection } from './PhotoCollection'
 import { HelpDialog } from './HelpDialog'
 import { ExportCompletion, type ExportCompletionState } from './ExportCompletion'
 import { Recipe, ImageItem } from '../engine/types'
@@ -33,6 +34,7 @@ interface EditorProps {
   onImageUpdate: (id: string, updates: Partial<ImageItem>) => void
   onNextImage?: () => void
   onPreviousImage?: () => void
+  onSelectImage: (index: number) => void
   onBack: () => void
   onAddImages: (files: File[]) => Promise<void>
   demoMode?: boolean
@@ -53,6 +55,7 @@ export function Editor({
   onImageUpdate,
   onNextImage,
   onPreviousImage,
+  onSelectImage,
   onBack,
   onAddImages,
   demoMode = false,
@@ -74,6 +77,7 @@ export function Editor({
   const [isApplyingToAll, setIsApplyingToAll] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
+  const [isCollectionOpen, setIsCollectionOpen] = useState(false)
   const [hasUnreadHelp, setHasUnreadHelp] = useState(() => {
     try {
       return localStorage.getItem('photochrome-help-version') !== APP_VERSION
@@ -109,7 +113,7 @@ export function Editor({
     demo: demoMode,
     loading: interactionDisabled,
     processing: !isPreviewReady,
-    modal: isHelpOpen || completion !== null,
+    modal: isHelpOpen || isCollectionOpen || completion !== null,
     exporting: isExporting || batchProgress !== null,
     applying: isApplyingToAll,
     session: edit.session?.kind,
@@ -443,7 +447,7 @@ export function Editor({
       onNextImage,
       onPreviousImage,
     },
-    !interactionDisabled && !completion && !isExporting && !isBatchExporting
+    !interactionDisabled && !completion && !isCollectionOpen && !isExporting && !isBatchExporting
   )
 
   // ============================================================================
@@ -455,7 +459,10 @@ export function Editor({
   const actions: EditorAction[] = demoMode ? [{
     id: 'upload', label: 'Upload photos', ariaLabel: 'Upload photos',
     onClick: () => demoUploadRef.current?.click(), disabled: !commands.add,
-  }] : isTuning ? [] : isCropping ? [{
+  }] : isTuning ? [
+    { id: 'cancel-advanced', label: 'Cancel', onClick: () => closeAdvanced(false), disabled: !commands.cancelDraft },
+    { id: 'apply-advanced', label: 'Apply', onClick: () => closeAdvanced(true), disabled: !commands.editDraft || !isPreviewReady },
+  ] : isCropping ? [{
     id: 'cancel-crop', label: 'Cancel', variant: 'ghost', onClick: () => closeCrop(false), disabled: !commands.cancelDraft,
   }, {
     id: 'apply-crop', label: 'Done', onClick: () => closeCrop(true), disabled: !commands.editDraft,
@@ -500,19 +507,16 @@ export function Editor({
           }}
         />
         <EditorHeader
-          compact={isTuning}
-          modes={<EditorModes mode={mode} onChange={changeMode} demoMode={demoMode} advancedOpen={isTuning}
-            disabled={{ films: !commands.selectColor, advanced: isTuning ? !commands.cancelDraft : !commands.advanced, crop: isCropping ? !commands.cancelDraft : !(commands.geometry || (isTuning && commands.editDraft)) }} />}
-          leading={!demoMode && (
-            <Button variant="ghost" size="sm" onClick={() => demoUploadRef.current?.click()} disabled={!commands.add}
-              className="editor-control h-11 min-w-11 gap-1 rounded-lg px-2 text-zinc-300" aria-label="Add photos">
-              <Plus className="size-4" aria-hidden="true" /><span className="editor-add-label">Add photos</span>
+          identity={<PhotoCollection images={images} currentIndex={currentIndex} onSelect={onSelectImage}
+            open={isCollectionOpen} onOpenChange={setIsCollectionOpen} disabled={!commands.navigate && !isCollectionOpen} demoMode={demoMode} />}
+          leading={!demoMode ? (
+            <Button variant="ghost" onClick={() => demoUploadRef.current?.click()} disabled={!commands.add}
+              className="editor-utility" aria-label="Add photos">
+              <Plus className="size-5" aria-hidden="true" />
             </Button>
-          )}
-          trailing={<EditorActions actions={isCropping ? [] : actions} placement="header" primaryId={isMdUp || totalImages === 1 ? 'export' : 'export-all'} extraActions={[{
-            id: 'help', label: 'Help', icon: <HelpCircle className="size-4" aria-hidden="true" />,
-            onClick: () => { if (commands.help) setIsHelpOpen(true) }, disabled: !commands.help,
-          }]} />}
+          ) : <span className="editor-demo-mark" aria-hidden="true">pc.</span>}
+          trailing={<Button variant="ghost" className="editor-utility" aria-label="Help" disabled={!commands.help}
+            onClick={() => setIsHelpOpen(true)}><HelpCircle className="size-5" aria-hidden="true" /></Button>}
         />
 
         {previewError && (
@@ -570,19 +574,20 @@ export function Editor({
           {totalImages > 1 && <EditorPhotoNavigation previous={onPreviousImage} next={onNextImage} disabled={!commands.navigate} />}
         </div>
 
-        <EditorControlDock mode={mode}>
+        <EditorControlDock mode={mode}
+          modes={<EditorModes mode={mode} onChange={changeMode} demoMode={demoMode} advancedOpen={isTuning}
+            disabled={{ films: !commands.selectColor, advanced: isTuning ? !commands.cancelDraft : !commands.advanced, crop: isCropping ? !commands.cancelDraft : !(commands.geometry || (isTuning && commands.editDraft)) }} />}
+          actions={<EditorActions actions={actions} primaryId={isTuning ? 'apply-advanced' : isCropping ? 'apply-crop' : demoMode ? 'upload' : 'export'} />}>
           {mode === 'films' && (
             <FilmSelector sourceImage={currentImage.transformedThumbnail} activeRecipe={currentImage.recipe} onSelect={handleRecipeSelect} disabled={!commands.selectColor} retryKey={previewRetry} />
           )}
           {mode === 'advanced' && isTuning && profile && (
             <AdvancedPanel profile={profile} settings={settings} sourceImage={transformedThumbnail}
               onProfileSelect={edit.selectDraftProfile} onSettingsChange={edit.changeSettings}
-              onApply={() => closeAdvanced(true)} onCancel={() => closeAdvanced(false)}
-              disabled={interactionDisabled || isExporting || isBatchExporting} applyDisabled={!isPreviewReady} />
+              disabled={interactionDisabled || isExporting || isBatchExporting} />
           )}
           {mode === 'crop' && isCropping && (
             <CropSessionControls
-              actions={<EditorActions actions={actions} primaryId="apply-crop" />}
               cropRatio={edit.transformState.cropRatio}
               fineAngle={edit.transformState.fineAngle}
               cropScale={edit.transformState.cropScale}

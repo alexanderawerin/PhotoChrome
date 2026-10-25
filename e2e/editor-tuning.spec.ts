@@ -13,17 +13,17 @@ test.describe('Editor — Tuning Panel', () => {
 
   test('Manual opens from Advanced for a base film', async ({ page, editorPage }) => {
     await selectAndOpen(page)
-    await expect(inspector(page).getByText('Highlight')).toBeVisible()
-    await expect(inspector(page).getByText('Shadow')).toBeVisible()
+    await expect(inspector(page).getByRole('slider', { name: 'Highlight', exact: true })).toBeVisible()
+    await expect(inspector(page).getByRole('slider', { name: 'Shadow', exact: true })).toBeVisible()
   })
 
   test('tuning panel shows sliders for main parameters', async ({ page, editorPage }) => {
     await selectAndOpen(page)
     const panel = inspector(page)
-    await expect(panel.getByText('Highlight')).toBeVisible()
-    await expect(panel.getByText('Shadow')).toBeVisible()
-    await expect(panel.getByText('Color', { exact: true })).toBeVisible()
-    await expect(panel.getByText('Sharpness')).toBeVisible()
+    await expect(panel.getByRole('slider', { name: 'Highlight', exact: true })).toBeVisible()
+    await expect(panel.getByRole('slider', { name: 'Shadow', exact: true })).toBeVisible()
+    await expect(panel.getByRole('slider', { name: 'Color', exact: true })).toBeVisible()
+    await expect(panel.getByRole('slider', { name: 'Sharpness', exact: true })).toBeVisible()
   })
 
   test('reset control restores a slider to the preset value', async ({ page, editorPage }) => {
@@ -39,7 +39,7 @@ test.describe('Editor — Tuning Panel', () => {
 
   test('inspector is dedicated to adjustments', async ({ page, editorPage }) => {
     await selectAndOpen(page)
-    await expect(inspector(page).getByText('Highlight')).toBeVisible()
+    await expect(inspector(page).getByRole('slider', { name: 'Highlight', exact: true })).toBeVisible()
     await expect(inspector(page).getByRole('tab')).toHaveCount(2)
     await expect(inspector(page).getByRole('tab', { name: 'Manual', exact: true })).toHaveAttribute('aria-selected', 'true')
     await expect(inspector(page).getByText('Provia', { exact: true })).toHaveCount(1)
