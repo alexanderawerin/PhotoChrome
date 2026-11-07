@@ -69,7 +69,7 @@ npm run test:e2e:chromium                # Desktop Chromium, matching main CI
 npm run test:e2e:ui                      # Interactive UI mode
 ```
 
-Main CI runs lint, unused-code analysis, unit/E2E type checks, unit tests, build, and desktop Chromium E2E. Firefox and the selected mobile specs run in a separate weekly/manual workflow. `mobile-chrome` emulates a Pixel 7; it does not verify real mobile hardware. WebKit/Safari is not configured. Type checks run without launching browsers; unit tests use the ES2023 library available in Node.js 22, while the application build keeps its ES2020 library.
+Main CI runs lint, unused-code analysis, unit/E2E type checks, unit tests, build, and desktop Chromium E2E. The separate Browser compatibility workflow for Firefox and selected mobile specs is disabled in GitHub (`disabled_manually`, checked 2026-11-07), so its declared weekly schedule does not currently run. Main CI remains active. Run compatibility checks locally when needed; changing the workflow state is a separate action. `mobile-chrome` emulates a Pixel 7; it does not verify real mobile hardware. WebKit/Safari is not configured. Type checks run without launching browsers; unit tests use the ES2023 library available in Node.js 22, while the application build keeps its ES2020 library.
 
 Playwright uses its managed Chromium by default. To use an existing installation for the Chromium projects, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to its absolute path, for example:
 
