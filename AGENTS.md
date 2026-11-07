@@ -5,6 +5,13 @@
 - Continue the redesign in the existing code, starting from the implemented interface and the remaining work in `docs/ROADMAP.md`.
 - Early Figma frames are optional visual references. A finished or approved Figma mockup is not a prerequisite for code iteration.
 
+## Agreed film-first scope
+
+- The agreed target is [the film-first editor specification](docs/film-first-editor-spec-2026-10-01.md). It supersedes conflicting historical mobile-first and preset-navigation plans; the core implementation is in main. For remaining acceptance and performance work, read `docs/ROADMAP.md`, `docs/film-first-acceptance.md`, and `docs/film-first-performance.md`.
+- Deliver photo and video on mobile and desktop. Video crop, rotation, and reflection are included in this scope.
+- Keep ten base films and all 100 recipes in Advanced settings. Remove both Random mechanisms, Smart Picks, and Editor's Choice; keep film-scoped favorite recipes.
+- Start user media as Original, preserve geometry across color/profile changes, and use one temporary Advanced draft with Apply/Cancel. Export supports Original and geometry-only edits; photo ZIPs include all loaded photos.
+
 ## Code-to-Figma rules
 
 These rules are mandatory whenever translating Photochrome pages or states from code into Figma.
