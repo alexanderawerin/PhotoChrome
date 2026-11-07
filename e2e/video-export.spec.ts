@@ -73,7 +73,7 @@ test.describe('Video import and export', () => {
     expect(frequency).toBeLessThan(442)
   })
 
-  test('imports, applies a recipe, recovers from unsupported WebCodecs, and exports video', async ({ page, landingPage, browserName }) => {
+  test('imports, applies a recipe, recovers from unsupported WebCodecs, and exports video', async ({ page, landingPage, browserName }, testInfo) => {
     test.skip(browserName !== 'chromium', 'WebCodecs export is verified in Chromium')
     test.setTimeout(90_000)
     await uploadVideo(page)
@@ -94,6 +94,15 @@ test.describe('Video import and export', () => {
       } catch {
         return false
       }
+    })
+    await testInfo.attach('aac-capability', {
+      body: JSON.stringify({
+        browserVersion: page.context().browser()?.version(),
+        userAgent: await page.evaluate(() => navigator.userAgent),
+        config: { codec: 'mp4a.40.2', sampleRate: 48_000, numberOfChannels: 1, bitrate: 128_000 },
+        supported: audioEncodingSupported,
+      }, null, 2),
+      contentType: 'application/json',
     })
 
     await page.evaluate(() => {
@@ -118,10 +127,12 @@ test.describe('Video import and export', () => {
     const download = await downloadPromise
     expect(download.suggestedFilename()).toMatch(/^photochrome_.+_test-video\.mp4$/)
 
-    const downloadPath = await download.path()
-    if (!downloadPath) throw new Error('Downloaded video path unavailable')
+    const downloadPath = testInfo.outputPath('recipe-audio.mp4')
+    await download.saveAs(downloadPath)
+    await testInfo.attach('recipe-audio', { path: downloadPath, contentType: 'video/mp4' })
     const outputBuffer = await readFile(downloadPath)
     const output = await inspectMp4(outputBuffer)
+    await testInfo.attach('export-metadata', { body: JSON.stringify(output, null, 2), contentType: 'application/json' })
     expect(output.videoCodec).toBe('avc')
     expect(output.width).toBe(640)
     expect(output.height).toBe(360)
@@ -197,11 +208,22 @@ test.describe('Video import and export', () => {
     await expect(page.getByRole('button', { name: 'Export without sound', exact: true })).toHaveCount(0)
   })
 
-  test('supported AAC retains the source audio offset and end time', async ({ page, landingPage, browserName }) => {
+  test('supported AAC retains the source audio offset and end time', async ({ page, landingPage, browserName }, testInfo) => {
     test.skip(browserName !== 'chromium')
     test.setTimeout(90000)
-    const supported = await page.evaluate(async () => typeof AudioEncoder !== 'undefined'
-      && (await AudioEncoder.isConfigSupported({ codec: 'mp4a.40.2', sampleRate: 48000, numberOfChannels: 1, bitrate: 128000 })).supported === true)
+    const config = { codec: 'mp4a.40.2', sampleRate: 48_000, numberOfChannels: 1, bitrate: 128_000 }
+    const supported = await page.evaluate(async config => {
+      if (typeof AudioEncoder === 'undefined') return false
+      try { return (await AudioEncoder.isConfigSupported(config)).supported === true } catch { return false }
+    }, config)
+    await testInfo.attach('aac-capability', {
+      body: JSON.stringify({
+        browserVersion: page.context().browser()?.version(),
+        userAgent: await page.evaluate(() => navigator.userAgent),
+        config, supported,
+      }, null, 2),
+      contentType: 'application/json',
+    })
     test.skip(!supported, 'This browser does not support the actual source AAC configuration')
     const source = await inspectMp4(await readFile(fixturePath('test-video-offset-audio.mp4')))
     expect(source.audioStart).toBeGreaterThan(.35)
@@ -209,9 +231,13 @@ test.describe('Video import and export', () => {
     await selectBaseFilm(page)
     const pending = page.waitForEvent('download')
     await page.getByRole('button', { name: 'Export video', exact: true }).click()
-    const path = await (await pending).path()
-    if (!path) throw new Error('Missing download')
+    const path = testInfo.outputPath('offset-audio.mp4')
+    await (await pending).saveAs(path)
+    await testInfo.attach('offset-audio', { path, contentType: 'video/mp4' })
     const output = await inspectMp4(await readFile(path))
+    await testInfo.attach('source-and-export-metadata', {
+      body: JSON.stringify({ source, output }, null, 2), contentType: 'application/json',
+    })
     expect(output.audioCodec).toBe('aac')
     expect(Math.abs(output.audioStart! - source.audioStart!)).toBeLessThan(.05)
     expect(Math.abs(output.audioEnd! - source.audioEnd!)).toBeLessThan(.05)

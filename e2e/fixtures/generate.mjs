@@ -97,6 +97,29 @@ function generateTestVideo() {
 
 }
 
-await generateTestImages()
-generateTestVideo()
+/** Geometry + sound oracle: white flashes and two gated tones share exact source times. */
+function generateAudioGeometryVideo() {
+  const ffmpeg = process.env.FFMPEG_PATH || 'ffmpeg'
+  const pulse = '0.7*sin(2*PI*880*t)*gte(n,4800)*lt(n,10800)+0.7*sin(2*PI*1320*t)*gte(n,68800)*lt(n,74800)'
+  const result = spawnSync(ffmpeg, [
+    '-v', 'error', '-y',
+    '-i', join(__dirname, 'test-video-asymmetric-24.mp4'),
+    '-itsoffset', '0.4', '-f', 'lavfi', '-i', `aevalsrc='${pulse}':s=48000:d=1.6`,
+    '-map', '0:v', '-map', '1:a',
+    '-vf', "drawbox=x=0:y=0:w=iw:h=ih:color=white:t=fill:enable='between(n,12,14)+between(n,44,46)'",
+    '-c:v', 'libx264', '-profile:v', 'baseline', '-pix_fmt', 'yuv420p', '-video_track_timescale', '12000',
+    '-c:a', 'aac', '-b:a', '128k', '-ac', '1', '-ar', '48000', '-movflags', '+faststart',
+    join(__dirname, 'test-video-asymmetric-audio.mp4'),
+  ], { encoding: 'utf8' })
+  if (result.error || result.status !== 0) throw new Error(`Failed to generate audio/geometry fixture: ${result.error?.message || result.stderr}`)
+}
+
+// This mode intentionally leaves every existing fixture binary unchanged.
+if (process.argv.includes('--audio-geometry')) {
+  generateAudioGeometryVideo()
+} else {
+  await generateTestImages()
+  generateTestVideo()
+  generateAudioGeometryVideo()
+}
 console.log('Test fixtures generated successfully.')
